@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500">
+  <style>
+    .title { font: bold 20px sans-serif; fill: #333; }
+    .label { font: 14px sans-serif; fill: #333; }
+    .ai-box { fill: #6366f1; rx: 8; }
+    .data-box { fill: #22c55e; rx: 8; }
+    .line { stroke: #94a3b8; stroke-width: 2; }
+    .box-text { font: bold 14px sans-serif; fill: white; }
+  </style>
+  
+  <!-- Title -->
+  <text x="400" y="30" text-anchor="middle" class="title">Before MCP: The N×M Integration Nightmare</text>
+  
+  <!-- AI Tools (Left Side) -->
+  <rect x="50" y="80" width="120" height="50" class="ai-box"/>
+  <text x="110" y="110" text-anchor="middle" class="box-text">Claude</text>
+  
+  <rect x="50" y="180" width="120" height="50" class="ai-box"/>
+  <text x="110" y="210" text-anchor="middle" class="box-text">ChatGPT</text>
+  
+  <rect x="50" y="280" width="120" height="50" class="ai-box"/>
+  <text x="110" y="310" text-anchor="middle" class="box-text">Cursor IDE</text>
+  
+  <!-- Data Sources (Right Side) -->
+  <rect x="630" y="60" width="120" height="40" class="data-box"/>
+  <text x="690" y="85" text-anchor="middle" class="box-text">PostgreSQL</text>
+  
+  <rect x="630" y="120" width="120" height="40" class="data-box"/>
+  <text x="690" y="145" text-anchor="middle" class="box-text">Slack</text>
+  
+  <rect x="630" y="180" width="120" height="40" class="data-box"/>
+  <text x="690" y="205" text-anchor="middle" class="box-text">GitHub</text>
+  
+  <rect x="630" y="240" width="120" height="40" class="data-box"/>
+  <text x="690" y="265" text-anchor="middle" class="box-text">Jira</text>
+  
+  <rect x="630" y="300" width="120" height="40" class="data-box"/>
+  <text x="690" y="325" text-anchor="middle" class="box-text">AWS S3</text>
+  
+  <!-- Connection Lines from Claude -->
+  <line x1="170" y1="105" x2="630" y2="80" class="line"/>
+  <line x1="170" y1="105" x2="630" y2="140" class="line"/>
+  <line x1="170" y1="105" x2="630" y2="200" class="line"/>
+  <line x1="170" y1="105" x2="630" y2="260" class="line"/>
+  <line x1="170" y1="105" x2="630" y2="320" class="line"/>
+  
+  <!-- Connection Lines from ChatGPT -->
+  <line x1="170" y1="205" x2="630" y2="80" class="line"/>
+  <line x1="170" y1="205" x2="630" y2="140" class="line"/>
+  <line x1="170" y1="205" x2="630" y2="200" class="line"/>
+  <line x1="170" y1="205" x2="630" y2="260" class="line"/>
+  <line x1="170" y1="205" x2="630" y2="320" class="line"/>
+  
+  <!-- Connection Lines from Cursor -->
+  <line x1="170" y1="305" x2="630" y2="80" class="line"/>
+  <line x1="170" y1="305" x2="630" y2="140" class="line"/>
+  <line x1="170" y1="305" x2="630" y2="200" class="line"/>
+  <line x1="170" y1="305" x2="630" y2="260" class="line"/>
+  <line x1="170" y1="305" x2="630" y2="320" class="line"/>
+  
+  <!-- Labels -->
+  <text x="110" y="380" text-anchor="middle" class="label">3 AI Tools</text>
+  <text x="690" y="380" text-anchor="middle" class="label">5 Data Sources</text>
+  
+  <!-- Math -->
+  <text x="400" y="430" text-anchor="middle" class="title" style="fill: #dc2626;">3 × 5 = 15 Custom Integrations!</text>
+  <text x="400" y="460" text-anchor="middle" class="label">Each line = unique code to write and maintain</text>
+</svg>
