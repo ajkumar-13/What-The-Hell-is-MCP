@@ -4,9 +4,8 @@
 - **Title:** What the Hell is MCP? (The Problem It Solves)
 - **Series:** MCP Mastery: From Zero to Production
 - **Part:** 1 of 12
-- **Reading Time:** 15 minutes
 - **Type:** Conceptual
-- **Code:** Minimal (diagrams only)
+- **Code:** diagrams only
 
 ## Files in This Directory
 ```
