@@ -1,8 +1,6 @@
 # What the Hell is MCP?
 ## The Problem It Solves (And Why You Should Care)
 
-*Reading Time: 15 minutes*
-
 ---
 
 > Ever tried to get Claude to query your local SQLite database? Or asked ChatGPT to read your server logs? You end up copy-pasting data like it's 2005. Welcome to integration hell.
@@ -39,31 +37,8 @@ Each integration = different plugin system, different API, different auth flow, 
 
 **This doesn't scale.**
 
-```
-┌─────────┐     ┌─────────────┐
-│ Claude  │────▶│  PostgreSQL │
-│         │────▶│    Slack    │
-│         │────▶│   GitHub    │
-│         │────▶│    Jira     │
-│         │────▶│ Local Files │
-└─────────┘     └─────────────┘
+![The N×M Integration Nightmare](assets/diagram-before-mcp.svg)
 
-┌─────────┐     ┌─────────────┐
-│ ChatGPT │────▶│  PostgreSQL │
-│         │────▶│    Slack    │
-│         │────▶│   GitHub    │
-│         │────▶│    Jira     │
-│         │────▶│ Local Files │
-└─────────┘     └─────────────┘
-
-┌─────────┐     ┌─────────────┐
-│ Cursor  │────▶│  PostgreSQL │
-│         │────▶│    Slack    │
-│         │────▶│   GitHub    │
-│         │────▶│    Jira     │
-│         │────▶│ Local Files │
-└─────────┘     └─────────────┘
-```
 *15 arrows. 15 custom integrations. 15 things that break independently.*
 
 ### The USB-C Solution
@@ -74,21 +49,8 @@ Then USB-C happened. One standard. Every device.
 
 **MCP is USB-C for AI.**
 
-```
-┌─────────┐     ┌───────────┐      ┌─────────────┐
-│ Claude  │────▶│           │────▶│  PostgreSQL │
-└─────────┘     │           │      └─────────────┘
-                │           │      ┌─────────────┐
-┌─────────┐     │    MCP    │────▶│    Slack    │
-│ ChatGPT │────▶│  Protocol │     └─────────────┘
-└─────────┘     │           │     ┌─────────────┐
-                │           │────▶│   GitHub    │
-┌─────────┐     │           │     └─────────────┘
-│ Cursor  │────▶│           │────▶│    Jira     │
-└─────────┘     │           │     └─────────────┘
-                │           │────▶│ Local Files │
-                └───────────┘     └─────────────┘
-```
+![The USB-C Solution with MCP](assets/diagram-after-mcp.svg)
+
 *3 + 5 = 8 integrations. Add a new AI tool? It works with all 5 sources automatically.*
 
 Build an MCP server for PostgreSQL once → **every** MCP-compatible AI tool can use it.
@@ -113,6 +75,22 @@ MCP has three components:
 | **Server** | The bridge to your data | A Python script you write |
 
 You talk to the Host. The Host uses its internal Client to talk to Servers. Servers talk to your actual data (database, files, APIs).
+
+#### The Restaurant Analogy
+
+Think of MCP like a restaurant:
+
+![MCP Restaurant Analogy](assets/diagram-restaurant.svg)
+
+| Restaurant | MCP Equivalent |
+|------------|----------------|
+| You (Customer) | The user asking questions |
+| Waiter | MCP Client (inside Host) |
+| Kitchen | MCP Server |
+| Menu | Available tools/resources |
+| Food | Your data/results |
+
+You don't go into the kitchen to cook. You tell the waiter what you want, the waiter communicates with the kitchen, and the food comes back to you. The waiter speaks both "customer language" and "kitchen language"—that's exactly what the MCP Client does.
 
 ### The Protocol
 
@@ -156,28 +134,11 @@ That's it. Request → Execute → Response. The AI sees 1547 users.
 
 ### The Localhost Advantage
 
-Here's what most people miss: **MCP servers run locally by default.**
+Here's what most people miss: **MCP servers typically run locally.**
 
-Don't let the word "server" confuse you. This isn't a cloud server or some remote machine. When you configure Claude Desktop to use an MCP server, that server is just a Python script running on YOUR computer:
+Don't let the word "server" confuse you. In the most common setup (STDIO transport), the MCP server is just a script (Python, TypeScript, or any language) running as a subprocess on YOUR computer. While MCP *can* connect to remote servers via SSE transport, the default local mode means:
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                     YOUR COMPUTER                           │
-│                                                             │
-│  ┌─────────────────┐         ┌─────────────────┐            │
-│  │ Claude Desktop  │◀───────▶│  MCP Server     │           │
-│  │  (the AI app)   │  STDIO  │ (Python script) │            │
-│  └─────────────────┘         └────────┬────────┘            │
-│                                       │                     │
-│                                       ▼                     │
-│                              ┌─────────────────┐            │
-│                              │  Your Database  │            │
-│                              │ (localhost:5432)│            │
-│                              └─────────────────┘            │
-│                                                             │
-│           Everything runs here. Data never leaves.          │
-└─────────────────────────────────────────────────────────────┘
-```
+![MCP Localhost Architecture](assets/diagram-localhost.svg)
 
 The MCP Server is YOUR code, running with YOUR permissions, accessing YOUR local files and databases. Claude sends a JSON request to this local process, the process queries your data, returns the result. No internet involved.
 
@@ -197,7 +158,7 @@ The AI gets context without your data ever hitting external servers.
 
 MCP servers expose three types of capabilities:
 
-### 1. Tools 🔧
+### 1. Tools
 **Actions the AI can execute.**
 
 ```
@@ -345,7 +306,7 @@ MCP is:
    • Resources = Data (files, schemas)
    • Prompts = Templates (pre-built workflows)
 
- Open Standard: Not locked to Claude—any AI tool can implement it
+ Open Standard: Not locked to Claude, any AI tool can implement it
 ```
 
 ---
@@ -361,8 +322,6 @@ In **Blog 2: MCP Architecture Deep Dive**, we'll cover:
 - How tool discovery works
 
 **[Continue to Blog 2 →](../blog-2/)**
-
-*Don't miss the next post—[subscribe to the newsletter](#) or [follow on Twitter](#).*
 
 ---
 
