@@ -1,0 +1,137 @@
+<svg viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .title { font: bold 18px system-ui, sans-serif; fill: #1a1a2e; }
+    .step-num { font: bold 16px system-ui, sans-serif; fill: white; }
+    .step-label { font: 600 13px system-ui, sans-serif; fill: #1a1a2e; }
+    .step-detail { font: 11px system-ui, sans-serif; fill: #4a5568; }
+    .code { font: 11px 'Consolas', monospace; fill: #059669; }
+    .box { stroke-width: 2; rx: 8; }
+    .arrow { stroke: #3b82f6; stroke-width: 3; fill: none; marker-end: url(#bluearrow); }
+    .arrow-back { stroke: #10b981; stroke-width: 3; fill: none; marker-end: url(#greenarrow); }
+  </style>
+  
+  <defs>
+    <marker id="bluearrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6"/>
+    </marker>
+    <marker id="greenarrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#10b981"/>
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="450" y="30" text-anchor="middle" class="title">Complete Request Flow: "How many users signed up last week?"</text>
+  
+  <!-- Components -->
+  <!-- User -->
+  <rect x="30" y="80" width="100" height="60" fill="#f0fdf4" stroke="#16a34a" class="box"/>
+  <text x="80" y="115" text-anchor="middle" class="step-label">USER</text>
+  
+  <!-- Host -->
+  <rect x="180" y="80" width="120" height="60" fill="#e8f4f8" stroke="#0891b2" class="box"/>
+  <text x="240" y="108" text-anchor="middle" class="step-label">HOST</text>
+  <text x="240" y="125" text-anchor="middle" class="step-detail">(Claude Desktop)</text>
+  
+  <!-- Client -->
+  <rect x="350" y="80" width="120" height="60" fill="#fef3c7" stroke="#d97706" class="box"/>
+  <text x="410" y="108" text-anchor="middle" class="step-label">CLIENT</text>
+  <text x="410" y="125" text-anchor="middle" class="step-detail">(MCP Connector)</text>
+  
+  <!-- Server -->
+  <rect x="520" y="80" width="120" height="60" fill="#dcfce7" stroke="#16a34a" class="box"/>
+  <text x="580" y="108" text-anchor="middle" class="step-label">SERVER</text>
+  <text x="580" y="125" text-anchor="middle" class="step-detail">(Your Python)</text>
+  
+  <!-- Database -->
+  <rect x="690" y="80" width="100" height="60" fill="#ede9fe" stroke="#7c3aed" class="box"/>
+  <text x="740" y="115" text-anchor="middle" class="step-label">PostgreSQL</text>
+  
+  <!-- Forward Flow (Steps 1-5) -->
+  <!-- Step 1 -->
+  <circle cx="80" cy="175" r="15" fill="#3b82f6"/>
+  <text x="80" y="180" text-anchor="middle" class="step-num">1</text>
+  <path d="M 80 160 L 80 190" class="arrow" style="marker-end: none"/>
+  <text x="80" y="210" text-anchor="middle" class="step-label">User types</text>
+  <text x="80" y="225" text-anchor="middle" class="step-detail">"How many users..."</text>
+  
+  <!-- Step 2 -->
+  <circle cx="240" cy="175" r="15" fill="#3b82f6"/>
+  <text x="240" y="180" text-anchor="middle" class="step-num">2</text>
+  <path d="M 130 110 L 180 110" class="arrow"/>
+  <text x="240" y="210" text-anchor="middle" class="step-label">AI decides</text>
+  <text x="240" y="225" text-anchor="middle" class="step-detail">"I need run_sql tool"</text>
+  
+  <!-- Step 3 -->
+  <circle cx="410" cy="175" r="15" fill="#3b82f6"/>
+  <text x="410" y="180" text-anchor="middle" class="step-num">3</text>
+  <path d="M 300 110 L 350 110" class="arrow"/>
+  <text x="410" y="210" text-anchor="middle" class="step-label">Client sends</text>
+  <text x="410" y="225" text-anchor="middle" class="step-detail">JSON-RPC request</text>
+  
+  <!-- Step 4 -->
+  <circle cx="580" cy="175" r="15" fill="#3b82f6"/>
+  <text x="580" y="180" text-anchor="middle" class="step-num">4</text>
+  <path d="M 470 110 L 520 110" class="arrow"/>
+  <text x="580" y="210" text-anchor="middle" class="step-label">Server receives</text>
+  <text x="580" y="225" text-anchor="middle" class="step-detail">executes query</text>
+  
+  <!-- Step 5 -->
+  <circle cx="740" cy="175" r="15" fill="#3b82f6"/>
+  <text x="740" y="180" text-anchor="middle" class="step-num">5</text>
+  <path d="M 640 110 L 690 110" class="arrow"/>
+  <text x="740" y="210" text-anchor="middle" class="step-label">Database</text>
+  <text x="740" y="225" text-anchor="middle" class="step-detail">returns 1547</text>
+  
+  <!-- JSON Request Box -->
+  <rect x="320" y="260" width="280" height="80" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1" rx="4"/>
+  <text x="340" y="285" class="code">{"jsonrpc": "2.0",</text>
+  <text x="340" y="300" class="code"> "method": "tools/call",</text>
+  <text x="340" y="315" class="code"> "params": {"name": "run_sql", ...}}</text>
+  <text x="460" y="255" text-anchor="middle" class="step-detail">Request (Step 3→4)</text>
+  
+  <!-- Return Flow (Steps 6-9) -->
+  <!-- Arrows going back -->
+  <path d="M 690 140 L 640 140" class="arrow-back"/>
+  <path d="M 520 140 L 470 140" class="arrow-back"/>
+  <path d="M 350 140 L 300 140" class="arrow-back"/>
+  <path d="M 180 140 L 130 140" class="arrow-back"/>
+  
+  <!-- Step 6 -->
+  <circle cx="580" cy="380" r="15" fill="#10b981"/>
+  <text x="580" y="385" text-anchor="middle" class="step-num">6</text>
+  <text x="580" y="410" text-anchor="middle" class="step-label">Server returns</text>
+  <text x="580" y="425" text-anchor="middle" class="step-detail">JSON-RPC response</text>
+  
+  <!-- Step 7 -->
+  <circle cx="410" cy="380" r="15" fill="#10b981"/>
+  <text x="410" y="385" text-anchor="middle" class="step-num">7</text>
+  <text x="410" y="410" text-anchor="middle" class="step-label">Client passes</text>
+  <text x="410" y="425" text-anchor="middle" class="step-detail">result to Host</text>
+  
+  <!-- Step 8 -->
+  <circle cx="240" cy="380" r="15" fill="#10b981"/>
+  <text x="240" y="385" text-anchor="middle" class="step-num">8</text>
+  <text x="240" y="410" text-anchor="middle" class="step-label">AI formulates</text>
+  <text x="240" y="425" text-anchor="middle" class="step-detail">English response</text>
+  
+  <!-- Step 9 -->
+  <circle cx="80" cy="380" r="15" fill="#10b981"/>
+  <text x="80" y="385" text-anchor="middle" class="step-num">9</text>
+  <text x="80" y="410" text-anchor="middle" class="step-label">User sees</text>
+  <text x="80" y="425" text-anchor="middle" class="step-detail">final answer</text>
+  
+  <!-- JSON Response Box -->
+  <rect x="320" y="460" width="280" height="80" fill="#f0fdf4" stroke="#86efac" stroke-width="1" rx="4"/>
+  <text x="340" y="485" class="code">{"jsonrpc": "2.0",</text>
+  <text x="340" y="500" class="code"> "result": {"content": [</text>
+  <text x="340" y="515" class="code">   {"type": "text", "text": "1547"}]}}</text>
+  <text x="460" y="555" text-anchor="middle" class="step-detail">Response (Step 6→7)</text>
+  
+  <!-- Legend -->
+  <rect x="680" y="450" width="200" height="90" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" rx="6"/>
+  <text x="700" y="475" class="step-detail">Legend:</text>
+  <circle cx="710" cy="495" r="8" fill="#3b82f6"/>
+  <text x="725" y="500" class="step-detail">Forward flow (request)</text>
+  <circle cx="710" cy="520" r="8" fill="#10b981"/>
+  <text x="725" y="525" class="step-detail">Return flow (response)</text>
+</svg>

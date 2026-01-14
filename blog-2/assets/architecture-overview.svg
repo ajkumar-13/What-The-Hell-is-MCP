@@ -1,0 +1,86 @@
+<svg viewBox="0 0 800 500" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .title { font: bold 18px system-ui, sans-serif; fill: #1a1a2e; }
+    .label { font: 600 14px system-ui, sans-serif; fill: #1a1a2e; }
+    .sublabel { font: 12px system-ui, sans-serif; fill: #4a5568; }
+    .box-host { fill: #e8f4f8; stroke: #0891b2; stroke-width: 2; rx: 8; }
+    .box-client { fill: #fef3c7; stroke: #d97706; stroke-width: 2; rx: 6; }
+    .box-server { fill: #dcfce7; stroke: #16a34a; stroke-width: 2; rx: 6; }
+    .arrow { stroke: #64748b; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+    .arrow-double { stroke: #64748b; stroke-width: 2; fill: none; }
+  </style>
+  
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#64748b"/>
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="400" y="30" text-anchor="middle" class="title">MCP Architecture Overview</text>
+  
+  <!-- Host Container -->
+  <rect x="50" y="60" width="700" height="200" class="box-host"/>
+  <text x="400" y="90" text-anchor="middle" class="label">HOST (Claude Desktop / Cursor IDE)</text>
+  <text x="400" y="110" text-anchor="middle" class="sublabel">The AI application you interact with</text>
+  
+  <!-- AI Model -->
+  <rect x="320" y="130" width="160" height="50" fill="#ddd6fe" stroke="#7c3aed" stroke-width="2" rx="6"/>
+  <text x="400" y="160" text-anchor="middle" class="label">AI Model</text>
+  
+  <!-- Clients -->
+  <rect x="100" y="200" width="140" height="45" class="box-client"/>
+  <text x="170" y="228" text-anchor="middle" class="label">CLIENT 1</text>
+  
+  <rect x="330" y="200" width="140" height="45" class="box-client"/>
+  <text x="400" y="228" text-anchor="middle" class="label">CLIENT 2</text>
+  
+  <rect x="560" y="200" width="140" height="45" class="box-client"/>
+  <text x="630" y="228" text-anchor="middle" class="label">CLIENT 3</text>
+  
+  <!-- Arrows from AI to Clients -->
+  <path d="M 340 180 L 200 200" class="arrow"/>
+  <path d="M 400 180 L 400 200" class="arrow"/>
+  <path d="M 460 180 L 600 200" class="arrow"/>
+  
+  <!-- Servers -->
+  <rect x="100" y="320" width="140" height="70" class="box-server"/>
+  <text x="170" y="350" text-anchor="middle" class="label">SERVER</text>
+  <text x="170" y="370" text-anchor="middle" class="sublabel">PostgreSQL</text>
+  
+  <rect x="330" y="320" width="140" height="70" class="box-server"/>
+  <text x="400" y="350" text-anchor="middle" class="label">SERVER</text>
+  <text x="400" y="370" text-anchor="middle" class="sublabel">Slack</text>
+  
+  <rect x="560" y="320" width="140" height="70" class="box-server"/>
+  <text x="630" y="350" text-anchor="middle" class="label">SERVER</text>
+  <text x="630" y="370" text-anchor="middle" class="sublabel">Local Files</text>
+  
+  <!-- Arrows from Clients to Servers -->
+  <path d="M 170 245 L 170 320" class="arrow"/>
+  <path d="M 400 245 L 400 320" class="arrow"/>
+  <path d="M 630 245 L 630 320" class="arrow"/>
+  
+  <!-- Transport Labels -->
+  <text x="190" y="285" class="sublabel">STDIO</text>
+  <text x="420" y="285" class="sublabel">STDIO</text>
+  <text x="650" y="285" class="sublabel">STDIO</text>
+  
+  <!-- Legend -->
+  <rect x="50" y="420" width="700" height="70" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" rx="6"/>
+  <text x="70" y="445" class="sublabel">Legend:</text>
+  
+  <rect x="130" y="432" width="20" height="20" fill="#e8f4f8" stroke="#0891b2" stroke-width="2" rx="3"/>
+  <text x="158" y="447" class="sublabel">Host (UI)</text>
+  
+  <rect x="250" y="432" width="20" height="20" fill="#fef3c7" stroke="#d97706" stroke-width="2" rx="3"/>
+  <text x="278" y="447" class="sublabel">Client (Connector)</text>
+  
+  <rect x="400" y="432" width="20" height="20" fill="#dcfce7" stroke="#16a34a" stroke-width="2" rx="3"/>
+  <text x="428" y="447" class="sublabel">Server (Your Code)</text>
+  
+  <rect x="550" y="432" width="20" height="20" fill="#ddd6fe" stroke="#7c3aed" stroke-width="2" rx="3"/>
+  <text x="578" y="447" class="sublabel">AI Model</text>
+  
+  <text x="70" y="475" class="sublabel">One Host → Multiple Clients → Multiple Servers. Each Client maintains a 1:1 connection with its Server.</text>
+</svg>

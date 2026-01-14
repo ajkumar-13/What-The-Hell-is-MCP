@@ -1,0 +1,98 @@
+<svg viewBox="0 0 900 500" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .title { font: bold 20px system-ui, sans-serif; fill: #1a1a2e; }
+      .section-title { font: bold 16px system-ui, sans-serif; fill: #1a1a2e; }
+      .label { font: 600 13px system-ui, sans-serif; fill: #1a1a2e; }
+      .sublabel { font: 12px system-ui, sans-serif; fill: #4a5568; }
+      .code { font: 12px 'Consolas', monospace; fill: #374151; }
+      .box { stroke-width: 2; rx: 6; }
+      .arrow { stroke: #64748b; stroke-width: 2; fill: none; }
+      .check { fill: #16a34a; font: 12px system-ui, sans-serif; }
+      .cross { fill: #dc2626; font: 12px system-ui, sans-serif; }
+    </style>
+    <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#64748b"/>
+    </marker>
+  </defs>
+  
+  <!-- Title -->
+  <text x="450" y="35" text-anchor="middle" class="title">Transport Comparison: STDIO vs SSE</text>
+  
+  <!-- STDIO Section -->
+  <rect x="40" y="70" width="390" height="380" fill="#f0fdf4" stroke="#16a34a" stroke-width="2" rx="10"/>
+  <text x="235" y="100" text-anchor="middle" class="section-title">STDIO (Standard Input/Output)</text>
+  <text x="235" y="122" text-anchor="middle" class="sublabel">Default for local apps like Claude Desktop</text>
+  
+  <!-- STDIO Diagram -->
+  <rect x="75" y="145" width="130" height="55" fill="#fef3c7" stroke="#d97706" class="box"/>
+  <text x="140" y="177" text-anchor="middle" class="label">CLIENT</text>
+  
+  <rect x="265" y="145" width="130" height="55" fill="#dcfce7" stroke="#16a34a" class="box"/>
+  <text x="330" y="177" text-anchor="middle" class="label">SERVER</text>
+  
+  <!-- STDIO Arrows -->
+  <path d="M 205 158 L 265 158" class="arrow" marker-end="url(#arrow)"/>
+  <text x="235" y="150" text-anchor="middle" class="code">stdin</text>
+  
+  <path d="M 265 187 L 205 187" class="arrow" marker-end="url(#arrow)"/>
+  <text x="235" y="202" text-anchor="middle" class="code">stdout</text>
+  
+  <!-- STDIO Details -->
+  <text x="60" y="235" class="label">How it works:</text>
+  <text x="60" y="258" class="sublabel">• Client spawns Server as child process</text>
+  <text x="60" y="277" class="sublabel">• Communication via stdin/stdout pipes</text>
+  <text x="60" y="296" class="sublabel">• No network involved</text>
+  
+  <text x="60" y="330" class="label">Best for:</text>
+  <text x="60" y="353" class="sublabel">• Local development</text>
+  <text x="60" y="372" class="sublabel">• Desktop apps (Claude Desktop)</text>
+  <text x="60" y="391" class="sublabel">• Personal tools on your machine</text>
+  
+  <!-- STDIO Pros/Cons with better spacing -->
+  <text x="60" y="425" class="check">✓ Zero config</text>
+  <text x="180" y="425" class="check">✓ Data stays local</text>
+  <text x="310" y="425" class="cross">✗ Not shareable</text>
+  
+  <!-- SSE Section -->
+  <rect x="470" y="70" width="390" height="380" fill="#eff6ff" stroke="#3b82f6" stroke-width="2" rx="10"/>
+  <text x="665" y="100" text-anchor="middle" class="section-title">SSE (Server-Sent Events)</text>
+  <text x="665" y="122" text-anchor="middle" class="sublabel">For remote and shared servers</text>
+  
+  <!-- SSE Diagram -->
+  <rect x="505" y="145" width="130" height="55" fill="#fef3c7" stroke="#d97706" class="box"/>
+  <text x="570" y="167" text-anchor="middle" class="label">CLIENT</text>
+  <text x="570" y="186" text-anchor="middle" class="sublabel">(Laptop)</text>
+  
+  <rect x="695" y="145" width="130" height="55" fill="#dcfce7" stroke="#16a34a" class="box"/>
+  <text x="760" y="167" text-anchor="middle" class="label">SERVER</text>
+  <text x="760" y="186" text-anchor="middle" class="sublabel">(Cloud)</text>
+  
+  <!-- SSE Arrows with cloud symbol -->
+  <path d="M 635 158 L 695 158" class="arrow" marker-end="url(#arrow)"/>
+  <path d="M 695 187 L 635 187" class="arrow" marker-end="url(#arrow)"/>
+  
+  <!-- Cloud/Network indicator -->
+  <ellipse cx="665" cy="172.5" rx="18" ry="12" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+  <text x="665" y="177" text-anchor="middle" style="font: 10px sans-serif; fill: #3b82f6; font-weight: bold;">NET</text>
+  
+  <!-- SSE Details -->
+  <text x="490" y="235" class="label">How it works:</text>
+  <text x="490" y="258" class="sublabel">• Server runs as HTTP service</text>
+  <text x="490" y="277" class="sublabel">• Client connects via HTTP + SSE</text>
+  <text x="490" y="296" class="sublabel">• Works over internet</text>
+  
+  <text x="490" y="330" class="label">Best for:</text>
+  <text x="490" y="353" class="sublabel">• Enterprise deployments</text>
+  <text x="490" y="372" class="sublabel">• Team-shared servers</text>
+  <text x="490" y="391" class="sublabel">• Cloud-hosted tools</text>
+  
+  <!-- SSE Pros/Cons with better spacing -->
+  <text x="490" y="425" class="check">✓ Network access</text>
+  <text x="620" y="425" class="check">✓ Many clients</text>
+  <text x="740" y="425" class="cross">✗ Needs auth</text>
+  
+  <!-- Bottom comparison -->
+  <rect x="40" y="465" width="820" height="28" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" rx="4"/>
+  <text x="450" y="484" text-anchor="middle" class="sublabel">This series uses STDIO (local). Blog 12 covers SSE for production deployment.</text>
+</svg>
