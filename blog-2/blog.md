@@ -203,9 +203,33 @@ Servers don't just "do everything." They expose specific capabilities through th
 
 **Discovery:** Client calls `prompts/list`. Server returns available prompts with names, descriptions, and optional arguments.
 
+### Primitive 4: SAMPLING
+
+**Server-initiated LLM requests.**
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ SAMPLING = Server asks Host to run LLM completions      │
+├─────────────────────────────────────────────────────────┤
+│ • Summarize this 50-page document I just scraped        │
+│ • Review this code and suggest improvements             │
+│ • Decide which of these 10 results is most relevant     │
+└─────────────────────────────────────────────────────────┘
+```
+
+**Who controls it:** The Server initiates the request, but the **Host controls approval and execution**. The Host can show the user what the Server is asking for, require confirmation, or reject it entirely.
+
+**Key characteristic:** Bidirectional intelligence. While Tools let the Host call the Server, Sampling lets the Server leverage the Host's LLM capabilities. This enables **agentic loops** where the server can process large amounts of data and ask the AI to help make sense of it.
+
+**Why it matters:** Imagine a web scraping server that reads 50 pages. Instead of sending all that text back to the Host (overwhelming the context), the server can use Sampling to summarize each page locally, then return only the summaries. The AI helps the server, not just the other way around.
+
+**Discovery:** Server declares `sampling` capability during initialization. Host decides whether to allow it.
+
+> **We'll use Sampling extensively in Blog 10-11** when building a research assistant that browses the web and summarizes findings.
+
 ### Summary: Who Controls What?
 
-**The Host is the gatekeeper.** Even if the AI model wants to call a tool, the Host can require user approval. Even if a resource exists, the Host decides whether to attach it. The control flow is: **User ↔ Host ↔ Model** (for AI-powered hosts) or **User ↔ Host** (for rule-based hosts).
+**The Host is the gatekeeper.** Even if the AI model wants to call a tool, the Host can require user approval. Even if a resource exists, the Host decides whether to attach it. Even when a Server requests Sampling, the Host controls whether to execute it. The control flow is: **User ↔ Host ↔ Model** (for AI-powered hosts) or **User ↔ Host** (for rule-based hosts).
 
 ---
 
@@ -456,6 +480,7 @@ Remember the "Connection Refused" promise from the intro? Here's your diagnostic
  TOOLS = Invocable capabilities (Host-controlled, some read-only, some mutate)
  RESOURCES = Data sources (User/Host-controlled, read-only)
  PROMPTS = Templates (User/Host-controlled, pre-built context)
+ SAMPLING = Server-initiated LLM requests (Host-controlled, enables agentic loops)
 
  Control Flow = User ↔ Host ↔ Model (Host is the gatekeeper)
 
@@ -495,11 +520,12 @@ You'll go from "I understand the architecture" to "I have a working server."
 | Server | Your code | You write it |
 
 ### The Primitives
-| Primitive | Controlled By | Can Mutate? |
+| Primitive | Controlled By | Purpose |
 |-----------|---------------|-------------|
-| Tools | Host (AI/rules/code) | Some do, some don't |
-| Resources | User or Host | No |
-| Prompts | User or Host | No |
+| Tools | Host (AI/rules/code) | Invoke actions (read or write) |
+| Resources | User or Host | Read-only data access |
+| Prompts | User or Host | Pre-built conversation templates |
+| Sampling | Server initiates, Host controls | Server asks Host to run LLM |
 
 ### The Transports
 | Transport | Use Case | Network? |
