@@ -3,7 +3,7 @@
 
 ---
 
-> Before you write a single line of code, you need to understand the players in the MCP game and how they talk to each other.
+> Before you write a single line of code, you need to understand the components in an MCP integration and how they talk to each other.
 
 ---
 
@@ -49,17 +49,17 @@ The Host also does the final formatting. When it gets back "1547" from the datab
 | **Lives in** | Inside the Host application |
 | **Role** | Wraps Host decisions in MCP protocol format, manages Server connections |
 
-The Client is the postal service between Host and Server.
+The Client is the protocol/runtime component inside the Host that manages the MCP connection lifecycle, discovery, request routing, and response correlation.
 
 When the Host decides "Call `run_sql` with query 'SELECT COUNT(*)'", the Client's job is purely mechanical:
 1. Wrap that decision in JSON-RPC format: `{"method": "tools/call", "params": {...}}`
-2. Send it to the Server (via STDIO or SSE)
+2. Send it to the Server (via stdio or Streamable HTTP)
 3. Wait for the response
 4. Pass the raw result back to the Host
 
 **The Client has zero intelligence.** It doesn't decide which tool to call. It doesn't format responses for users. It's just a messenger that knows how to speak the MCP protocol.
 
-**In Claude Desktop:** When you configure 3 servers in your config file, Claude Desktop spawns 3 internal Clients - one per server. You never see them directly. They're background workers managing the MCP connections while the Host (Claude) does the thinking.
+**In Claude Desktop:** Each configured server is handled through its own connection state (often modeled as one client-connection per server). More broadly, most hosts maintain separate per-server connection state inside the application (transport/session state, capability discovery cache, and request/response correlation), though implementation details vary by host. You don't see these components directly - they run in the background managing MCP connections while the Host does the reasoning and response formatting.
 
 > **Why separate Clients if the protocol is the same?**
 > 
@@ -67,8 +67,14 @@ When the Host decides "Call `run_sql` with query 'SELECT COUNT(*)'", the Client'
 > - A separate communication channel (different stdin/stdout pipes to different processes)
 > - Request/response tracking (Client 1's request ID #5 is separate from Client 2's request ID #5)
 > - Server-specific tool discovery (Client 1 knows `run_sql`, Client 2 knows `send_message`)
->
-> Think of it like phone calls on your smartphone: same voice protocol, but you need separate channels to keep multiple conversations straight. One Client = one active connection to one Server.
+
+
+All clients speak the same MCP protocol. Hosts still keep separate client instances (or separate per-connection state internally) because each server connection needs its own: 
+- transport/session state (stdio pipes or HTTP session)
+- request/response correlation (IDs, timeouts, inflight calls)
+- capability cache (tools/resources/prompts discovered from that server)
+- error/retry/backoff behavior per connection
+
 
 ### Player 3: SERVER
 
@@ -112,6 +118,46 @@ USER: Sees the natural language response
 ![MCP Architecture Overview](assets/architecture-overview.svg)
 
 **The diagram shows:** Claude Desktop (Host) contains 3 Clients, each managing a connection to a different Server (Postgres, Slack, Files). The AI model in Claude sees all the tools from all 3 servers as if they're one integrated system.
+
+### How Does the Host Route to the Right Server?
+
+When you have 3 servers configured, how does Claude know which one to call? **The Host builds a unified capability catalog at startup:**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                   UNIFIED CAPABILITY CATALOG                    │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  At Startup:                                                    │
+│  • Client 1 calls tools/list → gets ["query_database"]          │
+│  • Client 2 calls tools/list → gets ["send_email", "read_inbox"]│
+│  • Client 3 calls tools/list → gets ["search_web"]              │
+│                                                                 │
+│  Host builds internal map:                                      │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │ "query_database" → Client 1 → DB Server                    │ │
+│  │ "send_email"     → Client 2 → Email Server                 │ │
+│  │ "read_inbox"     → Client 2 → Email Server                 │ │
+│  │ "search_web"     → Client 3 → Web Server                   │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                 │
+│  LLM sees: "I have 4 tools available"                           │
+│  LLM picks: "query_database" based on user request              │
+│  Host routes: → Client 1 → DB Server                            │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**The routing is automatic and invisible to the LLM.** Claude doesn't "choose a server" - it chooses a **tool** based on what the user needs. The Host handles the routing behind the scenes.
+
+> **What if two servers register the same tool name?**
+> 
+> This is a name collision. Different hosts handle it differently:
+> - **Namespacing:** Some hosts prefix with server name: `db-analyst/search` vs `web/search`
+> - **First wins:** The first server's tool takes precedence (config order matters)
+> - **Error:** Some hosts reject duplicate names at startup
+> 
+> **Best practice:** Use unique, descriptive tool names like `query_postgres` instead of generic names like `query`.
 
 ---
 
@@ -203,7 +249,7 @@ Servers don't just "do everything." They expose specific capabilities through th
 
 **Discovery:** Client calls `prompts/list`. Server returns available prompts with names, descriptions, and optional arguments.
 
-### Primitive 4: SAMPLING
+### Optional capability: Sampling (server → client request)
 
 **Server-initiated LLM requests.**
 
@@ -255,13 +301,15 @@ The default for local applications.
 
 **This is what Claude Desktop uses.** When you configure a server in `claude_desktop_config.json`, Claude spawns it as a subprocess.
 
-### Transport 2: SSE (Server-Sent Events over HTTP)
+### Transport 2: Streamable HTTP
 
 For remote and shared servers.
 
 ![SSE Transport: HTTP Communication over Internet](assets/sse-transport.svg)
 
-**How it works:** The Server runs as an HTTP service. The Client connects via Server-Sent Events for streaming responses. (Hosts may implement HTTP transport differently; the key is it's remote communication over HTTP.)
+**How it works:** The **Streamable HTTP** transport uses HTTP requests for client→server messages and can optionally use Server-Sent Events (SSE) for server→client streaming. It's designed for remote/shared servers and multi-client deployments.
+
+**SSE is not the main "transport choice" anymore in modern MCP writeups,** it's best explained as a streaming mechanism used by Streamable HTTP (or as legacy/deprecated in older stacks), depending on the implementation/version.
 
 **Use case:** Enterprise deployments, shared team servers, cloud hosting.
 
@@ -426,13 +474,13 @@ When Claude decides to call `run_sql`, it doesn't just fire. The **Host** (not t
 
 Hosts *can* be configured to auto-approve certain tools, but by default, most act conservatively and ask for permission on everything.
 
-> **The AI proposes. You approve.** This is why you can run MCP servers locally without fear. Even if the AI hallucinates a `DELETE FROM users` command, it cannot execute without your click.
+> Many hosts implement user approvals for sensitive tools, but **you must not rely on host UI prompts as the only safety control.** Treat approvals as an extra layer. The real safety boundary is still: server-side allowlists, validation, scoped credentials, and auditing.
 
-**Important:** Host approval is UX-level safety for local/trusted servers. For remote or shared servers (SSE), the **server must still implement its own authentication and authorization**. Never assume the Host's permission layer replaces server-side security.
+**Important:** Host approval is a **host-side safety layer** (often implemented as user confirmation prompts), most effective for local/trusted setups. For **remote or shared servers (Streamable HTTP)**, the server must still enforce **authentication and authorization** (and ideally least-privilege credentials, validation, and auditing). Never assume the host's permission prompts replace server-side security.
 
 ---
 
-## Common Methods Reference
+## Common protocol methods (non-exhaustive)
 
 Here are the key JSON-RPC methods you'll see:
 
@@ -445,6 +493,8 @@ Here are the key JSON-RPC methods you'll see:
 | `resources/read` | Client → Server | Read a resource |
 | `prompts/list` | Client → Server | Discover available prompts |
 | `prompts/get` | Client → Server | Get a prompt template |
+
+The protocol includes additional capabilities/notifications beyond these; this list is the minimum you'll see in day-to-day tool/resource/prompt usage.
 
 ---
 
@@ -485,7 +535,7 @@ Remember the "Connection Refused" promise from the intro? Here's your diagnostic
  Control Flow = User ↔ Host ↔ Model (Host is the gatekeeper)
 
  STDIO = Local transport (process-to-process)
- SSE = Remote transport (over HTTP)
+ Streamable HTTP = Remote transport (over HTTP)
 
  JSON-RPC 2.0 = The message format for all communication
 
@@ -531,7 +581,7 @@ You'll go from "I understand the architecture" to "I have a working server."
 | Transport | Use Case | Network? |
 |-----------|----------|----------|
 | STDIO | Local/Desktop | No |
-| SSE | Remote/Shared | Yes |
+| Streamable HTTP | Remote/Shared | Yes |
 
 ---
 
