@@ -8,7 +8,7 @@
       .text-label { font-family: 'Segoe UI', Arial, sans-serif; font-size: 14px; fill: #3498db; font-weight: 600; }
       .arrow { stroke: #3498db; stroke-width: 3; fill: none; }
       .cloud { fill: #dbeafe; stroke: #3b82f6; stroke-width: 2; }
-      .cloud-text { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; fill: #3b82f6; font-weight: bold; }
+      .cloud-text { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; fill: #3b82f6; font-weight: bold; }
     </style>
     <marker id="arrowhead-double" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
       <polygon points="0 0, 10 3, 0 6" fill="#3498db" />
@@ -26,11 +26,11 @@
   <text x="475" y="140" class="text-small" text-anchor="middle">(Cloud)</text>
   
   <!-- Cloud/Internet in middle -->
-  <ellipse cx="300" cy="125" rx="50" ry="30" class="cloud"/>
-  <text x="300" y="120" class="cloud-text" text-anchor="middle">Internet</text>
-  <text x="300" y="135" class="cloud-text" text-anchor="middle">HTTP/SSE</text>
+  <ellipse cx="300" cy="125" rx="60" ry="30" class="cloud"/>
+  <text x="300" y="118" class="cloud-text" text-anchor="middle">Internet</text>
+  <text x="300" y="135" class="cloud-text" text-anchor="middle">Streamable HTTP</text>
   
   <!-- Bidirectional arrow -->
-  <line x1="200" y1="125" x2="250" y2="125" class="arrow" marker-end="url(#arrowhead-double)"/>
-  <line x1="350" y1="125" x2="400" y2="125" class="arrow" marker-end="url(#arrowhead-double)"/>
+  <line x1="200" y1="125" x2="240" y2="125" class="arrow" marker-end="url(#arrowhead-double)"/>
+  <line x1="360" y1="125" x2="400" y2="125" class="arrow" marker-end="url(#arrowhead-double)"/>
 </svg>

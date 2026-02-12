@@ -1,9 +1,8 @@
 # MCP Architecture Deep Dive
 ## The Players, The Primitives, and The Protocol
 
----
 
-> Before you write a single line of code, you need to understand the components in an MCP integration and how they talk to each other.
+> *"Before you write a single line of code, you need to understand the components in an MCP integration and how they talk to each other."*
 
 ---
 
@@ -29,7 +28,7 @@ MCP isn't just "connecting to a database." It's a chain of three distinct softwa
 | **Examples** | Claude Desktop, Cursor IDE, rule-based scripts, monitoring systems |
 | **Role** | Decides which tools to call, formats results for the user |
 
-The Host is the decision-maker. When you ask "How many users signed up last week?", the Host analyzes your question and decides: "I need to call the `run_sql` tool with this query."
+The Host is the decision maker. When you ask "How many users signed up last week?", the Host analyzes your question and decides: "I need to call the `run_sql` tool with this query."
 
 **The Host doesn't have to use AI.** It could be:
 - **AI-powered** (Claude decides which tool to use based on conversation)
@@ -39,7 +38,7 @@ The Host is the decision-maker. When you ask "How many users signed up last week
 
 The Host also does the final formatting. When it gets back "1547" from the database, the Host (if it's AI-powered) turns that into: "1,547 users signed up last week. That's up 23% from the previous week."
 
-**In Claude Desktop:** The Host is the entire application you interact with - the chat UI, the Claude AI model that thinks, and the response formatter.
+**In Claude Desktop:** The Host is the entire application you interact with, the chat UI, the Claude AI model that thinks, and the response formatter.
 
 ### Player 2: CLIENT
 
@@ -63,7 +62,7 @@ When the Host decides "Call `run_sql` with query 'SELECT COUNT(*)'", the Client'
 
 > **Why separate Clients if the protocol is the same?**
 > 
-> Good question! All Clients use identical JSON-RPC format. The reason for multiple Clients is **connection management**, not different protocols. Each Client manages:
+> All Clients use identical JSON-RPC format. The reason for multiple Clients is **connection management**, not different protocols. Each Client manages:
 > - A separate communication channel (different stdin/stdout pipes to different processes)
 > - Request/response tracking (Client 1's request ID #5 is separate from Client 2's request ID #5)
 > - Server-specific tool discovery (Client 1 knows `run_sql`, Client 2 knows `send_message`)
@@ -82,7 +81,7 @@ All clients speak the same MCP protocol. Hosts still keep separate client instan
 |---|---|
 | **What** | A standalone program that exposes data or actions |
 | **Written by** | You, or the community |
-| **Role** | Does the actual work - queries databases, calls APIs, reads files |
+| **Role** | Does the actual work, queries databases, calls APIs, reads files |
 
 The Server is where your code lives. It has the database credentials, the file system access, the API keys. It executes logic and returns results.
 
@@ -305,11 +304,11 @@ The default for local applications.
 
 For remote and shared servers.
 
-![SSE Transport: HTTP Communication over Internet](assets/sse-transport.svg)
+![Streamable HTTP Transport: HTTP Communication over Internet](assets/streamable-http-transport.svg)
 
-**How it works:** The **Streamable HTTP** transport uses HTTP requests for client→server messages and can optionally use Server-Sent Events (SSE) for server→client streaming. It's designed for remote/shared servers and multi-client deployments.
+**How it works:** The **Streamable HTTP** transport uses a single HTTP endpoint for client→server messages (POST) and can optionally use Server-Sent Events (SSE) for server→client streaming. It supports session management via `Mcp-Session-Id` headers and is designed for remote/shared servers and multi-client deployments.
 
-**SSE is not the main "transport choice" anymore in modern MCP writeups,** it's best explained as a streaming mechanism used by Streamable HTTP (or as legacy/deprecated in older stacks), depending on the implementation/version.
+> **Note:** The older "HTTP+SSE" transport from earlier MCP spec revisions has been replaced by Streamable HTTP as of the 2025-03-26 spec. Streamable HTTP is the current standard for remote MCP servers.
 
 **Use case:** Enterprise deployments, shared team servers, cloud hosting.
 
@@ -319,9 +318,9 @@ For remote and shared servers.
 | One server, many clients | Security considerations |
 | Works across machines | Auth required |
 
-**We'll cover SSE deployment in Blog 12.** For now, we're using STDIO.
+**We'll cover Streamable HTTP deployment in Blog 12.** For now, we're using STDIO.
 
-![Transport Comparison: STDIO vs SSE](assets/transport-comparison.svg)
+![Transport Comparison: STDIO vs Streamable HTTP](assets/transport-comparison.svg)
 
 ---
 
@@ -556,8 +555,6 @@ In **Blog 3: Your First MCP Server**, we'll:
 
 You'll go from "I understand the architecture" to "I have a working server."
 
-**[Continue to Blog 3 →](../blog-3/)**
-
 ---
 
 ## Quick Reference
@@ -585,5 +582,5 @@ You'll go from "I understand the architecture" to "I have a working server."
 
 ---
 
-*Previous: [Blog 1 - What the Hell is MCP?](../blog-1/)*
-*Next: [Blog 3 - Your First MCP Server](../blog-3/) →*
+*Previous blog: [← Blog 1: What the Hell is MCP?](../blog-1/blog.md)* 
+*Next up: [Blog 3: Your First MCP Server →](../blog-3/blog.md)*

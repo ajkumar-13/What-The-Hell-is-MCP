@@ -17,7 +17,7 @@
   </defs>
   
   <!-- Title -->
-  <text x="450" y="35" text-anchor="middle" class="title">Transport Comparison: STDIO vs SSE</text>
+  <text x="450" y="35" text-anchor="middle" class="title">Transport Comparison: STDIO vs Streamable HTTP</text>
   
   <!-- STDIO Section -->
   <rect x="40" y="70" width="390" height="380" fill="#f0fdf4" stroke="#16a34a" stroke-width="2" rx="10"/>
@@ -54,12 +54,12 @@
   <text x="180" y="425" class="check">✓ Data stays local</text>
   <text x="310" y="425" class="cross">✗ Not shareable</text>
   
-  <!-- SSE Section -->
+  <!-- Streamable HTTP Section -->
   <rect x="470" y="70" width="390" height="380" fill="#eff6ff" stroke="#3b82f6" stroke-width="2" rx="10"/>
-  <text x="665" y="100" text-anchor="middle" class="section-title">SSE (Server-Sent Events)</text>
+  <text x="665" y="100" text-anchor="middle" class="section-title">Streamable HTTP</text>
   <text x="665" y="122" text-anchor="middle" class="sublabel">For remote and shared servers</text>
   
-  <!-- SSE Diagram -->
+  <!-- Streamable HTTP Diagram -->
   <rect x="505" y="145" width="130" height="55" fill="#fef3c7" stroke="#d97706" class="box"/>
   <text x="570" y="167" text-anchor="middle" class="label">CLIENT</text>
   <text x="570" y="186" text-anchor="middle" class="sublabel">(Laptop)</text>
@@ -68,7 +68,7 @@
   <text x="760" y="167" text-anchor="middle" class="label">SERVER</text>
   <text x="760" y="186" text-anchor="middle" class="sublabel">(Cloud)</text>
   
-  <!-- SSE Arrows with cloud symbol -->
+  <!-- Streamable HTTP Arrows with cloud symbol -->
   <path d="M 635 158 L 695 158" class="arrow" marker-end="url(#arrow)"/>
   <path d="M 695 187 L 635 187" class="arrow" marker-end="url(#arrow)"/>
   
@@ -76,10 +76,10 @@
   <ellipse cx="665" cy="172.5" rx="18" ry="12" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
   <text x="665" y="177" text-anchor="middle" style="font: 10px sans-serif; fill: #3b82f6; font-weight: bold;">NET</text>
   
-  <!-- SSE Details -->
+  <!-- Streamable HTTP Details -->
   <text x="490" y="235" class="label">How it works:</text>
   <text x="490" y="258" class="sublabel">• Server runs as HTTP service</text>
-  <text x="490" y="277" class="sublabel">• Client connects via HTTP + SSE</text>
+  <text x="490" y="277" class="sublabel">• Client connects via Streamable HTTP</text>
   <text x="490" y="296" class="sublabel">• Works over internet</text>
   
   <text x="490" y="330" class="label">Best for:</text>
@@ -87,12 +87,12 @@
   <text x="490" y="372" class="sublabel">• Team-shared servers</text>
   <text x="490" y="391" class="sublabel">• Cloud-hosted tools</text>
   
-  <!-- SSE Pros/Cons with better spacing -->
+  <!-- Streamable HTTP Pros/Cons with better spacing -->
   <text x="490" y="425" class="check">✓ Network access</text>
   <text x="620" y="425" class="check">✓ Many clients</text>
   <text x="740" y="425" class="cross">✗ Needs auth</text>
   
   <!-- Bottom comparison -->
   <rect x="40" y="465" width="820" height="28" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1" rx="4"/>
-  <text x="450" y="484" text-anchor="middle" class="sublabel">This series uses STDIO (local). Blog 12 covers SSE for production deployment.</text>
+  <text x="450" y="484" text-anchor="middle" class="sublabel">This series uses STDIO (local). Blog 12 covers Streamable HTTP for production deployment.</text>
 </svg>
