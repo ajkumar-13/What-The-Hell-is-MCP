@@ -1,7 +1,8 @@
 # What the Hell is MCP?
 ## The Problem It Solves (And Why You Should Care)
 
-Ever tried to get Claude to query your local SQLite database? Or asked ChatGPT to read your server logs? You end up **copy-pasting data manually**.
+
+> *"Ever tried to get Claude to query your local SQLite database? Or asked ChatGPT to read your server logs? You end up copy-pasting data manually."*
 
 ---
 
@@ -97,7 +98,7 @@ You talk to the Host. The Host uses its internal Client to talk to Servers. Serv
 └─────────────────────────────────────────────────────────────┘
 ```
 
-The **Host** is your UI. The **Client** is the protocol adapter embedded in the host—it translates requests into MCP format. The **Server** is the capability provider you write—it exposes tools, resources, and prompts to any connected client.
+The **Host** is your UI. The **Client** is the protocol adapter embedded in the host, it translates requests into MCP format. The **Server** is the capability provider you write, it exposes tools, resources, and prompts to any connected client.
 
 ### The Protocol
 
@@ -169,7 +170,7 @@ This is valuable for:
 - Accessing code on your machine
 - Working with sensitive company data
 
-> **Important:** A local MCP server does not imply a local model. If your host uses a cloud LLM, any tool output included in the conversation will be sent to that model provider. MCP standardizes access—it does not define the privacy boundary. Whether data leaves your machine depends on your host and model configuration.
+> **Important:** A local MCP server does not imply a local model. If your host uses a cloud LLM, any tool output included in the conversation will be sent to that model provider. MCP standardizes access, it does not define the privacy boundary. Whether data leaves your machine depends on your host and model configuration.
 
 ---
 
@@ -303,7 +304,7 @@ Anthropic open-sourced MCP in November 2024 as a way to connect AI assistants to
 MCP is:
 - **Open specification** anyone can implement
 - **Open source SDKs** in Python and TypeScript
-- **Not proprietary** to Claude—works with any compliant AI tool
+- **Not proprietary** to Claude, works with any compliant AI tool
 
 ---
 
@@ -317,21 +318,13 @@ MCP is:
   - Tools = Actions (run query, send message)
   - Resources = Data (files, schemas)
   - Prompts = Templates (pre-built workflows)
-- **Open Standard:** Not locked to Claude—any AI tool can implement it
+- **Open Standard:** Not locked to Claude, any AI tool can implement it
 
 ---
 
 ## What's Next?
 
-You now understand what MCP is and why it exists. Next, we'll go deeper into the architecture.
-
-In **Blog 2: MCP Architecture Deep Dive**, we'll cover:
-- Host, Client, Server in detail
-- stdio vs Streamable HTTP transports
-- The complete lifecycle of a request
-- How tool discovery works
-
-**[Continue to Blog 2 →](../blog-2/)**
+You now understand what MCP is and why it exists. In **Blog 2**, we go deeper into the architecture, Host, Client, Server in detail, stdio vs Streamable HTTP transports, the complete request lifecycle, and how tool discovery works.
 
 ---
 
@@ -357,4 +350,4 @@ In **Blog 2: MCP Architecture Deep Dive**, we'll cover:
 
 ---
 
-*Next: [Blog 2 - MCP Architecture Deep Dive](../blog-2/) →*
+*Next up: [Blog 2: MCP Architecture Deep Dive →](../blog-2/blog.md)*
