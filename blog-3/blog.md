@@ -1,11 +1,9 @@
 # Your First MCP Server
 ## Hello World Done Right
 
-*Reading Time: 20 minutes*
 
----
 
-> Time to get our hands dirty. We're building an MCP server that actually does something useful—a system information server that lets Claude pull live system snapshots on-demand (CPU/memory/disk + processes).
+> *"Time to get our hands dirty. We're building an MCP server that actually does something useful, a system information server that lets Claude pull live system snapshots on-demand."*
 
 ---
 
@@ -102,7 +100,7 @@ if __name__ == "__main__":
 | `FastMCP("system-info")` | Creates an MCP server with a name (shown in Claude) |
 | `mcp.run()` | Starts the server with STDIO transport (default for local) |
 
-That's it! FastMCP handles all the protocol details. This server does nothing yet—it has no tools. Let's fix that.
+That's it! FastMCP handles all the protocol details. This server does nothing yet, it has no tools. Let's fix that.
 
 ---
 
@@ -152,7 +150,7 @@ if __name__ == "__main__":
 
 ## 4. Adding a Second Tool (With Arguments)
 
-Let's add a tool that accepts input—searching for a process by name. With FastMCP, just add another decorated function:
+Let's add a tool that accepts input, searching for a process by name. With FastMCP, just add another decorated function:
 
 **Add this to your `src/server.py`:**
 
@@ -194,7 +192,7 @@ def find_process(name: str, limit: int = 25) -> str:
 
 Now Claude can ask: *"Find all Chrome processes"* and your tool will return the actual PIDs and memory usage.
 
-> ⚠️ **Privacy Note:** The `find_process` tool exposes process names and PIDs. Only expose what you're comfortable sharing—tool outputs become part of the conversation context.
+> **Privacy Note:** The `find_process` tool exposes process names and PIDs. Only expose what you're comfortable sharing, tool outputs become part of the conversation context.
 
 ---
 
@@ -380,9 +378,11 @@ This automatically adds the server to your Claude Desktop config. Restart Claude
 
 > **Dev mode:** You can also test interactively with `uv run mcp dev src/server.py` which opens the MCP Inspector.
 
-### Option B: Manual Configuration
+> **Heads up:** `mcp install` uses `--frozen --with mcp[cli] mcp run` internally, which downloads packages at startup. If your network is slow, Claude Desktop may time out before the server responds. If you hit _"Could not attach to MCP server"_, skip to **Option B** below, it starts instantly because dependencies are already installed via `uv sync`.
 
-If you prefer to configure manually (or Option A doesn't work):
+### Option B: Manual Configuration (Recommended if Option A fails)
+
+If `mcp install` doesn't work, or you see connection errors, configure manually:
 
 #### Step 1: Find the Config File
 
@@ -393,41 +393,34 @@ If you prefer to configure manually (or Option A doesn't work):
 
 If the file doesn't exist, create it.
 
-> **Note:** Some MCP clients (like Cursor, VS Code extensions) use a different format called `mcp.json`. The structure is similar but not identical. We focus on Claude Desktop's format here—the concepts transfer to other clients.
+> **Note:** Some MCP clients (like Cursor, VS Code extensions) use a different format called `mcp.json`. The structure is similar but not identical. We focus on Claude Desktop's format here, the concepts transfer to other clients.
 
-### Step 2: Add Your Server
+#### Step 2: Add Your Server
 
-Open the config file and add your server. **Use the absolute path to your project folder.**
+Open the config file and add your server.
+
+> **Important:** Use the **full absolute path** to `uv` itself, not just `"uv"`. Claude Desktop launches as a GUI app and may not see your shell's PATH additions (like `~/.local/bin`). Find your `uv` path with:
+>
+> ```powershell
+> # Windows
+> Get-Command uv | Select-Object -ExpandProperty Source
+> # macOS/Linux
+> which uv
+> ```
 
 **Windows example:**
 
->  **Windows Users:** You MUST use double backslashes (`\\`) in JSON paths! If you copy `C:\Users\...` directly, the `\U` becomes an invalid escape sequence and breaks the config.
+>  **Windows Users:** You MUST use double backslashes (`\\`) in JSON paths
 
-```json
-{
-  "mcpServers": {
-    "system-info": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--directory",
-        "C:\\Users\\YourName\\mcp-system-info",
-        "python",
-        "src/server.py"
-      ]
-    }
-  }
-}
-```
 
-![The config file should look like this](assets/config-example.svg)
+![The config file should look like this](assets/config-example.PNG)
 
 **macOS/Linux example:**
 ```json
 {
   "mcpServers": {
     "system-info": {
-      "command": "uv",
+      "command": "/Users/yourname/.local/bin/uv",
       "args": [
         "run",
         "--directory",
@@ -440,19 +433,35 @@ Open the config file and add your server. **Use the absolute path to your projec
 }
 ```
 
->  **Important:** Use the full absolute path. Relative paths won't work.
+> **Important:** Use absolute paths for both the `uv` command AND the project directory. Relative paths won't work.
 
 #### Step 3: Quit and Restart Claude Desktop
 
 Claude only reads the config file on startup. If it's already running, your changes won't take effect.
 
 1. **Quit completely** (not just close the window):
-   - **Windows:** Right-click the Claude icon in the system tray → Quit
+   - **Windows:** Right-click the Claude icon in the **system tray** (bottom-right of taskbar, you may need to click the `^` arrow to find it) → **Quit**
    - **macOS:** `Cmd+Q` (clicking the red X doesn't quit the app!)
-2. Reopen Claude Desktop
-3. Open **Settings → Developers** (menu labels can vary by Claude Desktop version) to confirm the server is connected and view logs
+2. **Important:** Make sure ALL Claude processes are gone. On Windows, check Task Manager — if you see multiple `claude.exe` processes from hours ago, kill them all. Zombie processes prevent the new instance from reading the updated config.
+3. Reopen Claude Desktop
 
-### Step 4: Test It!
+> **Pro tip:** If Claude still won't restart cleanly, force-kill from terminal:
+> ```powershell
+> # Windows
+> Stop-Process -Name "claude" -Force
+> # macOS
+> pkill -9 Claude
+> ```
+
+#### Step 4: Find Your Tools
+
+Once Claude Desktop opens with a working MCP server, look for the **"+" button** next to the chat input area. Click it — you'll see your MCP tools listed there:
+
+![MCP tools appearing in Claude Desktop under the + button](assets/claude-mcp-tools.png)
+
+> **Note:** In some Claude Desktop versions, tools appear under a **🔨 hammer icon** instead of the **+** button. Either way, your `system-info` tools will be listed there.
+
+#### Step 5: Test It!
 
 Type in Claude:
 
@@ -463,7 +472,7 @@ You should see:
 2. A permission dialog appears (click Allow)
 3. Claude responds with your actual CPU percentage
 
-![Claude calling your tool and showing real system stats](assets/test-result.svg)
+![Claude calling your tool and showing real system stats](assets/test-result.PNG)
 
 Try these too:
 - "Find all Chrome processes"
@@ -474,36 +483,89 @@ Try these too:
 
 ## 9. Troubleshooting
 
+MCP is young, and connecting your first server can be frustrating. Here are the **real issues** you'll likely hit, and exactly how to fix them.
+
 ### Server Not Appearing?
 
-**Check 1: Path is correct**
+**Check 1: Is `uv` findable by Claude Desktop?**
+
+This is the #1 issue. Claude Desktop is a GUI app and may not inherit your terminal's PATH. Use the **full absolute path** to `uv` in your config:
+
+```powershell
+# Find your uv path
+Get-Command uv | Select-Object -ExpandProperty Source
+# Example output: C:\Users\admin\.local\bin\uv.exe
+```
+
+Then use that full path in `"command"`, not just `"uv"`.
+
+**Check 2: Path is correct**
 ```powershell
 # Windows - verify path exists
 Test-Path "C:\Users\YourName\mcp-system-info\src\server.py"
 ```
 
-**Check 2: Server runs standalone**
+**Check 3: Server runs standalone**
 ```bash
 cd mcp-system-info
 uv run python src/server.py
 ```
-It should hang (waiting for input). If it exits immediately, read the traceback—that's your root cause.
+It should hang (waiting for input). If it exits immediately, read the traceback, that's your root cause.
 
-**Check 3: JSON syntax**
-Your config must be valid JSON. Use a validator if unsure.
+**Check 4: JSON syntax, no BOM!**
+
+Your config must be valid JSON. On Windows, some editors add a **UTF-8 BOM** (Byte Order Mark) to the file, which breaks Claude Desktop's JSON parser. If you see _"Could not read app settings"_, check for BOM:
+
+```powershell
+# Check first bytes — should start with 7B ({), NOT EF BB BF
+Format-Hex "$env:APPDATA\Claude\claude_desktop_config.json" | Select-Object -First 2
+
+# Fix: rewrite without BOM
+$content = Get-Content "$env:APPDATA\Claude\claude_desktop_config.json" -Raw
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllText("$env:APPDATA\Claude\claude_desktop_config.json", $content, $utf8NoBom)
+```
+
+### "Could not attach to MCP server"
+
+This means Claude Desktop **found** your server but it **timed out** during startup. Common causes:
+
+1. **`mcp install` uses `--frozen --with mcp[cli]`** which downloads packages at startup. If this is slow, Claude kills the connection. Fix: use the manual config (Option B) with `uv run --directory ... python src/server.py` instead.
+
+2. **Dependencies not synced.** Run `uv sync` in your project directory first so packages are cached locally:
+   ```bash
+   cd mcp-system-info
+   uv sync
+   ```
+
+### Zombie Processes (Windows)
+
+If you close Claude Desktop's window but don't **Quit**, the old process stays running. Next time you open Claude, it starts as a "secondary instance" that **never reads the config**. You'll see the UI but no MCP servers.
+
+**Fix:** Kill all Claude processes and restart:
+```powershell
+# Kill all zombie Claude processes
+Stop-Process -Name "claude" -Force
+
+# Wait, then reopen
+Start-Sleep -Seconds 3
+Start-Process "$env:LOCALAPPDATA\AnthropicClaude\claude.exe"
+```
 
 ### Common Errors
 
 | Error | Cause | Fix |
 |-------|-------|-----|
-| Server not showing | Claude was already running | Quit completely (`Cmd+Q` / system tray → Quit) and restart |
-| Server not showing | Wrong path in config | Use absolute path with double backslashes on Windows |
-| "Server exited immediately" / "Initialize failed" | Python error, missing deps, or stdout polluted | Run `uv run python src/server.py` and check Claude MCP logs |
+| Server not showing / no tools icon | Claude was already running as zombie | Kill all `claude.exe` processes and restart |
+| Server not showing | `uv` not found by Claude Desktop | Use absolute path to `uv.exe` in config |
+| "Could not read app settings" | UTF-8 BOM in config file | Rewrite file without BOM (see above) |
+| "Could not attach to MCP server" | Server startup too slow | Use manual config (Option B), run `uv sync` first |
+| "Server exited immediately" | Python error or missing deps | Run `uv run python src/server.py` manually |
 | "Unknown tool" | Tool name mismatch | Check the function name in `@mcp.tool()` |
 | "No module named mcp" | Dependencies not installed | Run `uv add "mcp[cli]" psutil` |
 | Initialize fails / Malformed JSON | Server printed to stdout | Use `stderr` for logs, never `print()` |
 
-> ⚠️ **Critical STDIO Rule:** Never use `print()` in your server! STDIO transport uses stdout for JSON-RPC messages. If your server prints debug output to stdout, it corrupts the protocol.
+> **Critical STDIO Rule:** Never use `print()` in your server! STDIO transport uses stdout for JSON-RPC messages. If your server prints debug output to stdout, it corrupts the protocol.
 >
 > **Use this logging setup instead:**
 > ```python
@@ -512,16 +574,25 @@ Your config must be valid JSON. Use a validator if unsure.
 > log = logging.getLogger("system-info")
 > 
 > # Now use log.info(), log.error() instead of print()
-> log.info("Server started")  # ✅ Goes to stderr, safe
-> print("Debug")              # ❌ Corrupts JSON-RPC on stdout
+> log.info("Server started")  # Goes to stderr, safe
+> print("Debug")              # Corrupts JSON-RPC on stdout
 > ```
 
 ### Check Claude Logs
 
+When things go wrong, Claude Desktop writes detailed MCP logs:
+
 | OS | Log Path |
 |----|----------|
-| Windows | `%APPDATA%\Claude\logs\mcp*.log` |
+| Windows | `%APPDATA%\Claude\logs\mcp-server-system-info.log` |
 | macOS | `~/Library/Logs/Claude/mcp*.log` |
+
+```powershell
+# View the last 30 lines of the MCP log
+Get-Content "$env:APPDATA\Claude\logs\mcp-server-system-info.log" -Tail 30
+```
+
+Look for errors like `ModuleNotFoundError`, `FileNotFoundError`, or connection timeouts.
 
 ---
 
@@ -556,8 +627,6 @@ In **Blog 4: Building Your Own MCP Client**, we'll:
 - Understand the full request loop
 
 You'll go from "I can build servers" to "I can build the whole system."
-
-**[Continue to Blog 4 →](../blog-4/)**
 
 ---
 
@@ -594,5 +663,5 @@ mcp-system-info/
 
 ---
 
-*Previous: [Blog 2 - MCP Architecture Deep Dive](../blog-2/)*
-*Next: [Blog 4 - Building Your Own MCP Client](../blog-4/) →*
+*Previous blog: [← Blog 2: MCP Architecture Deep Dive](../blog-2/blog.md)*
+*Next up: [Blog 4: Building Your Own MCP Client →](../blog-4/blog.md)*

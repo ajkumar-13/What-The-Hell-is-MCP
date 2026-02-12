@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 400">
+  <defs>
+    <linearGradient id="claudeBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f7f5f2;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f0ebe3;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background (Claude Desktop style) -->
+  <rect width="600" height="400" fill="url(#claudeBg)"/>
+  
+  <!-- Header -->
+  <rect x="0" y="0" width="600" height="50" fill="#d97757"/>
+  <text x="20" y="32" fill="white" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="bold">Claude Desktop</text>
+  <circle cx="560" cy="25" r="12" fill="#c76a4d"/>
+  <text x="555" y="30" fill="white" font-family="Arial" font-size="14">🔧</text>
+  
+  <!-- User message -->
+  <rect x="200" y="70" width="380" height="40" rx="15" fill="#e8e3db"/>
+  <text x="220" y="95" fill="#333" font-family="Segoe UI, Arial, sans-serif" font-size="14">What's my current CPU usage?</text>
+  
+  <!-- Tool indicator -->
+  <rect x="20" y="130" width="200" height="35" rx="8" fill="#fff3e0" stroke="#ffb74d" stroke-width="1"/>
+  <text x="35" y="152" fill="#e65100" font-family="Segoe UI, Arial, sans-serif" font-size="12">🔧 Using: get_system_info</text>
+  
+  <!-- Claude response bubble -->
+  <rect x="20" y="180" width="400" height="120" rx="15" fill="white" stroke="#e0dcd4" stroke-width="1"/>
+  <text x="40" y="210" fill="#333" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="500">Here's your current system status:</text>
+  <text x="40" y="240" fill="#555" font-family="Consolas, monospace" font-size="13">• CPU Usage: 23%</text>
+  <text x="40" y="265" fill="#555" font-family="Consolas, monospace" font-size="13">• Memory: 45% (7GB / 16GB)</text>
+  <text x="40" y="290" fill="#555" font-family="Consolas, monospace" font-size="13">• Disk: 62% used</text>
+  
+  <!-- Success indicator -->
+  <rect x="20" y="320" width="560" height="60" rx="10" fill="#e8f5e9" stroke="#4caf50" stroke-width="1"/>
+  <text x="40" y="350" fill="#2e7d32" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="bold">✅ Success! Claude called your Python code!</text>
+  <text x="40" y="370" fill="#4caf50" font-family="Segoe UI, Arial, sans-serif" font-size="12">The CPU percentage above came from psutil running on YOUR machine.</text>
+</svg>
