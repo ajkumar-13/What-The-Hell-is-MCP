@@ -3,9 +3,9 @@
 ### A Complete Guide to the Model Context Protocol — From Confused Beginner to Production Developer
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Blogs-12-blue?style=for-the-badge" alt="12 Blogs"/>
+  <img src="https://img.shields.io/badge/Blogs-13-blue?style=for-the-badge" alt="13 Blogs"/>
   <img src="https://img.shields.io/badge/Language-Python-yellow?style=for-the-badge&logo=python" alt="Python"/>
-  <img src="https://img.shields.io/badge/Projects-3-green?style=for-the-badge" alt="3 Projects"/>
+  <img src="https://img.shields.io/badge/Projects-4-green?style=for-the-badge" alt="4 Projects"/>
   <img src="https://img.shields.io/badge/Level-Zero%20to%20Production-red?style=for-the-badge" alt="Zero to Production"/>
 </p>
 
@@ -27,9 +27,10 @@ By the end of this series, you will:
 
 - ✅ Understand what MCP is and why it matters
 - ✅ Build MCP servers that expose tools, resources, and prompts
+- ✅ Learn how client-approved sampling fits into real MCP workflows
 - ✅ Build MCP clients that can consume any MCP server
 - ✅ Deploy production-ready MCP solutions
-- ✅ Complete **3 real-world projects** with actual engineering challenges
+- ✅ Complete **4 real-world projects** with actual engineering challenges
 
 ---
 
@@ -75,7 +76,14 @@ By the end of this series, you will:
 
 | # | Blog | What You'll Learn |
 |---|------|-------------------|
-| 12 | [Production Deployment](blog-12/blog.md) | Docker, SSE transport, authentication, cloud deployment |
+| 12 | [Production Deployment](blog-12/blog.md) | Docker, Streamable HTTP transport, authentication, cloud deployment |
+
+### Phase 6: Project 4 — Multi-Client Knowledge Base (Blog 13)
+*Prove MCP interoperability across real clients*
+
+| # | Blog | What You'll Learn |
+|---|------|-------------------|
+| 13 | [Multi-Client MCP](blog-13/blog.md) | One server across Claude Desktop, Cursor, VS Code, and Python clients |
 
 ---
 
@@ -99,18 +107,27 @@ cd blog-1
 # Read blog.md and follow along!
 ```
 
-Each blog folder contains:
+Blog folders vary by phase:
+
+Foundation blogs usually contain:
+```
+blog-X/
+├── blog.md         # The full tutorial
+└── assets/         # Diagrams and screenshots
+```
+
+Project-focused blogs usually add metadata and runnable code:
 ```
 blog-X/
 ├── README.md       # Quick reference and metadata
 ├── blog.md         # The full tutorial
-├── code/           # Complete, runnable code
-└── assets/         # Diagrams (AI-generated because my stick figures are criminal)
+├── code/ or project-folder/
+└── assets/
 ```
 
 ---
 
-## The Three Projects
+## The Four Projects
 
 ### 1. Secure Database Analyst
 > *"Your CEO wants to ask questions about company data. But giving an AI raw database access is terrifying."*
@@ -139,6 +156,15 @@ An MCP server for web research:
 - MCP Sampling (server asks LLM for help)
 - Multi-page research with citations
 
+### 4. Multi-Client Knowledge Base
+> *"A protocol only matters if the same server works everywhere. This project proves it."*
+
+An MCP server that demonstrates interoperability across clients:
+- Search internal docs, code snippets, and FAQs
+- Connect the same server to Claude Desktop, Cursor, VS Code, and Python clients
+- Share team-ready config via `.cursor/mcp.json` and `.vscode/mcp.json`
+- Support both local stdio and remote Streamable HTTP deployments
+
 ---
 
 ## 📁 Repository Structure
@@ -159,7 +185,8 @@ what-the-hell-is-mcp/
 ├── blog-9/                   # Research Browser Part 1
 ├── blog-10/                  # Research Browser Part 2
 ├── blog-11/                  # Research Browser Part 3
-└── blog-12/                  # Production Deployment
+├── blog-12/                  # Production Deployment
+└── blog-13/                  # Multi-Client MCP
 ```
 
 ---
@@ -179,10 +206,11 @@ All contributions welcome, especially typo fixes. I wrote most of this at 2 AM.
 
 ## 📚 Resources
 
-- [MCP Specification](https://spec.modelcontextprotocol.io) — The official spec
+- [MCP Specification](https://modelcontextprotocol.io/specification) — The official spec and current version index
 - [Python SDK](https://github.com/modelcontextprotocol/python-sdk) — What we use
 - [Community Servers](https://github.com/modelcontextprotocol/servers) — Inspiration
 - [Claude Desktop](https://claude.ai/download) — For testing
+- [VS Code MCP Docs](https://code.visualstudio.com/docs/copilot/customization/mcp-servers) — Native MCP support in VS Code
 
 
 ## ⭐ If This Helped You

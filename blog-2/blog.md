@@ -268,7 +268,7 @@ Servers don't just "do everything." They expose specific capabilities through th
 
 **Why it matters:** Imagine a web scraping server that reads 50 pages. Instead of sending all that text back to the Host (overwhelming the context), the server can use Sampling to summarize each page locally, then return only the summaries. The AI helps the server, not just the other way around.
 
-**Discovery:** Server declares `sampling` capability during initialization. Host decides whether to allow it.
+**Discovery:** The client declares sampling support during initialization. A server can request sampling only when that client capability is available, and the Host still decides whether to allow it.
 
 > **We'll use Sampling extensively in Blog 10-11** when building a research assistant that browses the web and summarizes findings.
 
