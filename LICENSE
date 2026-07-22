@@ -1,0 +1,55 @@
+# LICENSE
+
+This repository is dual-licensed.
+
+## Prose, diagrams, illustrations
+
+The written content of this series — every `.md` file under `posts/`, every
+top-level prose file (`README.md`, `PLAN.md`, `GLOSSARY.md`, `CHEATSHEET.md`,
+`REFERENCES.md`, `CONTRIBUTING.md`, `notation_guide.md`), and every diagram
+under `assets/` and `posts/*/diagrams/` — is licensed under the **Creative
+Commons Attribution 4.0 International License (CC BY 4.0)**.
+
+You are free to:
+- **Share** — copy and redistribute the material in any medium or format.
+- **Adapt** — remix, transform, and build upon the material for any purpose,
+  including commercially.
+
+Under the following terms:
+- **Attribution** — You must give appropriate credit, provide a link to the
+  license, and indicate if changes were made. You may do so in any reasonable
+  manner, but not in any way that suggests the licensor endorses you or your use.
+
+Full text: https://creativecommons.org/licenses/by/4.0/legalcode
+
+## Code
+
+All source code in this repository — every file under `code/` and every code
+snippet under `posts/*/snippets/` — is licensed under the **MIT License**:
+
+> Copyright (c) 2026 What The Hell is MCP — a Model Context Protocol series
+>
+> Permission is hereby granted, free of charge, to any person obtaining a copy
+> of this software and associated documentation files (the "Software"), to deal
+> in the Software without restriction, including without limitation the rights
+> to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+> copies of the Software, and to permit persons to whom the Software is
+> furnished to do so, subject to the following conditions:
+>
+> The above copyright notice and this permission notice shall be included in all
+> copies or substantial portions of the Software.
+>
+> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+> IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+> FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL THE
+> AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+> LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+> OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+> SOFTWARE.
+
+## A note on the protocol itself
+
+"Model Context Protocol" and the MCP specification are maintained by the
+Agentic AI Foundation. This series is an independent educational work and is
+not an official specification document. Where the two disagree, the
+specification is right and this series has a bug worth reporting.
