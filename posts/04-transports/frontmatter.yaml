@@ -1,0 +1,7 @@
+slug: 04-transports
+title: "04 · Transports: stdio and Streamable HTTP"
+date: 2026-07-22
+tags: [model-context-protocol, mcp, foundations, transports, stdio, http]
+hero: diagrams/01-two-transports.svg
+reading_time: 13
+part: "Part I — Foundations"

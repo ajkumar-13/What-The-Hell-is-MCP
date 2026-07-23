@@ -1,0 +1,7 @@
+slug: 08-elicitation-and-mrtr
+title: "08 · Elicitation and MRTR: asking the user mid-call"
+date: 2026-07-23
+tags: [model-context-protocol, mcp, servers, elicitation, mrtr, human-in-the-loop]
+hero: diagrams/01-mrtr-loop.svg
+reading_time: 16
+part: "Part II — Building servers"

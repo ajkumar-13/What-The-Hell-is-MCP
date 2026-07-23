@@ -1,0 +1,7 @@
+slug: 12-testing-and-debugging
+title: "12 · Testing and debugging MCP"
+date: 2026-07-24
+tags: [model-context-protocol, mcp, testing, debugging, inspector, ci]
+hero: diagrams/01-three-levels-of-test.svg
+reading_time: 14
+part: "Part III — Clients, hosts, and testing"

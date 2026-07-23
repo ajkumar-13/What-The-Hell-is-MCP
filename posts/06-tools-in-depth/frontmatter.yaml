@@ -1,0 +1,7 @@
+slug: 06-tools-in-depth
+title: "06 · Tools in depth: schemas, structured output, and annotations"
+date: 2026-07-23
+tags: [model-context-protocol, mcp, servers, tools, json-schema, structured-output]
+hero: diagrams/01-anatomy-of-a-tool-call.svg
+reading_time: 17
+part: "Part II — Building servers"

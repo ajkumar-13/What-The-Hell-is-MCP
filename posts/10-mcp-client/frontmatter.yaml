@@ -1,0 +1,7 @@
+slug: 10-mcp-client
+title: "10 · Building your own MCP client"
+date: 2026-07-24
+tags: [model-context-protocol, mcp, clients, hands-on, python-sdk]
+hero: diagrams/01-client-internals.svg
+reading_time: 15
+part: "Part III — Clients, hosts, and testing"
