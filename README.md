@@ -1,231 +1,185 @@
-# What the Hell is MCP?
+# What The Hell is MCP?
 
-### A Complete Guide to the Model Context Protocol — From Confused Beginner to Production Developer
+A free, beginner-first series on the **Model Context Protocol (MCP)** — the open standard
+that lets AI applications talk to your tools and your data — taught from absolute zero
+against protocol revision **2026-07-28**.
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Blogs-13-blue?style=for-the-badge" alt="13 Blogs"/>
-  <img src="https://img.shields.io/badge/Language-Python-yellow?style=for-the-badge&logo=python" alt="Python"/>
-  <img src="https://img.shields.io/badge/Projects-4-green?style=for-the-badge" alt="4 Projects"/>
-  <img src="https://img.shields.io/badge/Level-Zero%20to%20Production-red?style=for-the-badge" alt="Zero to Production"/>
-</p>
+No protocol background, no networking background, and no OAuth background are assumed.
+If you can read Python and run a command in a terminal, you have the prerequisites.
 
----
+This repository contains the source for all 24 posts, every diagram as editable SVG, six
+runnable project codebases, and a one-page poster of the whole protocol.
 
-## Why I Wrote This
+> **License:** prose CC-BY 4.0 · code MIT
+> **Protocol revision:** 2026-07-28, throughout. See [PLAN.md](PLAN.md) section 2 for why.
+> **Python SDK:** `mcp==2.0.0b2`, pinned exactly in every project.
 
-Because **I wish this existed when I started.**
-
-Every blog in this series answers a question I actually had. Every code sample solves a problem I actually faced. Every project is something I actually built (and broke, and fixed, and broke again).
-
-If you're reading this with zero understanding of MCP, you're exactly who I wrote this for.
-
----
-
-## 🎯 What You'll Learn
-
-By the end of this series, you will:
-
-- ✅ Understand what MCP is and why it matters
-- ✅ Build MCP servers that expose tools, resources, and prompts
-- ✅ Learn how client-approved sampling fits into real MCP workflows
-- ✅ Build MCP clients that can consume any MCP server
-- ✅ Deploy production-ready MCP solutions
-- ✅ Complete **4 real-world projects** with actual engineering challenges
+> **A note on timing, in the open.** This edition was written as the 2026-07-28 revision
+> went final and while the Python SDK's 2.0 line was still in beta. Every code sample here
+> was executed against `mcp==2.0.0b2` — not transcribed from documentation — but that is a
+> pre-release, and the SDK repository's own `main` documentation already disagrees with it
+> in a few places. Each project pins the exact version it was tested against. If you are
+> reading this some months later, expect a stable `mcp>=2,<3` to exist, and expect a
+> handful of the smaller details here to have moved.
 
 ---
 
-## 📚 The Series
+## Start here
 
-### Phase 1: Foundation (Blogs 1-4)
-*Understanding MCP from scratch*
+Read the posts in order, or jump to any one. Each stands alone and links forward and back.
 
-| # | Blog | What You'll Learn |
-|---|------|-------------------|
-| 1 | [What the Hell is MCP?](blog-1/blog.md) | The problem MCP solves, the USB-C analogy, why this matters |
-| 2 | [MCP Architecture Deep Dive](blog-2/blog.md) | Hosts, Clients, Servers, Tools, Resources, Prompts, Transports |
-| 3 | [Your First MCP Server](blog-3/blog.md) | Build a system info server, connect to Claude Desktop |
-| 4 | [Building Your Own MCP Client](blog-4/blog.md) | Build a CLI chatbot, understand the tool execution loop |
+If you have never built an MCP server, **start at Post 01 and read Part I in order.** The
+four foundation posts are written so that someone who has never seen JSON-RPC can follow
+every step.
 
-### Phase 2: Project 1 — Secure Database Analyst (Blogs 5-6)
-*Production-grade PostgreSQL access for AI*
+If you already build servers and only want what changed in 2026-07-28, read these three:
 
-| # | Blog | What You'll Learn |
-|---|------|-------------------|
-| 5 | [Secure Database Analyst (Part 1)](blog-5/blog.md) | Connection pooling, SQL security layer, schema introspection |
-| 6 | [Secure Database Analyst (Part 2)](blog-6/blog.md) | Human-in-the-loop writes, transactions, audit logging |
+1. [Post 03 — The wire protocol](posts/03-wire-protocol/index.md), for the stateless model
+2. [Post 08 — Elicitation and MRTR](posts/08-elicitation-and-mrtr/index.md), for what
+   replaced the server-to-client channel
+3. [Post 09 — Tasks](posts/09-tasks/index.md), for long-running work and the extension model
 
-### Phase 3: Project 2 — DevOps First Responder (Blogs 7-8)
-*Kubernetes debugging agent with real cluster access*
+If you have ten minutes, read the [cheatsheet](CHEATSHEET.md).
 
-| # | Blog | What You'll Learn |
-|---|------|-------------------|
-| 7 | [DevOps First Responder (Part 1)](blog-7/blog.md) | K8s client setup, pod diagnostics, log analysis |
-| 8 | [DevOps First Responder (Part 2)](blog-8/blog.md) | Safe pod restart, scaling, rollbacks with approval |
-
-### Phase 4: Project 3 — Deep Research Browser (Blogs 9-11)
-*Web research agent with server-side LLM calls*
-
-| # | Blog | What You'll Learn |
-|---|------|-------------------|
-| 9 | [Deep Research Browser (Part 1)](blog-9/blog.md) | Headless browsing with Playwright, content extraction |
-| 10 | [Deep Research Browser (Part 2)](blog-10/blog.md) | MCP Sampling — servers asking LLMs for help |
-| 11 | [Deep Research Browser (Part 3)](blog-11/blog.md) | Multi-page research, PDF extraction, citations |
-
-### Phase 5: Production Deployment (Blog 12)
-*Taking MCP servers to production*
-
-| # | Blog | What You'll Learn |
-|---|------|-------------------|
-| 12 | [Production Deployment](blog-12/blog.md) | Docker, Streamable HTTP transport, authentication, cloud deployment |
-
-### Phase 6: Project 4 — Multi-Client Knowledge Base (Blog 13)
-*Prove MCP interoperability across real clients*
-
-| # | Blog | What You'll Learn |
-|---|------|-------------------|
-| 13 | [Multi-Client MCP](blog-13/blog.md) | One server across Claude Desktop, Cursor, VS Code, and Python clients |
+If you are about to ship a server to other people, read
+[Post 19 — Security](posts/19-security/index.md) first. It is the post most likely to
+change what you build.
 
 ---
 
-## Prerequisites
+## The series
 
-- **Python 3.10+** — We use modern Python features
-- **Basic Python knowledge** — Functions, classes, async/await
-- **Zero MCP knowledge** — That's literally the point
+### Part I — Foundations
 
----
+| #  | Title | |
+|----|-------|-|
+| 01 | What MCP is, and the problem it solves | [read](posts/01-what-is-mcp/index.md) |
+| 02 | The architecture: hosts, clients, and servers | [read](posts/02-architecture/index.md) |
+| 03 | The wire protocol: JSON-RPC, discovery, and the stateless model | [read](posts/03-wire-protocol/index.md) |
+| 04 | Transports: stdio and Streamable HTTP | [read](posts/04-transports/index.md) |
 
-## Getting Started
+### Part II — Building servers
 
-```bash
-# Clone the repo
-git clone https://github.com/YOUR_USERNAME/what-the-hell-is-mcp.git
-cd what-the-hell-is-mcp
+| #  | Title | |
+|----|-------|-|
+| 05 | Your first MCP server | [read](posts/05-first-server/index.md) |
+| 06 | Tools in depth: schemas, structured output, and annotations | [read](posts/06-tools-in-depth/index.md) |
+| 07 | Resources and prompts: the primitives that are not tools | [read](posts/07-resources-and-prompts/index.md) |
+| 08 | Elicitation and MRTR: asking the user mid-call | [read](posts/08-elicitation-and-mrtr/index.md) |
+| 09 | Tasks: work that outlives a single request | [read](posts/09-tasks/index.md) |
 
-# Start with Blog 1
-cd blog-1
-# Read blog.md and follow along!
-```
+### Part III — Clients, hosts, and testing
 
-Blog folders vary by phase:
+| #  | Title | |
+|----|-------|-|
+| 10 | Building your own MCP client | [read](posts/10-mcp-client/index.md) |
+| 11 | Building a host: the tool loop, many servers, and permissions | [read](posts/11-building-a-host/index.md) |
+| 12 | Testing and debugging MCP | [read](posts/12-testing-and-debugging/index.md) |
 
-Foundation blogs usually contain:
-```
-blog-X/
-├── blog.md         # The full tutorial
-└── assets/         # Diagrams and screenshots
-```
+### Part IV — Projects
 
-Project-focused blogs usually add metadata and runnable code:
-```
-blog-X/
-├── README.md       # Quick reference and metadata
-├── blog.md         # The full tutorial
-├── code/ or project-folder/
-└── assets/
-```
+| #  | Title | |
+|----|-------|-|
+| 13 | Project 1 · A secure database analyst | [read](posts/13-database-analyst/index.md) |
+| 14 | Project 1 · Writes, transactions, and an audit trail | [read](posts/14-database-writes/index.md) |
+| 15 | Project 2 · A DevOps first responder | [read](posts/15-devops-responder/index.md) |
+| 16 | Project 2 · Safe remediation with approval | [read](posts/16-devops-remediation/index.md) |
+| 17 | Project 3 · A deep research browser | [read](posts/17-research-browser/index.md) |
+| 18 | Project 3 · Server-side model calls and multi-page research | [read](posts/18-server-side-models/index.md) |
 
----
+### Part V — Production
 
-## The Four Projects
+| #  | Title | |
+|----|-------|-|
+| 19 | Security: the attacks the protocol does not stop | [read](posts/19-security/index.md) |
+| 20 | Authorization: OAuth 2.1 for MCP servers | [read](posts/20-authorization/index.md) |
+| 21 | Deploying to production: containers, scaling, and observability | [read](posts/21-deploying/index.md) |
+| 22 | Publishing: the registry, `server.json`, and MCPB bundles | [read](posts/22-publishing/index.md) |
 
-### 1. Secure Database Analyst
-> *"Your CEO wants to ask questions about company data. But giving an AI raw database access is terrifying."*
+### Part VI — Interoperability and the frontier
 
-An MCP server that lets Claude query PostgreSQL safely:
-- Connection pooling with asyncpg
-- SQL parsing and validation (blocks DROP, DELETE, etc.)
-- Human-in-the-loop for write operations
-- Full audit trail
-
-### 2. DevOps First Responder
-> *"It's 3 AM. Your K8s cluster is failing. Instead of typing kubectl commands half-asleep, you ask: 'What's wrong with my cluster?'"*
-
-An MCP server for Kubernetes debugging:
-- List pods, deployments, services
-- Get logs from any pod
-- Analyze crash loops automatically
-- Safe remediation with approval
-
-### 3. Deep Research Browser
-> *"Web pages are huge. Sending 5MB of HTML to an LLM doesn't work. We need the server to be smart."*
-
-An MCP server for web research:
-- Headless browsing with Playwright
-- Content extraction and summarization
-- MCP Sampling (server asks LLM for help)
-- Multi-page research with citations
-
-### 4. Multi-Client Knowledge Base
-> *"A protocol only matters if the same server works everywhere. This project proves it."*
-
-An MCP server that demonstrates interoperability across clients:
-- Search internal docs, code snippets, and FAQs
-- Connect the same server to Claude Desktop, Cursor, VS Code, and Python clients
-- Share team-ready config via `.cursor/mcp.json` and `.vscode/mcp.json`
-- Support both local stdio and remote Streamable HTTP deployments
+| #  | Title | |
+|----|-------|-|
+| 23 | Project 4 · One server, every client | [read](posts/23-multi-client/index.md) |
+| 24 | MCP Apps, extensions, and where the protocol goes next | [read](posts/24-mcp-apps-and-frontier/index.md) |
 
 ---
 
-## 📁 Repository Structure
+## The four projects
 
-```
-what-the-hell-is-mcp/
-├── README.md                 # You are here
-├── plan.md                   # Series outline and planning notes
-│
-├── blog-1/                   # What the Hell is MCP?
-├── blog-2/                   # Architecture Deep Dive
-├── blog-3/                   # First MCP Server
-├── blog-4/                   # Building an MCP Client
-├── blog-5/                   # Database Analyst Part 1
-├── blog-6/                   # Database Analyst Part 2
-├── blog-7/                   # DevOps Agent Part 1
-├── blog-8/                   # DevOps Agent Part 2
-├── blog-9/                   # Research Browser Part 1
-├── blog-10/                  # Research Browser Part 2
-├── blog-11/                  # Research Browser Part 3
-├── blog-12/                  # Production Deployment
-└── blog-13/                  # Multi-Client MCP
-```
+Each project is a real codebase under [code/](code/), not a snippet. Each one exists to
+teach a specific hard part of MCP that a toy server never reaches.
+
+**1. A secure database analyst** (posts 13 and 14) — read access to PostgreSQL that is
+safe because the *server* decides what "read" means, then write access that is defensible
+because every mutation is previewed to a human, wrapped in a transaction, and audited.
+
+**2. A DevOps first responder** (posts 15 and 16) — a read-only Kubernetes diagnostic
+server, then remediation with preview, approval, and long rollouts modeled as tasks.
+
+**3. A deep research browser** (posts 17 and 18) — headless browsing that throws away the
+95 percent of a page that would waste the model's context, then multi-page research with
+citations, and an honest look at what replaced sampling.
+
+**4. A multi-client knowledge base** (post 23) — one server, proven against Claude Desktop,
+Claude Code, Cursor, VS Code, and a plain Python client, with the configuration file each
+one actually wants.
 
 ---
 
-## 🤝 Contributing
+## Why this edition targets 2026-07-28
 
-Found a bug? Have a better explanation? Want to add a project?
+The 2026-07-28 revision is the largest change to MCP since it launched. The protocol became
+**stateless**: there is no `initialize` handshake, no session id, and no channel for a
+server to call back into a client.
 
-1. Fork the repo
-2. Create your branch (`git checkout -b fix/better-explanation`)
-3. Commit your changes
-4. Push and open a PR
+That is not a footnote. It changes how you ask the user a question mid-tool-call, how a
+long-running job reports progress, and how you scale a server. A series that taught the old
+model and appended a migration chapter would be teaching a shape of thinking that no longer
+fits.
 
-All contributions welcome, especially typo fixes. I wrote most of this at 2 AM.
-
----
-
-## 📚 Resources
-
-- [MCP Specification](https://modelcontextprotocol.io/specification) — The official spec and current version index
-- [Python SDK](https://github.com/modelcontextprotocol/python-sdk) — What we use
-- [Community Servers](https://github.com/modelcontextprotocol/servers) — Inspiration
-- [Claude Desktop](https://claude.ai/download) — For testing
-- [VS Code MCP Docs](https://code.visualstudio.com/docs/copilot/customization/mcp-servers) — Native MCP support in VS Code
-
-
-## ⭐ If This Helped You
-
-If this series saved you weeks of confusion like I experienced, consider:
-- ⭐ Starring this repo
-- 🐦 Sharing it with someone who's lost in MCP land
-- 🛠️ Building something cool and telling me about it
+So this edition teaches the new model from post 01, and names the old one only where a
+reader will meet it in existing code. [PLAN.md](PLAN.md) section 2 has the full table of
+what changed.
 
 ---
 
-<p align="center">
-  <i>From zero to production. One blog at a time.</i>
-</p>
+## Reference assets
 
-<p align="center">
-  <b>Happy building!</b>
-</p>
+- [GLOSSARY.md](GLOSSARY.md) — every term, one line each.
+- [CHEATSHEET.md](CHEATSHEET.md) — one printable page: the method table, the `_meta` keys,
+  the MRTR loop, the security checklist, the client configuration matrix.
+- [REFERENCES.md](REFERENCES.md) — every citation in the series.
+- [PLAN.md](PLAN.md) — the master plan and per-post specs, the source of truth.
+- [notation_guide.md](notation_guide.md) — naming and typography conventions.
+- `assets/poster/one-page-of-mcp.svg` — the whole protocol on one canvas, prints at A2.
+
+---
+
+## How the diagrams are made
+
+Every diagram is hand-edited SVG drawn against a single design-token system that supports
+light and dark mode and is colorblind-safe. Client side is blue, server side is terracotta,
+and a request always flows blue to terracotta. See
+[templates/diagram-style-guide.md](templates/diagram-style-guide.md).
+
+You are welcome to copy, remix, or translate them under CC-BY 4.0. Please keep the
+attribution line.
+
+---
+
+## Contributing
+
+Typos, broken links, clarity fixes, and spec-drift corrections are all welcome. See
+[CONTRIBUTING.md](CONTRIBUTING.md). For larger changes please open an issue first.
+
+Spec drift is the most valuable kind of report. This protocol is young and its
+documentation moves; if a link here is dead or a claim is stale, that is a real bug.
+
+---
+
+## Why free?
+
+MCP is becoming the way software talks to models, and the on-ramp should not sit behind a
+paywall. If this series helps you, the best thank-you is to send it to one other person who
+is trying to work out what the hell MCP is.
