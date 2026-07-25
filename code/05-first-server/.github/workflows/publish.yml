@@ -1,0 +1,94 @@
+# Publish the system-info server to PyPI and then to the MCP Registry.
+#
+# WHERE THIS FILE HAS TO LIVE
+# ---------------------------
+# GitHub Actions only reads workflows from `.github/workflows/` at the ROOT of a
+# repository. It is kept here so that this project directory is a complete,
+# self-contained example. If you split `code/05-first-server/` out into its own
+# repository, this file is already in the right place and you can delete the
+# `working-directory` and `packages-dir` prefixes below. If you keep it inside
+# the series repository, copy it to `.github/workflows/publish-system-info.yml`
+# at the root, unchanged.
+#
+# WHAT IT NEEDS BEFORE IT WILL WORK
+# ---------------------------------
+#  1. A PyPI project named `mcp-system-info` with a Trusted Publisher configured
+#     for this repository and this workflow filename. That is what makes the
+#     `id-token: write` permission enough, with no API token stored anywhere.
+#  2. The line `<!-- mcp-name: io.github.ajkumar-13/system-info -->` in
+#     README.md, which is what the registry reads off the PyPI project page to
+#     confirm that the package and the registry entry have the same owner.
+#  3. Nothing else. GitHub OIDC needs no secret: the registry validates the
+#     token GitHub mints for this job, and grants the `io.github.ajkumar-13/*`
+#     namespace because that is the owner of the repository the job runs in.
+
+name: Publish system-info
+
+on:
+  push:
+    tags: ["v*"]          # v0.2.0, v0.2.1, ...
+  workflow_dispatch: {}   # so you can rehearse the whole thing by hand
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write     # OIDC. Used twice: PyPI trusted publishing, and mcp-publisher.
+      contents: read
+
+    defaults:
+      run:
+        working-directory: code/05-first-server
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v5
+
+      - name: Install uv
+        run: curl -LsSf https://astral.sh/uv/install.sh | sh
+
+      - name: Install dependencies
+        run: uv sync --extra dev
+
+      - name: Run the tests
+        run: uv run pytest
+
+      # ---- Step 1: the package the registry entry points at ----------------
+
+      - name: Build the wheel and the sdist
+        run: uv build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: code/05-first-server/dist
+
+      # ---- Step 2: the registry entry --------------------------------------
+
+      - name: Install mcp-publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
+
+      # The tag is the single source of truth for the version. Both the
+      # top-level `version` and the package `version` have to move together, or
+      # the registry will advertise a release of the package that does not
+      # exist on PyPI yet.
+      - name: Stamp the version from the tag
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          jq --arg v "$VERSION" '.version = $v | .packages[0].version = $v' \
+            server.json > server.tmp && mv server.tmp server.json
+
+      # Catches a malformed server.json before the publish attempt, so a bad
+      # field fails in five seconds rather than after PyPI has already accepted
+      # a release you cannot take back.
+      - name: Validate server.json
+        run: ./mcp-publisher validate server.json
+
+      - name: Authenticate to the MCP Registry
+        run: ./mcp-publisher login github-oidc
+
+      - name: Publish to the MCP Registry
+        run: ./mcp-publisher publish server.json

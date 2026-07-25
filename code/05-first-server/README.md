@@ -1,5 +1,7 @@
 # system-info
 
+<!-- mcp-name: io.github.ajkumar-13/system-info -->
+
 The server built across posts 05 to 09. It reports on the machine it runs on:
 CPU, memory, disk, and processes.
 

@@ -73,12 +73,12 @@ class WriteResult:
 
     `status` is one of:
 
-    - `disabled`  — ENABLE_WRITES is not true on this server.
-    - `rejected`  — the validator refused the statement. Nothing ran.
-    - `dry_run`   — the statement is valid; nothing ran, nobody was asked.
-    - `declined`  — a human was asked and said no, or dismissed the prompt.
-    - `committed` — it ran, and it is in the audit log.
-    - `failed`    — it ran and rolled back. The failure is in the audit log.
+    - `disabled`:  ENABLE_WRITES is not true on this server.
+    - `rejected`:  the validator refused the statement. Nothing ran.
+    - `dry_run`:   the statement is valid; nothing ran, nobody was asked.
+    - `declined`:  a human was asked and said no, or dismissed the prompt.
+    - `committed`: it ran, and it is in the audit log.
+    - `failed`:    it ran and rolled back. The failure is in the audit log.
     """
 
     status: str
@@ -127,8 +127,8 @@ def _confirm_write(
     A resolver may take any of the tool's arguments by name, and the SDK fills
     in defaults the caller omitted, so `dry_run` is always a real bool here.
 
-    Three of the four paths return a stand-in `DeclinedElicitation` instead of
-    an `Elicit`, and no question is put to the user at all:
+    Three conditions send back a stand-in `DeclinedElicitation` instead of an
+    `Elicit`, and no question is put to the user at all:
 
     - writes are switched off, so there is nothing to approve;
     - this is a dry run, so nothing will be executed;

@@ -1,0 +1,25 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.ajkumar-13/system-info",
+  "title": "System Info",
+  "description": "Reports CPU, memory, disk, and process facts about the machine it runs on",
+  "version": "0.2.0",
+  "websiteUrl": "https://github.com/ajkumar-13/What-The-Hell-is-MCP",
+  "repository": {
+    "url": "https://github.com/ajkumar-13/What-The-Hell-is-MCP",
+    "source": "github",
+    "subfolder": "code/05-first-server"
+  },
+  "packages": [
+    {
+      "registryType": "pypi",
+      "registryBaseUrl": "https://pypi.org",
+      "identifier": "mcp-system-info",
+      "version": "0.2.0",
+      "runtimeHint": "uvx",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

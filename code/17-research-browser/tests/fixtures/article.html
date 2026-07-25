@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>What a web page actually costs a language model | Northwind Review</title><meta name="description" content="Most of a web page is not the page. Measuring the difference changes how you build tools that read the web."><link rel="canonical" href="https://example.com/blog/what-a-page-costs"><meta property="og:title" content="What a web page actually costs a language model"><meta property="og:description" content="Most of a web page is not the page. Measuring the difference changes how you build tools that read the web."><meta property="og:url" content="https://example.com/blog/what-a-page-costs"><meta property="og:type" content="article"><meta name="twitter:card" content="summary_large_image"><link rel="preconnect" href="https://fonts.example.com"><link rel="icon" href="/favicon.ico"><style>*,*::before,*::after{box-sizing:border-box}html{-webkit-text-size-adjust:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}body{margin:0;background:#fff;color:#1c1e21}img,video{max-width:100%;height:auto;display:block}button,input,select,textarea{font:inherit;color:inherit}
+.site-header{position:sticky;top:0;z-index:40;background:#fff;border-bottom:1px solid #e6e6e6;padding:0 24px}
+.site-header__inner{display:flex;align-items:center;justify-content:space-between;max-width:1200px;margin:0 auto;height:64px}
+.site-nav ul{display:flex;gap:20px;list-style:none;margin:0;padding:0}
+.site-nav a{color:#26282b;text-decoration:none;font-size:14px;font-weight:500;letter-spacing:.01em}
+.site-nav a:hover{color:#0b5fff;text-decoration:underline;text-underline-offset:3px}
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:48px;max-width:1200px;margin:0 auto;padding:40px 24px}
+.article{font-size:18px;line-height:1.65;color:#1c1e21;max-width:68ch}
+.article h1{font-size:40px;line-height:1.15;margin:0 0 12px;letter-spacing:-.02em}
+.article h2{font-size:26px;line-height:1.25;margin:40px 0 12px;letter-spacing:-.01em}
+.article p{margin:0 0 20px}
+.article blockquote{margin:28px 0;padding:0 0 0 20px;border-left:3px solid #0b5fff;color:#41454a;font-style:italic}
+.article pre{background:#14161a;color:#e8eaed;padding:16px 18px;border-radius:6px;overflow-x:auto;font-size:14px}
+.article code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.92em}
+.article ul{margin:0 0 20px;padding-left:22px}
+.byline{display:flex;gap:12px;align-items:center;color:#6b7077;font-size:14px;margin:0 0 32px}
+.sidebar{font-size:14px;color:#41454a}
+.sidebar h3{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#6b7077;margin:0 0 12px}
+.sidebar ul{list-style:none;margin:0 0 32px;padding:0}
+.sidebar li{margin:0 0 10px;line-height:1.4}
+.sidebar a{color:#1c1e21;text-decoration:none}
+.newsletter{background:#f4f6f8;border:1px solid #e2e6ea;border-radius:8px;padding:20px}
+.newsletter input{width:100%;padding:9px 11px;border:1px solid #cfd4d9;border-radius:5px;font-size:14px}
+.newsletter button{width:100%;margin-top:8px;padding:9px 11px;background:#0b5fff;color:#fff;border:0;border-radius:5px;font-size:14px;cursor:pointer}
+.site-footer{background:#14161a;color:#9aa0a6;padding:56px 24px;font-size:14px}
+.site-footer__grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:32px;max-width:1200px;margin:0 auto}
+.site-footer a{color:#c8ccd0;text-decoration:none;display:block;margin:0 0 8px}
+.site-footer small{display:block;max-width:1200px;margin:40px auto 0;color:#6b7077}
+.cookie-bar{position:fixed;left:0;right:0;bottom:0;background:#1c1e21;color:#fff;padding:16px 24px;display:flex;gap:16px;align-items:center;justify-content:center}
+.cookie-bar button{background:#0b5fff;color:#fff;border:0;border-radius:4px;padding:8px 16px;cursor:pointer}
+.ad-slot{background:#f0f1f3;border:1px dashed #c8ccd0;color:#9aa0a6;text-align:center;padding:28px 8px;margin:24px 0;font-size:12px;letter-spacing:.06em;text-transform:uppercase}
+.megamenu{position:absolute;left:0;right:0;background:#fff;box-shadow:0 12px 32px rgba(0,0,0,.12);padding:32px 24px;display:none}
+.megamenu__col h4{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#6b7077;margin:0 0 10px}
+.megamenu a{display:block;color:#26282b;text-decoration:none;font-size:14px;margin:0 0 7px}
+.share-rail{position:sticky;top:96px;display:flex;flex-direction:column;gap:10px}
+.share-rail a{width:36px;height:36px;border-radius:50%;border:1px solid #d6dade;display:grid;place-items:center}
+.comment{border-top:1px solid #e6e6e6;padding:18px 0}
+.comment__meta{color:#6b7077;font-size:13px;margin:0 0 6px}
+.related{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin:40px 0}
+.related a{color:#1c1e21;text-decoration:none;font-weight:600;line-height:1.35}
+.modal{position:fixed;inset:0;background:rgba(20,22,26,.6);display:none;place-items:center}
+.modal__card{background:#fff;border-radius:10px;padding:32px;max-width:440px;width:100%}
+.u-m-0{margin:0px}
+.u-mt-0{margin-top:0px}
+.u-mb-0{margin-bottom:0px}
+.u-mx-0{margin-left:0px;margin-right:0px}
+.u-p-0{padding:0px}
+.u-pt-0{padding-top:0px}
+.u-pb-0{padding-bottom:0px}
+.u-px-0{padding-left:0px;padding-right:0px}
+.u-gap-0{gap:0px}
+.u-m-2{margin:2px}
+.u-mt-2{margin-top:2px}
+.u-mb-2{margin-bottom:2px}
+.u-mx-2{margin-left:2px;margin-right:2px}
+.u-p-2{padding:2px}
+.u-pt-2{padding-top:2px}
+.u-pb-2{padding-bottom:2px}
+.u-px-2{padding-left:2px;padding-right:2px}
+.u-gap-2{gap:2px}
+.u-m-4{margin:4px}
+.u-mt-4{margin-top:4px}
+.u-mb-4{margin-bottom:4px}
+.u-mx-4{margin-left:4px;margin-right:4px}
+.u-p-4{padding:4px}
+.u-pt-4{padding-top:4px}
+.u-pb-4{padding-bottom:4px}
+.u-px-4{padding-left:4px;padding-right:4px}
+.u-gap-4{gap:4px}
+.u-m-6{margin:6px}
+.u-mt-6{margin-top:6px}
+.u-mb-6{margin-bottom:6px}
+.u-mx-6{margin-left:6px;margin-right:6px}
+.u-p-6{padding:6px}
+.u-pt-6{padding-top:6px}
+.u-pb-6{padding-bottom:6px}
+.u-px-6{padding-left:6px;padding-right:6px}
+.u-gap-6{gap:6px}
+.u-m-8{margin:8px}
+.u-mt-8{margin-top:8px}
+.u-mb-8{margin-bottom:8px}
+.u-mx-8{margin-left:8px;margin-right:8px}
+.u-p-8{padding:8px}
+.u-pt-8{padding-top:8px}
+.u-pb-8{padding-bottom:8px}
+.u-px-8{padding-left:8px;padding-right:8px}
+.u-gap-8{gap:8px}
+.u-m-10{margin:10px}
+.u-mt-10{margin-top:10px}
+.u-mb-10{margin-bottom:10px}
+.u-mx-10{margin-left:10px;margin-right:10px}
+.u-p-10{padding:10px}
+.u-pt-10{padding-top:10px}
+.u-pb-10{padding-bottom:10px}
+.u-px-10{padding-left:10px;padding-right:10px}
+.u-gap-10{gap:10px}
+.u-m-12{margin:12px}
+.u-mt-12{margin-top:12px}
+.u-mb-12{margin-bottom:12px}
+.u-mx-12{margin-left:12px;margin-right:12px}
+.u-p-12{padding:12px}
+.u-pt-12{padding-top:12px}
+.u-pb-12{padding-bottom:12px}
+.u-px-12{padding-left:12px;padding-right:12px}
+.u-gap-12{gap:12px}
+.u-m-16{margin:16px}
+.u-mt-16{margin-top:16px}
+.u-mb-16{margin-bottom:16px}
+.u-mx-16{margin-left:16px;margin-right:16px}
+.u-p-16{padding:16px}
+.u-pt-16{padding-top:16px}
+.u-pb-16{padding-bottom:16px}
+.u-px-16{padding-left:16px;padding-right:16px}
+.u-gap-16{gap:16px}
+.u-m-20{margin:20px}
+.u-mt-20{margin-top:20px}
+.u-mb-20{margin-bottom:20px}
+.u-mx-20{margin-left:20px;margin-right:20px}
+.u-p-20{padding:20px}
+.u-pt-20{padding-top:20px}
+.u-pb-20{padding-bottom:20px}
+.u-px-20{padding-left:20px;padding-right:20px}
+.u-gap-20{gap:20px}
+.u-m-24{margin:24px}
+.u-mt-24{margin-top:24px}
+.u-mb-24{margin-bottom:24px}
+.u-mx-24{margin-left:24px;margin-right:24px}
+.u-p-24{padding:24px}
+.u-pt-24{padding-top:24px}
+.u-pb-24{padding-bottom:24px}
+.u-px-24{padding-left:24px;padding-right:24px}
+.u-gap-24{gap:24px}
+.u-m-28{margin:28px}
+.u-mt-28{margin-top:28px}
+.u-mb-28{margin-bottom:28px}
+.u-mx-28{margin-left:28px;margin-right:28px}
+.u-p-28{padding:28px}
+.u-pt-28{padding-top:28px}
+.u-pb-28{padding-bottom:28px}
+.u-px-28{padding-left:28px;padding-right:28px}
+.u-gap-28{gap:28px}
+.u-m-32{margin:32px}
+.u-mt-32{margin-top:32px}
+.u-mb-32{margin-bottom:32px}
+.u-mx-32{margin-left:32px;margin-right:32px}
+.u-p-32{padding:32px}
+.u-pt-32{padding-top:32px}
+.u-pb-32{padding-bottom:32px}
+.u-px-32{padding-left:32px;padding-right:32px}
+.u-gap-32{gap:32px}
+.u-m-40{margin:40px}
+.u-mt-40{margin-top:40px}
+.u-mb-40{margin-bottom:40px}
+.u-mx-40{margin-left:40px;margin-right:40px}
+.u-p-40{padding:40px}
+.u-pt-40{padding-top:40px}
+.u-pb-40{padding-bottom:40px}
+.u-px-40{padding-left:40px;padding-right:40px}
+.u-gap-40{gap:40px}
+.u-m-48{margin:48px}
+.u-mt-48{margin-top:48px}
+.u-mb-48{margin-bottom:48px}
+.u-mx-48{margin-left:48px;margin-right:48px}
+.u-p-48{padding:48px}
+.u-pt-48{padding-top:48px}
+.u-pb-48{padding-bottom:48px}
+.u-px-48{padding-left:48px;padding-right:48px}
+.u-gap-48{gap:48px}
+.u-m-56{margin:56px}
+.u-mt-56{margin-top:56px}
+.u-mb-56{margin-bottom:56px}
+.u-mx-56{margin-left:56px;margin-right:56px}
+.u-p-56{padding:56px}
+.u-pt-56{padding-top:56px}
+.u-pb-56{padding-bottom:56px}
+.u-px-56{padding-left:56px;padding-right:56px}
+.u-gap-56{gap:56px}
+.u-m-64{margin:64px}
+.u-mt-64{margin-top:64px}
+.u-mb-64{margin-bottom:64px}
+.u-mx-64{margin-left:64px;margin-right:64px}
+.u-p-64{padding:64px}
+.u-pt-64{padding-top:64px}
+.u-pb-64{padding-bottom:64px}
+.u-px-64{padding-left:64px;padding-right:64px}
+.u-gap-64{gap:64px}
+.u-m-80{margin:80px}
+.u-mt-80{margin-top:80px}
+.u-mb-80{margin-bottom:80px}
+.u-mx-80{margin-left:80px;margin-right:80px}
+.u-p-80{padding:80px}
+.u-pt-80{padding-top:80px}
+.u-pb-80{padding-bottom:80px}
+.u-px-80{padding-left:80px;padding-right:80px}
+.u-gap-80{gap:80px}
+.u-m-96{margin:96px}
+.u-mt-96{margin-top:96px}
+.u-mb-96{margin-bottom:96px}
+.u-mx-96{margin-left:96px;margin-right:96px}
+.u-p-96{padding:96px}
+.u-pt-96{padding-top:96px}
+.u-pb-96{padding-bottom:96px}
+.u-px-96{padding-left:96px;padding-right:96px}
+.u-gap-96{gap:96px}
+.u-fs-11{font-size:11px;line-height:16px}
+.u-fs-12{font-size:12px;line-height:17px}
+.u-fs-13{font-size:13px;line-height:19px}
+.u-fs-14{font-size:14px;line-height:20px}
+.u-fs-15{font-size:15px;line-height:22px}
+.u-fs-16{font-size:16px;line-height:23px}
+.u-fs-18{font-size:18px;line-height:26px}
+.u-fs-20{font-size:20px;line-height:29px}
+.u-fs-24{font-size:24px;line-height:35px}
+.u-fs-28{font-size:28px;line-height:41px}
+.u-fs-32{font-size:32px;line-height:46px}
+.u-fs-40{font-size:40px;line-height:58px}
+.u-fs-48{font-size:48px;line-height:70px}
+.u-fs-56{font-size:56px;line-height:81px}
+.u-c-ink{color:#1c1e21}
+.u-bg-ink{background-color:#1c1e21}
+.u-bd-ink{border-color:#1c1e21}
+.u-c-slate{color:#41454a}
+.u-bg-slate{background-color:#41454a}
+.u-bd-slate{border-color:#41454a}
+.u-c-mute{color:#6b7077}
+.u-bg-mute{background-color:#6b7077}
+.u-bd-mute{border-color:#6b7077}
+.u-c-line{color:#e2e6ea}
+.u-bg-line{background-color:#e2e6ea}
+.u-bd-line{border-color:#e2e6ea}
+.u-c-paper{color:#ffffff}
+.u-bg-paper{background-color:#ffffff}
+.u-bd-paper{border-color:#ffffff}
+.u-c-wash{color:#f4f6f8}
+.u-bg-wash{background-color:#f4f6f8}
+.u-bd-wash{border-color:#f4f6f8}
+.u-c-brand{color:#0b5fff}
+.u-bg-brand{background-color:#0b5fff}
+.u-bd-brand{border-color:#0b5fff}
+.u-c-brand-dark{color:#0842b8}
+.u-bg-brand-dark{background-color:#0842b8}
+.u-bd-brand-dark{border-color:#0842b8}
+.u-c-warn{color:#b7791f}
+.u-bg-warn{background-color:#b7791f}
+.u-bd-warn{border-color:#b7791f}
+.u-c-danger{color:#c53030}
+.u-bg-danger{background-color:#c53030}
+.u-bd-danger{border-color:#c53030}
+.u-c-ok{color:#2f855a}
+.u-bg-ok{background-color:#2f855a}
+.u-bd-ok{border-color:#2f855a}
+.u-c-night{color:#14161a}
+.u-bg-night{background-color:#14161a}
+.u-bd-night{border-color:#14161a}
+.u-fw-300{font-weight:300}
+.u-fw-400{font-weight:400}
+.u-fw-500{font-weight:500}
+.u-fw-600{font-weight:600}
+.u-fw-700{font-weight:700}
+.u-fw-800{font-weight:800}
+.u-r-0{border-radius:0px}
+.u-r-2{border-radius:2px}
+.u-r-4{border-radius:4px}
+.u-r-6{border-radius:6px}
+.u-r-8{border-radius:8px}
+.u-r-12{border-radius:12px}
+.u-r-999{border-radius:999px}
+.u-sh-1{box-shadow:0 2px 6px rgba(20,22,26,.4)}
+.u-sh-2{box-shadow:0 4px 12px rgba(20,22,26,.5)}
+.u-sh-3{box-shadow:0 6px 18px rgba(20,22,26,.6)}
+.u-sh-4{box-shadow:0 8px 24px rgba(20,22,26,.7)}
+.u-sh-5{box-shadow:0 10px 30px rgba(20,22,26,.8)}
+.u-sh-6{box-shadow:0 12px 36px rgba(20,22,26,.9)}
+.u-d-none{display:none}
+.u-d-block{display:block}
+.u-d-flex{display:flex}
+.u-d-grid{display:grid}
+.u-d-inline-flex{display:inline-flex}
+.u-d-inline-block{display:inline-block}
+.u-jc-start{justify-content:start}
+.u-ai-start{align-items:start}
+.u-jc-center{justify-content:center}
+.u-ai-center{align-items:center}
+.u-jc-end{justify-content:end}
+.u-ai-end{align-items:end}
+.u-jc-between{justify-content:space-between}
+.u-ai-between{align-items:space-between}
+.u-jc-around{justify-content:space-around}
+.u-ai-around{align-items:space-around}
+.u-sm-m-0{margin:0px}
+.u-sm-mt-0{margin-top:0px}
+.u-sm-mb-0{margin-bottom:0px}
+.u-sm-mx-0{margin-left:0px;margin-right:0px}
+.u-sm-p-0{padding:0px}
+.u-sm-pt-0{padding-top:0px}
+.u-sm-pb-0{padding-bottom:0px}
+.u-sm-px-0{padding-left:0px;padding-right:0px}
+.u-sm-gap-0{gap:0px}
+.u-sm-m-2{margin:2px}
+.u-sm-mt-2{margin-top:2px}
+.u-sm-mb-2{margin-bottom:2px}
+.u-sm-mx-2{margin-left:2px;margin-right:2px}
+.u-sm-p-2{padding:2px}
+.u-sm-pt-2{padding-top:2px}
+.u-sm-pb-2{padding-bottom:2px}
+.u-sm-px-2{padding-left:2px;padding-right:2px}
+.u-sm-gap-2{gap:2px}
+.u-sm-m-4{margin:4px}
+.u-sm-mt-4{margin-top:4px}
+.u-sm-mb-4{margin-bottom:4px}
+.u-sm-mx-4{margin-left:4px;margin-right:4px}
+.u-sm-p-4{padding:4px}
+.u-sm-pt-4{padding-top:4px}
+.u-sm-pb-4{padding-bottom:4px}
+.u-sm-px-4{padding-left:4px;padding-right:4px}
+.u-sm-gap-4{gap:4px}
+.u-sm-m-6{margin:6px}
+.u-sm-mt-6{margin-top:6px}
+.u-sm-mb-6{margin-bottom:6px}
+.u-sm-mx-6{margin-left:6px;margin-right:6px}
+.u-sm-p-6{padding:6px}
+.u-sm-pt-6{padding-top:6px}
+.u-sm-pb-6{padding-bottom:6px}
+.u-sm-px-6{padding-left:6px;padding-right:6px}
+.u-sm-gap-6{gap:6px}
+.u-sm-m-8{margin:8px}
+.u-sm-mt-8{margin-top:8px}
+.u-sm-mb-8{margin-bottom:8px}
+.u-sm-mx-8{margin-left:8px;margin-right:8px}
+.u-sm-p-8{padding:8px}
+.u-sm-pt-8{padding-top:8px}
+.u-sm-pb-8{padding-bottom:8px}
+.u-sm-px-8{padding-left:8px;padding-right:8px}
+.u-sm-gap-8{gap:8px}
+.u-sm-m-10{margin:10px}
+.u-sm-mt-10{margin-top:10px}
+.u-sm-mb-10{margin-bottom:10px}
+.u-sm-mx-10{margin-left:10px;margin-right:10px}
+.u-sm-p-10{padding:10px}
+.u-sm-pt-10{padding-top:10px}
+.u-sm-pb-10{padding-bottom:10px}
+.u-sm-px-10{padding-left:10px;padding-right:10px}
+.u-sm-gap-10{gap:10px}
+.u-sm-m-12{margin:12px}
+.u-sm-mt-12{margin-top:12px}
+.u-sm-mb-12{margin-bottom:12px}
+.u-sm-mx-12{margin-left:12px;margin-right:12px}
+.u-sm-p-12{padding:12px}
+.u-sm-pt-12{padding-top:12px}
+.u-sm-pb-12{padding-bottom:12px}
+.u-sm-px-12{padding-left:12px;padding-right:12px}
+.u-sm-gap-12{gap:12px}
+.u-sm-m-16{margin:16px}
+.u-sm-mt-16{margin-top:16px}
+.u-sm-mb-16{margin-bottom:16px}
+.u-sm-mx-16{margin-left:16px;margin-right:16px}
+.u-sm-p-16{padding:16px}
+.u-sm-pt-16{padding-top:16px}
+.u-sm-pb-16{padding-bottom:16px}
+.u-sm-px-16{padding-left:16px;padding-right:16px}
+.u-sm-gap-16{gap:16px}
+.u-sm-m-20{margin:20px}
+.u-sm-mt-20{margin-top:20px}
+.u-sm-mb-20{margin-bottom:20px}
+.u-sm-mx-20{margin-left:20px;margin-right:20px}
+.u-sm-p-20{padding:20px}
+.u-sm-pt-20{padding-top:20px}
+.u-sm-pb-20{padding-bottom:20px}
+.u-sm-px-20{padding-left:20px;padding-right:20px}
+.u-sm-gap-20{gap:20px}
+.u-sm-m-24{margin:24px}
+.u-sm-mt-24{margin-top:24px}
+.u-sm-mb-24{margin-bottom:24px}
+.u-sm-mx-24{margin-left:24px;margin-right:24px}
+.u-sm-p-24{padding:24px}
+.u-sm-pt-24{padding-top:24px}
+.u-sm-pb-24{padding-bottom:24px}
+.u-sm-px-24{padding-left:24px;padding-right:24px}
+.u-sm-gap-24{gap:24px}
+.u-sm-m-28{margin:28px}
+.u-sm-mt-28{margin-top:28px}
+.u-sm-mb-28{margin-bottom:28px}
+.u-sm-mx-28{margin-left:28px;margin-right:28px}
+.u-sm-p-28{padding:28px}
+.u-sm-pt-28{padding-top:28px}
+.u-sm-pb-28{padding-bottom:28px}
+.u-sm-px-28{padding-left:28px;padding-right:28px}
+.u-sm-gap-28{gap:28px}
+.u-sm-m-32{margin:32px}
+.u-sm-mt-32{margin-top:32px}
+.u-sm-mb-32{margin-bottom:32px}
+.u-sm-mx-32{margin-left:32px;margin-right:32px}
+.u-sm-p-32{padding:32px}
+.u-sm-pt-32{padding-top:32px}
+.u-sm-pb-32{padding-bottom:32px}
+.u-sm-px-32{padding-left:32px;padding-right:32px}
+.u-sm-gap-32{gap:32px}
+.u-sm-m-40{margin:40px}
+.u-sm-mt-40{margin-top:40px}
+.u-sm-mb-40{margin-bottom:40px}
+.u-sm-mx-40{margin-left:40px;margin-right:40px}
+.u-sm-p-40{padding:40px}
+.u-sm-pt-40{padding-top:40px}
+.u-sm-pb-40{padding-bottom:40px}
+.u-sm-px-40{padding-left:40px;padding-right:40px}
+.u-sm-gap-40{gap:40px}
+.u-sm-m-48{margin:48px}
+.u-sm-mt-48{margin-top:48px}
+.u-sm-mb-48{margin-bottom:48px}
+.u-sm-mx-48{margin-left:48px;margin-right:48px}
+.u-sm-p-48{padding:48px}
+.u-sm-pt-48{padding-top:48px}
+.u-sm-pb-48{padding-bottom:48px}
+.u-sm-px-48{padding-left:48px;padding-right:48px}
+.u-sm-gap-48{gap:48px}
+.u-sm-m-56{margin:56px}
+.u-sm-mt-56{margin-top:56px}
+.u-sm-mb-56{margin-bottom:56px}
+.u-sm-mx-56{margin-left:56px;margin-right:56px}
+.u-sm-p-56{padding:56px}
+.u-sm-pt-56{padding-top:56px}
+.u-sm-pb-56{padding-bottom:56px}
+.u-sm-px-56{padding-left:56px;padding-right:56px}
+.u-sm-gap-56{gap:56px}
+.u-sm-m-64{margin:64px}
+.u-sm-mt-64{margin-top:64px}
+.u-sm-mb-64{margin-bottom:64px}
+.u-sm-mx-64{margin-left:64px;margin-right:64px}
+.u-sm-p-64{padding:64px}
+.u-sm-pt-64{padding-top:64px}
+.u-sm-pb-64{padding-bottom:64px}
+.u-sm-px-64{padding-left:64px;padding-right:64px}
+.u-sm-gap-64{gap:64px}
+.u-sm-m-80{margin:80px}
+.u-sm-mt-80{margin-top:80px}
+.u-sm-mb-80{margin-bottom:80px}
+.u-sm-mx-80{margin-left:80px;margin-right:80px}
+.u-sm-p-80{padding:80px}
+.u-sm-pt-80{padding-top:80px}
+.u-sm-pb-80{padding-bottom:80px}
+.u-sm-px-80{padding-left:80px;padding-right:80px}
+.u-sm-gap-80{gap:80px}
+.u-sm-m-96{margin:96px}
+.u-sm-mt-96{margin-top:96px}
+.u-sm-mb-96{margin-bottom:96px}
+.u-sm-mx-96{margin-left:96px;margin-right:96px}
+.u-sm-p-96{padding:96px}
+.u-sm-pt-96{padding-top:96px}
+.u-sm-pb-96{padding-bottom:96px}
+.u-sm-px-96{padding-left:96px;padding-right:96px}
+.u-sm-gap-96{gap:96px}
+.u-sm-fs-11{font-size:11px;line-height:16px}
+.u-sm-fs-12{font-size:12px;line-height:17px}
+.u-sm-fs-13{font-size:13px;line-height:19px}
+.u-sm-fs-14{font-size:14px;line-height:20px}
+.u-sm-fs-15{font-size:15px;line-height:22px}
+.u-sm-fs-16{font-size:16px;line-height:23px}
+.u-sm-fs-18{font-size:18px;line-height:26px}
+.u-sm-fs-20{font-size:20px;line-height:29px}
+.u-sm-fs-24{font-size:24px;line-height:35px}
+.u-sm-fs-28{font-size:28px;line-height:41px}
+.u-sm-fs-32{font-size:32px;line-height:46px}
+.u-sm-fs-40{font-size:40px;line-height:58px}
+.u-sm-fs-48{font-size:48px;line-height:70px}
+.u-sm-fs-56{font-size:56px;line-height:81px}
+.u-sm-c-ink{color:#1c1e21}
+.u-sm-bg-ink{background-color:#1c1e21}
+.u-sm-bd-ink{border-color:#1c1e21}
+.u-sm-c-slate{color:#41454a}
+.u-sm-bg-slate{background-color:#41454a}
+.u-sm-bd-slate{border-color:#41454a}
+.u-sm-c-mute{color:#6b7077}
+.u-sm-bg-mute{background-color:#6b7077}
+.u-sm-bd-mute{border-color:#6b7077}
+.u-sm-c-line{color:#e2e6ea}
+.u-sm-bg-line{background-color:#e2e6ea}
+.u-sm-bd-line{border-color:#e2e6ea}
+.u-sm-c-paper{color:#ffffff}
+.u-sm-bg-paper{background-color:#ffffff}
+.u-sm-bd-paper{border-color:#ffffff}
+.u-sm-c-wash{color:#f4f6f8}
+.u-sm-bg-wash{background-color:#f4f6f8}
+.u-sm-bd-wash{border-color:#f4f6f8}
+.u-sm-c-brand{color:#0b5fff}
+.u-sm-bg-brand{background-color:#0b5fff}
+.u-sm-bd-brand{border-color:#0b5fff}
+.u-sm-c-brand-dark{color:#0842b8}
+.u-sm-bg-brand-dark{background-color:#0842b8}
+.u-sm-bd-brand-dark{border-color:#0842b8}
+.u-sm-c-warn{color:#b7791f}
+.u-sm-bg-warn{background-color:#b7791f}
+.u-sm-bd-warn{border-color:#b7791f}
+.u-sm-c-danger{color:#c53030}
+.u-sm-bg-danger{background-color:#c53030}
+.u-sm-bd-danger{border-color:#c53030}
+.u-sm-c-ok{color:#2f855a}
+.u-sm-bg-ok{background-color:#2f855a}
+.u-sm-bd-ok{border-color:#2f855a}
+.u-sm-c-night{color:#14161a}
+.u-sm-bg-night{background-color:#14161a}
+.u-sm-bd-night{border-color:#14161a}
+.u-sm-fw-300{font-weight:300}
+.u-sm-fw-400{font-weight:400}
+.u-sm-fw-500{font-weight:500}
+.u-sm-fw-600{font-weight:600}
+.u-sm-fw-700{font-weight:700}
+.u-sm-fw-800{font-weight:800}
+.u-sm-r-0{border-radius:0px}
+.u-sm-r-2{border-radius:2px}
+.u-sm-r-4{border-radius:4px}
+.u-sm-r-6{border-radius:6px}
+.u-sm-r-8{border-radius:8px}
+.u-sm-r-12{border-radius:12px}
+.u-sm-r-999{border-radius:999px}
+.u-sm-sh-1{box-shadow:0 2px 6px rgba(20,22,26,.4)}
+.u-sm-sh-2{box-shadow:0 4px 12px rgba(20,22,26,.5)}
+.u-sm-sh-3{box-shadow:0 6px 18px rgba(20,22,26,.6)}
+.u-sm-sh-4{box-shadow:0 8px 24px rgba(20,22,26,.7)}
+.u-sm-sh-5{box-shadow:0 10px 30px rgba(20,22,26,.8)}
+.u-sm-sh-6{box-shadow:0 12px 36px rgba(20,22,26,.9)}
+.u-sm-d-none{display:none}
+.u-sm-d-block{display:block}
+.u-sm-d-flex{display:flex}
+.u-sm-d-grid{display:grid}
+.u-sm-d-inline-flex{display:inline-flex}
+.u-sm-d-inline-block{display:inline-block}
+.u-sm-jc-start{justify-content:start}
+.u-sm-ai-start{align-items:start}
+.u-sm-jc-center{justify-content:center}
+.u-sm-ai-center{align-items:center}
+.u-sm-jc-end{justify-content:end}
+.u-sm-ai-end{align-items:end}
+.u-sm-jc-between{justify-content:space-between}
+.u-sm-ai-between{align-items:space-between}
+.u-sm-jc-around{justify-content:space-around}
+.u-sm-ai-around{align-items:space-around}
+.u-md-m-0{margin:0px}
+.u-md-mt-0{margin-top:0px}
+.u-md-mb-0{margin-bottom:0px}
+.u-md-mx-0{margin-left:0px;margin-right:0px}
+.u-md-p-0{padding:0px}
+.u-md-pt-0{padding-top:0px}
+.u-md-pb-0{padding-bottom:0px}
+.u-md-px-0{padding-left:0px;padding-right:0px}
+.u-md-gap-0{gap:0px}
+.u-md-m-2{margin:2px}
+.u-md-mt-2{margin-top:2px}
+.u-md-mb-2{margin-bottom:2px}
+.u-md-mx-2{margin-left:2px;margin-right:2px}
+.u-md-p-2{padding:2px}
+.u-md-pt-2{padding-top:2px}
+.u-md-pb-2{padding-bottom:2px}
+.u-md-px-2{padding-left:2px;padding-right:2px}
+.u-md-gap-2{gap:2px}
+.u-md-m-4{margin:4px}
+.u-md-mt-4{margin-top:4px}
+.u-md-mb-4{margin-bottom:4px}
+.u-md-mx-4{margin-left:4px;margin-right:4px}
+.u-md-p-4{padding:4px}
+.u-md-pt-4{padding-top:4px}
+.u-md-pb-4{padding-bottom:4px}
+.u-md-px-4{padding-left:4px;padding-right:4px}
+.u-md-gap-4{gap:4px}
+.u-md-m-6{margin:6px}
+.u-md-mt-6{margin-top:6px}
+.u-md-mb-6{margin-bottom:6px}
+.u-md-mx-6{margin-left:6px;margin-right:6px}
+.u-md-p-6{padding:6px}
+.u-md-pt-6{padding-top:6px}
+.u-md-pb-6{padding-bottom:6px}
+.u-md-px-6{padding-left:6px;padding-right:6px}
+.u-md-gap-6{gap:6px}
+.u-md-m-8{margin:8px}
+.u-md-mt-8{margin-top:8px}
+.u-md-mb-8{margin-bottom:8px}
+.u-md-mx-8{margin-left:8px;margin-right:8px}
+.u-md-p-8{padding:8px}
+.u-md-pt-8{padding-top:8px}
+.u-md-pb-8{padding-bottom:8px}
+.u-md-px-8{padding-left:8px;padding-right:8px}
+.u-md-gap-8{gap:8px}
+.u-md-m-10{margin:10px}
+.u-md-mt-10{margin-top:10px}
+.u-md-mb-10{margin-bottom:10px}
+.u-md-mx-10{margin-left:10px;margin-right:10px}
+.u-md-p-10{padding:10px}
+.u-md-pt-10{padding-top:10px}
+.u-md-pb-10{padding-bottom:10px}
+.u-md-px-10{padding-left:10px;padding-right:10px}
+.u-md-gap-10{gap:10px}
+.u-md-m-12{margin:12px}
+.u-md-mt-12{margin-top:12px}
+.u-md-mb-12{margin-bottom:12px}
+.u-md-mx-12{margin-left:12px;margin-right:12px}
+.u-md-p-12{padding:12px}
+.u-md-pt-12{padding-top:12px}
+.u-md-pb-12{padding-bottom:12px}
+.u-md-px-12{padding-left:12px;padding-right:12px}
+.u-md-gap-12{gap:12px}
+.u-md-m-16{margin:16px}
+.u-md-mt-16{margin-top:16px}
+.u-md-mb-16{margin-bottom:16px}
+.u-md-mx-16{margin-left:16px;margin-right:16px}
+.u-md-p-16{padding:16px}
+.u-md-pt-16{padding-top:16px}
+.u-md-pb-16{padding-bottom:16px}
+.u-md-px-16{padding-left:16px;padding-right:16px}
+.u-md-gap-16{gap:16px}
+.u-md-m-20{margin:20px}
+.u-md-mt-20{margin-top:20px}
+.u-md-mb-20{margin-bottom:20px}
+.u-md-mx-20{margin-left:20px;margin-right:20px}
+.u-md-p-20{padding:20px}
+.u-md-pt-20{padding-top:20px}
+.u-md-pb-20{padding-bottom:20px}
+.u-md-px-20{padding-left:20px;padding-right:20px}
+.u-md-gap-20{gap:20px}
+.u-md-m-24{margin:24px}
+.u-md-mt-24{margin-top:24px}
+.u-md-mb-24{margin-bottom:24px}
+.u-md-mx-24{margin-left:24px;margin-right:24px}
+.u-md-p-24{padding:24px}
+.u-md-pt-24{padding-top:24px}
+.u-md-pb-24{padding-bottom:24px}
+.u-md-px-24{padding-left:24px;padding-right:24px}
+.u-md-gap-24{gap:24px}
+.u-md-m-28{margin:28px}
+.u-md-mt-28{margin-top:28px}
+.u-md-mb-28{margin-bottom:28px}
+.u-md-mx-28{margin-left:28px;margin-right:28px}
+.u-md-p-28{padding:28px}
+.u-md-pt-28{padding-top:28px}
+.u-md-pb-28{padding-bottom:28px}
+.u-md-px-28{padding-left:28px;padding-right:28px}
+.u-md-gap-28{gap:28px}
+.u-md-m-32{margin:32px}
+.u-md-mt-32{margin-top:32px}
+.u-md-mb-32{margin-bottom:32px}
+.u-md-mx-32{margin-left:32px;margin-right:32px}
+.u-md-p-32{padding:32px}
+.u-md-pt-32{padding-top:32px}
+.u-md-pb-32{padding-bottom:32px}
+.u-md-px-32{padding-left:32px;padding-right:32px}
+.u-md-gap-32{gap:32px}
+.u-md-m-40{margin:40px}
+.u-md-mt-40{margin-top:40px}
+.u-md-mb-40{margin-bottom:40px}
+.u-md-mx-40{margin-left:40px;margin-right:40px}
+.u-md-p-40{padding:40px}
+.u-md-pt-40{padding-top:40px}
+.u-md-pb-40{padding-bottom:40px}
+.u-md-px-40{padding-left:40px;padding-right:40px}
+.u-md-gap-40{gap:40px}
+.u-md-m-48{margin:48px}
+.u-md-mt-48{margin-top:48px}
+.u-md-mb-48{margin-bottom:48px}
+.u-md-mx-48{margin-left:48px;margin-right:48px}
+.u-md-p-48{padding:48px}
+.u-md-pt-48{padding-top:48px}
+.u-md-pb-48{padding-bottom:48px}
+.u-md-px-48{padding-left:48px;padding-right:48px}
+.u-md-gap-48{gap:48px}
+.u-md-m-56{margin:56px}
+.u-md-mt-56{margin-top:56px}
+.u-md-mb-56{margin-bottom:56px}
+.u-md-mx-56{margin-left:56px;margin-right:56px}
+.u-md-p-56{padding:56px}
+.u-md-pt-56{padding-top:56px}
+.u-md-pb-56{padding-bottom:56px}
+.u-md-px-56{padding-left:56px;padding-right:56px}
+.u-md-gap-56{gap:56px}
+.u-md-m-64{margin:64px}
+.u-md-mt-64{margin-top:64px}
+.u-md-mb-64{margin-bottom:64px}
+.u-md-mx-64{margin-left:64px;margin-right:64px}
+.u-md-p-64{padding:64px}
+.u-md-pt-64{padding-top:64px}
+.u-md-pb-64{padding-bottom:64px}
+.u-md-px-64{padding-left:64px;padding-right:64px}
+.u-md-gap-64{gap:64px}
+.u-md-m-80{margin:80px}
+.u-md-mt-80{margin-top:80px}
+.u-md-mb-80{margin-bottom:80px}
+.u-md-mx-80{margin-left:80px;margin-right:80px}
+.u-md-p-80{padding:80px}
+.u-md-pt-80{padding-top:80px}
+.u-md-pb-80{padding-bottom:80px}
+.u-md-px-80{padding-left:80px;padding-right:80px}
+.u-md-gap-80{gap:80px}
+.u-md-m-96{margin:96px}
+.u-md-mt-96{margin-top:96px}
+.u-md-mb-96{margin-bottom:96px}
+.u-md-mx-96{margin-left:96px;margin-right:96px}
+.u-md-p-96{padding:96px}
+.u-md-pt-96{padding-top:96px}
+.u-md-pb-96{padding-bottom:96px}
+.u-md-px-96{padding-left:96px;padding-right:96px}
+.u-md-gap-96{gap:96px}
+.u-md-fs-11{font-size:11px;line-height:16px}
+.u-md-fs-12{font-size:12px;line-height:17px}
+.u-md-fs-13{font-size:13px;line-height:19px}
+.u-md-fs-14{font-size:14px;line-height:20px}
+.u-md-fs-15{font-size:15px;line-height:22px}
+.u-md-fs-16{font-size:16px;line-height:23px}
+.u-md-fs-18{font-size:18px;line-height:26px}
+.u-md-fs-20{font-size:20px;line-height:29px}
+.u-md-fs-24{font-size:24px;line-height:35px}
+.u-md-fs-28{font-size:28px;line-height:41px}
+.u-md-fs-32{font-size:32px;line-height:46px}
+.u-md-fs-40{font-size:40px;line-height:58px}
+.u-md-fs-48{font-size:48px;line-height:70px}
+.u-md-fs-56{font-size:56px;line-height:81px}
+.u-md-c-ink{color:#1c1e21}
+.u-md-bg-ink{background-color:#1c1e21}
+.u-md-bd-ink{border-color:#1c1e21}
+.u-md-c-slate{color:#41454a}
+.u-md-bg-slate{background-color:#41454a}
+.u-md-bd-slate{border-color:#41454a}
+.u-md-c-mute{color:#6b7077}
+.u-md-bg-mute{background-color:#6b7077}
+.u-md-bd-mute{border-color:#6b7077}
+.u-md-c-line{color:#e2e6ea}
+.u-md-bg-line{background-color:#e2e6ea}
+.u-md-bd-line{border-color:#e2e6ea}
+.u-md-c-paper{color:#ffffff}
+.u-md-bg-paper{background-color:#ffffff}
+.u-md-bd-paper{border-color:#ffffff}
+.u-md-c-wash{color:#f4f6f8}
+.u-md-bg-wash{background-color:#f4f6f8}
+.u-md-bd-wash{border-color:#f4f6f8}
+.u-md-c-brand{color:#0b5fff}
+.u-md-bg-brand{background-color:#0b5fff}
+.u-md-bd-brand{border-color:#0b5fff}
+.u-md-c-brand-dark{color:#0842b8}
+.u-md-bg-brand-dark{background-color:#0842b8}
+.u-md-bd-brand-dark{border-color:#0842b8}
+.u-md-c-warn{color:#b7791f}
+.u-md-bg-warn{background-color:#b7791f}
+.u-md-bd-warn{border-color:#b7791f}
+.u-md-c-danger{color:#c53030}
+.u-md-bg-danger{background-color:#c53030}
+.u-md-bd-danger{border-color:#c53030}
+.u-md-c-ok{color:#2f855a}
+.u-md-bg-ok{background-color:#2f855a}
+.u-md-bd-ok{border-color:#2f855a}
+.u-md-c-night{color:#14161a}
+.u-md-bg-night{background-color:#14161a}
+.u-md-bd-night{border-color:#14161a}
+.u-md-fw-300{font-weight:300}
+.u-md-fw-400{font-weight:400}
+.u-md-fw-500{font-weight:500}
+.u-md-fw-600{font-weight:600}
+.u-md-fw-700{font-weight:700}
+.u-md-fw-800{font-weight:800}
+.u-md-r-0{border-radius:0px}
+.u-md-r-2{border-radius:2px}
+.u-md-r-4{border-radius:4px}
+.u-md-r-6{border-radius:6px}
+.u-md-r-8{border-radius:8px}
+.u-md-r-12{border-radius:12px}
+.u-md-r-999{border-radius:999px}
+.u-md-sh-1{box-shadow:0 2px 6px rgba(20,22,26,.4)}
+.u-md-sh-2{box-shadow:0 4px 12px rgba(20,22,26,.5)}
+.u-md-sh-3{box-shadow:0 6px 18px rgba(20,22,26,.6)}
+.u-md-sh-4{box-shadow:0 8px 24px rgba(20,22,26,.7)}
+.u-md-sh-5{box-shadow:0 10px 30px rgba(20,22,26,.8)}
+.u-md-sh-6{box-shadow:0 12px 36px rgba(20,22,26,.9)}
+.u-md-d-none{display:none}
+.u-md-d-block{display:block}
+.u-md-d-flex{display:flex}
+.u-md-d-grid{display:grid}
+.u-md-d-inline-flex{display:inline-flex}
+.u-md-d-inline-block{display:inline-block}
+.u-md-jc-start{justify-content:start}
+.u-md-ai-start{align-items:start}
+.u-md-jc-center{justify-content:center}
+.u-md-ai-center{align-items:center}
+.u-md-jc-end{justify-content:end}
+.u-md-ai-end{align-items:end}
+.u-md-jc-between{justify-content:space-between}
+.u-md-ai-between{align-items:space-between}
+.u-md-jc-around{justify-content:space-around}
+.u-md-ai-around{align-items:space-around}
+.u-lg-m-0{margin:0px}
+.u-lg-mt-0{margin-top:0px}
+.u-lg-mb-0{margin-bottom:0px}
+.u-lg-mx-0{margin-left:0px;margin-right:0px}
+.u-lg-p-0{padding:0px}
+.u-lg-pt-0{padding-top:0px}
+.u-lg-pb-0{padding-bottom:0px}
+.u-lg-px-0{padding-left:0px;padding-right:0px}
+.u-lg-gap-0{gap:0px}
+.u-lg-m-2{margin:2px}
+.u-lg-mt-2{margin-top:2px}
+.u-lg-mb-2{margin-bottom:2px}
+.u-lg-mx-2{margin-left:2px;margin-right:2px}
+.u-lg-p-2{padding:2px}
+.u-lg-pt-2{padding-top:2px}
+.u-lg-pb-2{padding-bottom:2px}
+.u-lg-px-2{padding-left:2px;padding-right:2px}
+.u-lg-gap-2{gap:2px}
+.u-lg-m-4{margin:4px}
+.u-lg-mt-4{margin-top:4px}
+.u-lg-mb-4{margin-bottom:4px}
+.u-lg-mx-4{margin-left:4px;margin-right:4px}
+.u-lg-p-4{padding:4px}
+.u-lg-pt-4{padding-top:4px}
+.u-lg-pb-4{padding-bottom:4px}
+.u-lg-px-4{padding-left:4px;padding-right:4px}
+.u-lg-gap-4{gap:4px}
+.u-lg-m-6{margin:6px}
+.u-lg-mt-6{margin-top:6px}
+.u-lg-mb-6{margin-bottom:6px}
+.u-lg-mx-6{margin-left:6px;margin-right:6px}
+.u-lg-p-6{padding:6px}
+.u-lg-pt-6{padding-top:6px}
+.u-lg-pb-6{padding-bottom:6px}
+.u-lg-px-6{padding-left:6px;padding-right:6px}
+.u-lg-gap-6{gap:6px}
+.u-lg-m-8{margin:8px}
+.u-lg-mt-8{margin-top:8px}
+.u-lg-mb-8{margin-bottom:8px}
+.u-lg-mx-8{margin-left:8px;margin-right:8px}
+.u-lg-p-8{padding:8px}
+.u-lg-pt-8{padding-top:8px}
+.u-lg-pb-8{padding-bottom:8px}
+.u-lg-px-8{padding-left:8px;padding-right:8px}
+.u-lg-gap-8{gap:8px}
+.u-lg-m-10{margin:10px}
+.u-lg-mt-10{margin-top:10px}
+.u-lg-mb-10{margin-bottom:10px}
+.u-lg-mx-10{margin-left:10px;margin-right:10px}
+.u-lg-p-10{padding:10px}
+.u-lg-pt-10{padding-top:10px}
+.u-lg-pb-10{padding-bottom:10px}
+.u-lg-px-10{padding-left:10px;padding-right:10px}
+.u-lg-gap-10{gap:10px}
+.u-lg-m-12{margin:12px}
+.u-lg-mt-12{margin-top:12px}
+.u-lg-mb-12{margin-bottom:12px}
+.u-lg-mx-12{margin-left:12px;margin-right:12px}
+.u-lg-p-12{padding:12px}
+.u-lg-pt-12{padding-top:12px}
+.u-lg-pb-12{padding-bottom:12px}
+.u-lg-px-12{padding-left:12px;padding-right:12px}
+.u-lg-gap-12{gap:12px}
+.u-lg-m-16{margin:16px}
+.u-lg-mt-16{margin-top:16px}
+.u-lg-mb-16{margin-bottom:16px}
+.u-lg-mx-16{margin-left:16px;margin-right:16px}
+.u-lg-p-16{padding:16px}
+.u-lg-pt-16{padding-top:16px}
+.u-lg-pb-16{padding-bottom:16px}
+.u-lg-px-16{padding-left:16px;padding-right:16px}
+.u-lg-gap-16{gap:16px}
+.u-lg-m-20{margin:20px}
+.u-lg-mt-20{margin-top:20px}
+.u-lg-mb-20{margin-bottom:20px}
+.u-lg-mx-20{margin-left:20px;margin-right:20px}
+.u-lg-p-20{padding:20px}
+.u-lg-pt-20{padding-top:20px}
+.u-lg-pb-20{padding-bottom:20px}
+.u-lg-px-20{padding-left:20px;padding-right:20px}
+.u-lg-gap-20{gap:20px}
+.u-lg-m-24{margin:24px}
+.u-lg-mt-24{margin-top:24px}
+.u-lg-mb-24{margin-bottom:24px}
+.u-lg-mx-24{margin-left:24px;margin-right:24px}
+.u-lg-p-24{padding:24px}
+.u-lg-pt-24{padding-top:24px}
+.u-lg-pb-24{padding-bottom:24px}
+.u-lg-px-24{padding-left:24px;padding-right:24px}
+.u-lg-gap-24{gap:24px}
+.u-lg-m-28{margin:28px}
+.u-lg-mt-28{margin-top:28px}
+.u-lg-mb-28{margin-bottom:28px}
+.u-lg-mx-28{margin-left:28px;margin-right:28px}
+.u-lg-p-28{padding:28px}
+.u-lg-pt-28{padding-top:28px}
+.u-lg-pb-28{padding-bottom:28px}
+.u-lg-px-28{padding-left:28px;padding-right:28px}
+.u-lg-gap-28{gap:28px}
+.u-lg-m-32{margin:32px}
+.u-lg-mt-32{margin-top:32px}
+.u-lg-mb-32{margin-bottom:32px}
+.u-lg-mx-32{margin-left:32px;margin-right:32px}
+.u-lg-p-32{padding:32px}
+.u-lg-pt-32{padding-top:32px}
+.u-lg-pb-32{padding-bottom:32px}
+.u-lg-px-32{padding-left:32px;padding-right:32px}
+.u-lg-gap-32{gap:32px}
+.u-lg-m-40{margin:40px}
+.u-lg-mt-40{margin-top:40px}
+.u-lg-mb-40{margin-bottom:40px}
+.u-lg-mx-40{margin-left:40px;margin-right:40px}
+.u-lg-p-40{padding:40px}
+.u-lg-pt-40{padding-top:40px}
+.u-lg-pb-40{padding-bottom:40px}
+.u-lg-px-40{padding-left:40px;padding-right:40px}
+.u-lg-gap-40{gap:40px}
+.u-lg-m-48{margin:48px}
+.u-lg-mt-48{margin-top:48px}
+.u-lg-mb-48{margin-bottom:48px}
+.u-lg-mx-48{margin-left:48px;margin-right:48px}
+.u-lg-p-48{padding:48px}
+.u-lg-pt-48{padding-top:48px}
+.u-lg-pb-48{padding-bottom:48px}
+.u-lg-px-48{padding-left:48px;padding-right:48px}
+.u-lg-gap-48{gap:48px}
+.u-lg-m-56{margin:56px}
+.u-lg-mt-56{margin-top:56px}
+.u-lg-mb-56{margin-bottom:56px}
+.u-lg-mx-56{margin-left:56px;margin-right:56px}
+.u-lg-p-56{padding:56px}
+.u-lg-pt-56{padding-top:56px}
+.u-lg-pb-56{padding-bottom:56px}
+.u-lg-px-56{padding-left:56px;padding-right:56px}
+.u-lg-gap-56{gap:56px}
+.u-lg-m-64{margin:64px}
+.u-lg-mt-64{margin-top:64px}
+.u-lg-mb-64{margin-bottom:64px}
+.u-lg-mx-64{margin-left:64px;margin-right:64px}
+.u-lg-p-64{padding:64px}
+.u-lg-pt-64{padding-top:64px}
+.u-lg-pb-64{padding-bottom:64px}
+.u-lg-px-64{padding-left:64px;padding-right:64px}
+.u-lg-gap-64{gap:64px}
+.u-lg-m-80{margin:80px}
+.u-lg-mt-80{margin-top:80px}
+.u-lg-mb-80{margin-bottom:80px}
+.u-lg-mx-80{margin-left:80px;margin-right:80px}
+.u-lg-p-80{padding:80px}
+.u-lg-pt-80{padding-top:80px}
+.u-lg-pb-80{padding-bottom:80px}
+.u-lg-px-80{padding-left:80px;padding-right:80px}
+.u-lg-gap-80{gap:80px}
+.u-lg-m-96{margin:96px}
+.u-lg-mt-96{margin-top:96px}
+.u-lg-mb-96{margin-bottom:96px}
+.u-lg-mx-96{margin-left:96px;margin-right:96px}
+.u-lg-p-96{padding:96px}
+.u-lg-pt-96{padding-top:96px}
+.u-lg-pb-96{padding-bottom:96px}
+.u-lg-px-96{padding-left:96px;padding-right:96px}
+.u-lg-gap-96{gap:96px}
+.u-lg-fs-11{font-size:11px;line-height:16px}
+.u-lg-fs-12{font-size:12px;line-height:17px}
+.u-lg-fs-13{font-size:13px;line-height:19px}
+.u-lg-fs-14{font-size:14px;line-height:20px}
+.u-lg-fs-15{font-size:15px;line-height:22px}
+.u-lg-fs-16{font-size:16px;line-height:23px}
+.u-lg-fs-18{font-size:18px;line-height:26px}
+.u-lg-fs-20{font-size:20px;line-height:29px}
+.u-lg-fs-24{font-size:24px;line-height:35px}
+.u-lg-fs-28{font-size:28px;line-height:41px}
+.u-lg-fs-32{font-size:32px;line-height:46px}
+.u-lg-fs-40{font-size:40px;line-height:58px}
+.u-lg-fs-48{font-size:48px;line-height:70px}
+.u-lg-fs-56{font-size:56px;line-height:81px}
+.u-lg-c-ink{color:#1c1e21}
+.u-lg-bg-ink{background-color:#1c1e21}
+.u-lg-bd-ink{border-color:#1c1e21}
+.u-lg-c-slate{color:#41454a}
+.u-lg-bg-slate{background-color:#41454a}
+.u-lg-bd-slate{border-color:#41454a}
+.u-lg-c-mute{color:#6b7077}
+.u-lg-bg-mute{background-color:#6b7077}
+.u-lg-bd-mute{border-color:#6b7077}
+.u-lg-c-line{color:#e2e6ea}
+.u-lg-bg-line{background-color:#e2e6ea}
+.u-lg-bd-line{border-color:#e2e6ea}
+.u-lg-c-paper{color:#ffffff}
+.u-lg-bg-paper{background-color:#ffffff}
+.u-lg-bd-paper{border-color:#ffffff}
+.u-lg-c-wash{color:#f4f6f8}
+.u-lg-bg-wash{background-color:#f4f6f8}
+.u-lg-bd-wash{border-color:#f4f6f8}
+.u-lg-c-brand{color:#0b5fff}
+.u-lg-bg-brand{background-color:#0b5fff}
+.u-lg-bd-brand{border-color:#0b5fff}
+.u-lg-c-brand-dark{color:#0842b8}
+.u-lg-bg-brand-dark{background-color:#0842b8}
+.u-lg-bd-brand-dark{border-color:#0842b8}
+.u-lg-c-warn{color:#b7791f}
+.u-lg-bg-warn{background-color:#b7791f}
+.u-lg-bd-warn{border-color:#b7791f}
+.u-lg-c-danger{color:#c53030}
+.u-lg-bg-danger{background-color:#c53030}
+.u-lg-bd-danger{border-color:#c53030}
+.u-lg-c-ok{color:#2f855a}
+.u-lg-bg-ok{background-color:#2f855a}
+.u-lg-bd-ok{border-color:#2f855a}
+.u-lg-c-night{color:#14161a}
+.u-lg-bg-night{background-color:#14161a}
+.u-lg-bd-night{border-color:#14161a}
+.u-lg-fw-300{font-weight:300}
+.u-lg-fw-400{font-weight:400}
+.u-lg-fw-500{font-weight:500}
+.u-lg-fw-600{font-weight:600}
+.u-lg-fw-700{font-weight:700}
+.u-lg-fw-800{font-weight:800}
+.u-lg-r-0{border-radius:0px}
+.u-lg-r-2{border-radius:2px}
+.u-lg-r-4{border-radius:4px}
+.u-lg-r-6{border-radius:6px}
+.u-lg-r-8{border-radius:8px}
+.u-lg-r-12{border-radius:12px}
+.u-lg-r-999{border-radius:999px}
+.u-lg-sh-1{box-shadow:0 2px 6px rgba(20,22,26,.4)}
+.u-lg-sh-2{box-shadow:0 4px 12px rgba(20,22,26,.5)}
+.u-lg-sh-3{box-shadow:0 6px 18px rgba(20,22,26,.6)}
+.u-lg-sh-4{box-shadow:0 8px 24px rgba(20,22,26,.7)}
+.u-lg-sh-5{box-shadow:0 10px 30px rgba(20,22,26,.8)}
+.u-lg-sh-6{box-shadow:0 12px 36px rgba(20,22,26,.9)}
+.u-lg-d-none{display:none}
+.u-lg-d-block{display:block}
+.u-lg-d-flex{display:flex}
+.u-lg-d-grid{display:grid}
+.u-lg-d-inline-flex{display:inline-flex}
+.u-lg-d-inline-block{display:inline-block}
+.u-lg-jc-start{justify-content:start}
+.u-lg-ai-start{align-items:start}
+.u-lg-jc-center{justify-content:center}
+.u-lg-ai-center{align-items:center}
+.u-lg-jc-end{justify-content:end}
+.u-lg-ai-end{align-items:end}
+.u-lg-jc-between{justify-content:space-between}
+.u-lg-ai-between{align-items:space-between}
+.u-lg-jc-around{justify-content:space-around}
+.u-lg-ai-around{align-items:space-around}
+@media (max-width:1024px){.layout{grid-template-columns:minmax(0,1fr)}.sidebar{display:none}}
+@media (max-width:768px){.site-nav ul{display:none}.article h1{font-size:30px}.related{grid-template-columns:1fr}}
+@media (max-width:480px){.layout{padding:24px 16px}.site-footer__grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (prefers-color-scheme:dark){body{background:#14161a;color:#e8eaed}.site-header{background:#1c1e21;border-color:#2a2d31}}
+@media print{.site-header,.sidebar,.site-footer,.cookie-bar,.ad-slot{display:none}.layout{display:block}}</style><script type="application/ld+json">{"@context": "https://schema.org", "@type": "NewsArticle", "headline": "What a web page actually costs a language model", "description": "Most of a web page is not the page. Measuring the difference changes how you build tools that read the web.", "url": "https://example.com/blog/what-a-page-costs", "datePublished": "2026-05-12T09:00:00Z", "dateModified": "2026-05-14T16:30:00Z", "author": {"@type": "Person", "name": "Rosalind Vane"}, "publisher": {"@type": "Organization", "name": "Northwind Review", "logo": {"@type": "ImageObject", "url": "https://example.com/logo.png"}}}</script><script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments)}gtag('js',new Date());gtag('config','G-NWR000000',{page_path:location.pathname});(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src='/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);})(window,document,'script','dataLayer','GTM-NWR000');document.addEventListener('DOMContentLoaded',function(){var bar=document.querySelector('.cookie-bar');if(bar&&localStorage.getItem('consent')){bar.remove()}document.querySelectorAll('.site-nav a').forEach(function(a){a.addEventListener('mouseenter',function(){document.querySelector('.megamenu').hidden=false})});});</script></head><body><svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><symbol id="i-search" viewBox="0 0 24 24"><path d="M11 3a8 8 0 1 0 4.9 14.32l4.39 4.39 1.42-1.42-4.39-4.39A8 8 0 0 0 11 3Zm0 2a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"/></symbol><symbol id="i-menu" viewBox="0 0 24 24"><path d="M3 6h18v2H3V6Zm0 5h18v2H3v-2Zm0 5h18v2H3v-2Z"/></symbol><symbol id="i-close" viewBox="0 0 24 24"><path d="m6.4 5 5.6 5.6L17.6 5 19 6.4 13.4 12 19 17.6 17.6 19 12 13.4 6.4 19 5 17.6 10.6 12 5 6.4 6.4 5Z"/></symbol><symbol id="i-share" viewBox="0 0 24 24"><path d="M18 16.08a2.9 2.9 0 0 0-1.96.77L8.91 12.7a3.3 3.3 0 0 0 0-1.4l7.05-4.11A3 3 0 1 0 15 5c0 .24.04.47.09.7L8.04 9.81a3 3 0 1 0 0 4.38l7.12 4.16c-.05.21-.08.43-.08.65a2.92 2.92 0 1 0 2.92-2.92Z"/></symbol><symbol id="i-bookmark" viewBox="0 0 24 24"><path d="M17 3H7a2 2 0 0 0-2 2v16l7-3 7 3V5a2 2 0 0 0-2-2Z"/></symbol><symbol id="i-print" viewBox="0 0 24 24"><path d="M19 8h-1V3H6v5H5a3 3 0 0 0-3 3v6h4v3h12v-3h4v-6a3 3 0 0 0-3-3ZM8 5h8v3H8V5Zm8 14H8v-4h8v4Z"/></symbol><symbol id="i-mail" viewBox="0 0 24 24"><path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 4-8 5-8-5V6l8 5 8-5v2Z"/></symbol><symbol id="i-chevron" viewBox="0 0 24 24"><path d="M8.6 5.4 15.2 12l-6.6 6.6L7.2 17.2 12.4 12 7.2 6.8 8.6 5.4Z"/></symbol><symbol id="i-external" viewBox="0 0 24 24"><path d="M14 3v2h3.6l-9.8 9.8 1.4 1.4L19 6.4V10h2V3h-7ZM5 5h5V3H3v18h18v-7h-2v5H5V5Z"/></symbol><symbol id="i-clock" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 10.6V6h-2v7.4l5.5 3.3 1-1.7-4.5-2.4Z"/></symbol><symbol id="i-user" viewBox="0 0 24 24"><path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-4.4 0-8 2.2-8 5v3h16v-3c0-2.8-3.6-5-8-5Z"/></symbol><symbol id="i-comment" viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 0 0-2 2v14l4-4h14a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2Z"/></symbol></svg><header class="site-header"><div class="site-header__inner"><a class="brand" href="/">Northwind Review</a><nav class="site-nav" aria-label="Primary"><ul><li><a href="/product">Product</a></li><li><a href="/developers">Developers</a></li><li><a href="/solutions">Solutions</a></li><li><a href="/resources">Resources</a></li><li><a href="/company">Company</a></li><li><a href="/support">Support</a></li><li><a href="/legal">Legal</a></li><li><a href="/regions">Regions</a></li></ul></nav><form class="site-search" role="search" action="/search"><label class="sr-only" for="q">Search</label><input id="q" name="q" type="search" placeholder="Search the archive"><button type="submit">Search</button></form></div></header><main class="layout"><article class="article"><h1>What a web page actually costs a language model</h1><p class="byline"><span>By Rosalind Vane</span><span>12 May 2026</span><span>9 minute read</span></p><p>A reader opening a news article sees perhaps nine hundred words of prose. The
+browser that drew those words downloaded something closer to half a megabyte of
+markup, and the overwhelming majority of it had nothing to do with the story.</p>
+
+<p>That gap does not matter much to a human. It matters enormously to a language
+model, which pays for every token it is handed and has a hard ceiling on how many
+it can hold at once. Feeding a model raw HTML is not merely wasteful; it is
+actively harmful, because the boilerplate crowds out the content it was supposed
+to make room for.</p>
+
+<h2>Where the bytes actually go</h2>
+
+<p>Take any article page apart and the same four categories account for nearly all
+of its weight. Inline stylesheets are usually the largest single block, because
+build tools now ship the critical CSS for the whole site rather than the page.
+Navigation comes second: a mega menu with eight sections and twelve links each is
+ninety-six anchors before the reader has scrolled at all.</p>
+
+<p>Third is instrumentation. Analytics initialisation, consent management, and
+tag-manager bootstrapping run to several kilobytes of inline JavaScript that no
+reader will ever see and no model can act on. Fourth is the recirculation
+furniture: related stories, newsletter prompts, share rails, and the comment
+thread.</p>
+
+<blockquote>The article is not the page. On a typical publisher template it is
+between three and eight percent of what the server sent.</blockquote>
+
+<p>None of this is anyone's fault. Each piece was added for a defensible reason,
+and together they make a page that works. But a tool whose job is to read the web
+on someone's behalf has to treat the page as a container rather than as the
+content, and separate the two before anything expensive happens downstream.</p>
+
+<h2>Measuring instead of guessing</h2>
+
+<p>The useful discipline here is to measure the reduction rather than assume it.
+Record the size of the document that came in, the size of the text that came out,
+and the ratio between them. Three numbers, attached to every extraction, and they
+pay for themselves immediately.</p>
+
+<p>They tell you when an extractor has failed silently. A page that reduces by
+ninety-nine point nine percent has not been cleaned; it has been emptied,
+usually because the content arrived after the initial paint and the fetch did not
+wait for it. A page that reduces by twelve percent has not been cleaned either.
+The extractor fell through to a whole-document conversion and kept the navigation
+along with the prose.</p>
+
+<p>They also tell you which pages are worth caching. Extraction is not free, and a
+document that shrinks by a factor of thirty is a document you would rather not
+process twice in the same session.</p>
+
+<h2>Rendered, not fetched</h2>
+
+<p>A significant fraction of the modern web does not exist until JavaScript has
+run. Fetching such a page over plain HTTP returns a shell: a container element,
+a script tag, and nothing a reader would recognise. Every extraction library will
+correctly report that there was nothing to extract, because there genuinely was
+not.</p>
+
+<p>Driving a real browser engine solves this, at a cost. The process is heavy, it
+takes a second or two to start, and it must be reused rather than launched per
+request. Handing each navigation a fresh page inside one long-lived browser is
+the arrangement that survives contact with a real workload.</p>
+
+<h2>The number that justifies the work</h2>
+
+<p>On the pages tested for this piece, the reduction ranged from roughly ninety
+percent on a plain article template to over ninety-nine percent on a portal page
+carrying four advertising slots and a mega menu. A four hundred kilobyte document
+became eleven kilobytes of prose.</p>
+
+<p>Expressed in tokens rather than bytes, that is the difference between a page
+that consumes a meaningful slice of a context window and one that barely
+registers. It is also the difference between reading three sources on a question
+and reading thirty.</p>
+
+<p>The lesson generalises past web pages. Any tool that hands data to a model is
+making a decision about what that model's attention is spent on, and the default
+answer, everything we happened to receive, is almost never the right one.</p></article><aside class="sidebar"><h3>Related reading</h3><ul><li><a href="/blog/the-quiet-cost-of-a-mega-menu">The quiet cost of a mega menu</a></li><li><a href="/blog/why-your-extractor-returns-an-empty-string">Why your extractor returns an empty string</a></li><li><a href="/blog/rendering-budgets-for-crawlers">Rendering budgets for crawlers</a></li><li><a href="/blog/consent-banners-and-the-pages-they-hide">Consent banners and the pages they hide</a></li><li><a href="/blog/a-short-history-of-reader-mode">A short history of reader mode</a></li><li><a href="/blog/caching-what-you-already-cleaned">Caching what you already cleaned</a></li><li><a href="/blog/measuring-token-spend-per-source">Measuring token spend per source</a></li><li><a href="/blog/six-ways-a-fetch-silently-succeeds">Six ways a fetch silently succeeds</a></li></ul><div class="newsletter"><h3>The weekly digest</h3><p>One email each Thursday. Reporting on tooling, measurement, and the web as infrastructure. No advertising.</p><form action="/subscribe" method="post"><input type="email" name="email" placeholder="you@example.com" required><button type="submit">Subscribe</button></form><p><small>By subscribing you agree to our privacy policy. Unsubscribe at any time.</small></p></div></aside></main><footer class="site-footer"><div class="site-footer__grid"><div><h4>Product</h4><a href="/product/overview">Overview</a><a href="/product/pricing">Pricing</a><a href="/product/integrations">Integrations</a><a href="/product/changelog">Changelog</a><a href="/product/roadmap">Roadmap</a><a href="/product/status">Status</a><a href="/product/security">Security</a><a href="/product/trust-centre">Trust centre</a><a href="/product/enterprise">Enterprise</a><a href="/product/migration">Migration</a><a href="/product/uptime">Uptime</a><a href="/product/limits">Limits</a></div><div><h4>Developers</h4><a href="/developers/documentation">Documentation</a><a href="/developers/api-reference">API reference</a><a href="/developers/sdks">SDKs</a><a href="/developers/cli">CLI</a><a href="/developers/examples">Examples</a><a href="/developers/playground">Playground</a><a href="/developers/webhooks">Webhooks</a><a href="/developers/rate-limits">Rate limits</a><a href="/developers/errors">Errors</a><a href="/developers/versioning">Versioning</a><a href="/developers/sandbox">Sandbox</a><a href="/developers/postman">Postman</a></div><div><h4>Solutions</h4><a href="/solutions/startups">Startups</a><a href="/solutions/agencies">Agencies</a><a href="/solutions/education">Education</a><a href="/solutions/healthcare">Healthcare</a><a href="/solutions/retail">Retail</a><a href="/solutions/finance">Finance</a><a href="/solutions/public-sector">Public sector</a><a href="/solutions/non-profit">Non-profit</a><a href="/solutions/media">Media</a><a href="/solutions/logistics">Logistics</a><a href="/solutions/travel">Travel</a><a href="/solutions/gaming">Gaming</a></div><div><h4>Resources</h4><a href="/resources/blog">Blog</a><a href="/resources/guides">Guides</a><a href="/resources/case-studies">Case studies</a><a href="/resources/webinars">Webinars</a><a href="/resources/newsletter">Newsletter</a><a href="/resources/glossary">Glossary</a><a href="/resources/templates">Templates</a><a href="/resources/community">Community</a><a href="/resources/events">Events</a><a href="/resources/podcast">Podcast</a><a href="/resources/research">Research</a><a href="/resources/reports">Reports</a></div><div><h4>Company</h4><a href="/company/about">About</a><a href="/company/careers">Careers</a><a href="/company/press">Press</a><a href="/company/partners">Partners</a><a href="/company/investors">Investors</a><a href="/company/brand">Brand</a><a href="/company/contact">Contact</a><a href="/company/offices">Offices</a><a href="/company/diversity">Diversity</a><a href="/company/sustainability">Sustainability</a><a href="/company/legal">Legal</a><a href="/company/imprint">Imprint</a></div><div><h4>Support</h4><a href="/support/help-centre">Help centre</a><a href="/support/contact-support">Contact support</a><a href="/support/system-status">System status</a><a href="/support/report-a-bug">Report a bug</a><a href="/support/feature-requests">Feature requests</a><a href="/support/service-levels">Service levels</a><a href="/support/onboarding">Onboarding</a><a href="/support/training">Training</a><a href="/support/certification">Certification</a><a href="/support/forums">Forums</a><a href="/support/office-hours">Office hours</a><a href="/support/escalations">Escalations</a></div><div><h4>Legal</h4><a href="/legal/terms-of-service">Terms of service</a><a href="/legal/privacy-policy">Privacy policy</a><a href="/legal/cookie-policy">Cookie policy</a><a href="/legal/acceptable-use">Acceptable use</a><a href="/legal/data-processing">Data processing</a><a href="/legal/subprocessors">Subprocessors</a><a href="/legal/accessibility">Accessibility</a><a href="/legal/modern-slavery">Modern slavery</a><a href="/legal/patents">Patents</a><a href="/legal/trademarks">Trademarks</a><a href="/legal/disclosures">Disclosures</a><a href="/legal/compliance">Compliance</a></div><div><h4>Regions</h4><a href="/regions/united-kingdom">United Kingdom</a><a href="/regions/united-states">United States</a><a href="/regions/canada">Canada</a><a href="/regions/ireland">Ireland</a><a href="/regions/germany">Germany</a><a href="/regions/france">France</a><a href="/regions/spain">Spain</a><a href="/regions/netherlands">Netherlands</a><a href="/regions/sweden">Sweden</a><a href="/regions/australia">Australia</a><a href="/regions/singapore">Singapore</a><a href="/regions/japan">Japan</a></div></div><small>Copyright 2026 Northwind Review Limited. Registered in England and Wales. All rights reserved. Reproduction in whole or in part without written permission is prohibited.</small></footer><div class="cookie-bar" role="dialog" aria-label="Cookie consent"><p>We and our 847 partners store and access information on your device to personalise advertising, measure engagement, and develop products. You can change your choices at any time from the footer.</p><button type="button">Accept all</button><button type="button">Reject non-essential</button><button type="button">Manage preferences</button></div><script id="__NEXT_DATA__" type="application/json">{"props": {"pageProps": {"article": {"id": "art_100000", "slug": "consultation-timetable-published-in-full-0", "headline": "Consultation timetable published in full", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Policy", "published": "2026-05-01T08:15:00Z", "updated": "2026-05-01T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 400, "paywall": true, "tags": ["portability", "regulation", "policy"], "image": {"id": "img_5000", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1200, "shares": 40, "dwell": 96}}, "related": [{"id": "art_100000", "slug": "consultation-timetable-published-in-full-0", "headline": "Consultation timetable published in full", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Policy", "published": "2026-05-01T08:15:00Z", "updated": "2026-05-01T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 400, "paywall": true, "tags": ["portability", "regulation", "policy"], "image": {"id": "img_5000", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1200, "shares": 40, "dwell": 96}}, {"id": "art_100001", "slug": "what-the-seven-day-window-would-mean-in-practice-1", "headline": "What the seven-day window would mean in practice", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Technology", "published": "2026-05-02T08:15:00Z", "updated": "2026-05-02T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 437, "paywall": false, "tags": ["portability", "regulation", "technology"], "image": {"id": "img_5001", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1213, "shares": 41, "dwell": 96}}, {"id": "art_100002", "slug": "industry-bodies-request-an-extension-2", "headline": "Industry bodies request an extension", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Markets", "published": "2026-05-03T08:15:00Z", "updated": "2026-05-03T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 474, "paywall": false, "tags": ["portability", "regulation", "markets"], "image": {"id": "img_5002", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1226, "shares": 42, "dwell": 96}}, {"id": "art_100003", "slug": "derived-data:-the-definition-everyone-is-arguing-about-3", "headline": "Derived data: the definition everyone is arguing about", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Opinion", "published": "2026-05-04T08:15:00Z", "updated": "2026-05-04T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 511, "paywall": true, "tags": ["portability", "regulation", "opinion"], "image": {"id": "img_5003", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1239, "shares": 43, "dwell": 96}}, {"id": "art_100004", "slug": "five-smaller-platforms-already-meet-the-standard-4", "headline": "Five smaller platforms already meet the standard", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Analysis", "published": "2026-05-05T08:15:00Z", "updated": "2026-05-05T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 548, "paywall": false, "tags": ["portability", "regulation", "analysis"], "image": {"id": "img_5004", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1252, "shares": 44, "dwell": 96}}, {"id": "art_100005", "slug": "how-the-last-consultation-went-5", "headline": "How the last consultation went", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Data", "published": "2026-05-06T08:15:00Z", "updated": "2026-05-06T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 585, "paywall": false, "tags": ["portability", "regulation", "data"], "image": {"id": "img_5005", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1265, "shares": 45, "dwell": 96}}, {"id": "art_100006", "slug": "reading-the-sixty-one-pages-so-you-do-not-have-to-6", "headline": "Reading the sixty-one pages so you do not have to", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Policy", "published": "2026-05-07T08:15:00Z", "updated": "2026-05-07T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 622, "paywall": true, "tags": ["portability", "regulation", "policy"], "image": {"id": "img_5006", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1278, "shares": 46, "dwell": 96}}, {"id": "art_100007", "slug": "the-threshold-question-nobody-has-answered-7", "headline": "The threshold question nobody has answered", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Technology", "published": "2026-05-08T08:15:00Z", "updated": "2026-05-08T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 659, "paywall": false, "tags": ["portability", "regulation", "technology"], "image": {"id": "img_5007", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1291, "shares": 47, "dwell": 96}}, {"id": "art_100008", "slug": "export-formats-compared-8", "headline": "Export formats compared", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Markets", "published": "2026-05-09T08:15:00Z", "updated": "2026-05-09T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 696, "paywall": false, "tags": ["portability", "regulation", "markets"], "image": {"id": "img_5008", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1304, "shares": 48, "dwell": 96}}, {"id": "art_100009", "slug": "a-short-guide-to-responding-9", "headline": "A short guide to responding", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Opinion", "published": "2026-05-10T08:15:00Z", "updated": "2026-05-10T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 733, "paywall": true, "tags": ["portability", "regulation", "opinion"], "image": {"id": "img_5009", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1317, "shares": 49, "dwell": 96}}, {"id": "art_100010", "slug": "portability-in-practice:-three-case-studies-10", "headline": "Portability in practice: three case studies", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Analysis", "published": "2026-05-11T08:15:00Z", "updated": "2026-05-11T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 770, "paywall": false, "tags": ["portability", "regulation", "analysis"], "image": {"id": "img_5010", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1330, "shares": 50, "dwell": 96}}, {"id": "art_100011", "slug": "the-regulators-own-numbers,-annotated-11", "headline": "The regulator's own numbers, annotated", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Data", "published": "2026-05-12T08:15:00Z", "updated": "2026-05-12T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 807, "paywall": false, "tags": ["portability", "regulation", "data"], "image": {"id": "img_5011", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1343, "shares": 51, "dwell": 96}}, {"id": "art_100012", "slug": "consultation-timetable-published-in-full-12", "headline": "Consultation timetable published in full", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Policy", "published": "2026-05-13T08:15:00Z", "updated": "2026-05-13T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 844, "paywall": true, "tags": ["portability", "regulation", "policy"], "image": {"id": "img_5012", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1356, "shares": 52, "dwell": 96}}, {"id": "art_100013", "slug": "what-the-seven-day-window-would-mean-in-practice-13", "headline": "What the seven-day window would mean in practice", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Technology", "published": "2026-05-14T08:15:00Z", "updated": "2026-05-14T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 881, "paywall": false, "tags": ["portability", "regulation", "technology"], "image": {"id": "img_5013", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1369, "shares": 53, "dwell": 96}}, {"id": "art_100014", "slug": "industry-bodies-request-an-extension-14", "headline": "Industry bodies request an extension", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Markets", "published": "2026-05-15T08:15:00Z", "updated": "2026-05-15T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 918, "paywall": false, "tags": ["portability", "regulation", "markets"], "image": {"id": "img_5014", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1382, "shares": 54, "dwell": 96}}, {"id": "art_100015", "slug": "derived-data:-the-definition-everyone-is-arguing-about-15", "headline": "Derived data: the definition everyone is arguing about", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Opinion", "published": "2026-05-16T08:15:00Z", "updated": "2026-05-16T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 955, "paywall": true, "tags": ["portability", "regulation", "opinion"], "image": {"id": "img_5015", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1395, "shares": 55, "dwell": 96}}, {"id": "art_100016", "slug": "five-smaller-platforms-already-meet-the-standard-16", "headline": "Five smaller platforms already meet the standard", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Analysis", "published": "2026-05-17T08:15:00Z", "updated": "2026-05-17T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 992, "paywall": false, "tags": ["portability", "regulation", "analysis"], "image": {"id": "img_5016", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1408, "shares": 56, "dwell": 96}}, {"id": "art_100017", "slug": "how-the-last-consultation-went-17", "headline": "How the last consultation went", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Data", "published": "2026-05-18T08:15:00Z", "updated": "2026-05-18T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 1029, "paywall": false, "tags": ["portability", "regulation", "data"], "image": {"id": "img_5017", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1421, "shares": 57, "dwell": 96}}, {"id": "art_100018", "slug": "reading-the-sixty-one-pages-so-you-do-not-have-to-18", "headline": "Reading the sixty-one pages so you do not have to", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Policy", "published": "2026-05-19T08:15:00Z", "updated": "2026-05-19T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 1066, "paywall": true, "tags": ["portability", "regulation", "policy"], "image": {"id": "img_5018", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1434, "shares": 58, "dwell": 96}}, {"id": "art_100019", "slug": "the-threshold-question-nobody-has-answered-19", "headline": "The threshold question nobody has answered", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Technology", "published": "2026-05-20T08:15:00Z", "updated": "2026-05-20T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 1103, "paywall": false, "tags": ["portability", "regulation", "technology"], "image": {"id": "img_5019", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1447, "shares": 59, "dwell": 96}}, {"id": "art_100020", "slug": "export-formats-compared-20", "headline": "Export formats compared", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Markets", "published": "2026-05-21T08:15:00Z", "updated": "2026-05-21T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 1140, "paywall": false, "tags": ["portability", "regulation", "markets"], "image": {"id": "img_5020", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1460, "shares": 60, "dwell": 96}}, {"id": "art_100021", "slug": "a-short-guide-to-responding-21", "headline": "A short guide to responding", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Opinion", "published": "2026-05-22T08:15:00Z", "updated": "2026-05-22T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 1177, "paywall": true, "tags": ["portability", "regulation", "opinion"], "image": {"id": "img_5021", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1473, "shares": 61, "dwell": 96}}, {"id": "art_100022", "slug": "portability-in-practice:-three-case-studies-22", "headline": "Portability in practice: three case studies", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Analysis", "published": "2026-05-23T08:15:00Z", "updated": "2026-05-23T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 1214, "paywall": false, "tags": ["portability", "regulation", "analysis"], "image": {"id": "img_5022", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1486, "shares": 62, "dwell": 96}}, {"id": "art_100023", "slug": "the-regulators-own-numbers,-annotated-23", "headline": "The regulator's own numbers, annotated", "standfirst": "The consultation closes on 4 August and responses will be published alongside a summary in the autumn.", "section": "Data", "published": "2026-05-24T08:15:00Z", "updated": "2026-05-24T11:40:00Z", "byline": {"name": "Alec Fenwick", "id": "auth_41"}, "wordCount": 1251, "paywall": false, "tags": ["portability", "regulation", "data"], "image": {"id": "img_5023", "alt": "Placeholder image", "widths": [320, 480, 640, 960, 1280, 1920], "aspectRatio": "5:3"}, "metrics": {"reads": 1499, "shares": 63, "dwell": 96}}], "mostRead": ["art_100000", "art_100001", "art_100002", "art_100003", "art_100004", "art_100005", "art_100006", "art_100007", "art_100008", "art_100009"], "navigation": {"Product": [{"label": "Overview", "href": "/product/overview"}, {"label": "Pricing", "href": "/product/pricing"}, {"label": "Integrations", "href": "/product/integrations"}, {"label": "Changelog", "href": "/product/changelog"}, {"label": "Roadmap", "href": "/product/roadmap"}, {"label": "Status", "href": "/product/status"}, {"label": "Security", "href": "/product/security"}, {"label": "Trust centre", "href": "/product/trust-centre"}, {"label": "Enterprise", "href": "/product/enterprise"}, {"label": "Migration", "href": "/product/migration"}, {"label": "Uptime", "href": "/product/uptime"}, {"label": "Limits", "href": "/product/limits"}], "Developers": [{"label": "Documentation", "href": "/developers/documentation"}, {"label": "API reference", "href": "/developers/api-reference"}, {"label": "SDKs", "href": "/developers/sdks"}, {"label": "CLI", "href": "/developers/cli"}, {"label": "Examples", "href": "/developers/examples"}, {"label": "Playground", "href": "/developers/playground"}, {"label": "Webhooks", "href": "/developers/webhooks"}, {"label": "Rate limits", "href": "/developers/rate-limits"}, {"label": "Errors", "href": "/developers/errors"}, {"label": "Versioning", "href": "/developers/versioning"}, {"label": "Sandbox", "href": "/developers/sandbox"}, {"label": "Postman", "href": "/developers/postman"}], "Solutions": [{"label": "Startups", "href": "/solutions/startups"}, {"label": "Agencies", "href": "/solutions/agencies"}, {"label": "Education", "href": "/solutions/education"}, {"label": "Healthcare", "href": "/solutions/healthcare"}, {"label": "Retail", "href": "/solutions/retail"}, {"label": "Finance", "href": "/solutions/finance"}, {"label": "Public sector", "href": "/solutions/public-sector"}, {"label": "Non-profit", "href": "/solutions/non-profit"}, {"label": "Media", "href": "/solutions/media"}, {"label": "Logistics", "href": "/solutions/logistics"}, {"label": "Travel", "href": "/solutions/travel"}, {"label": "Gaming", "href": "/solutions/gaming"}], "Resources": [{"label": "Blog", "href": "/resources/blog"}, {"label": "Guides", "href": "/resources/guides"}, {"label": "Case studies", "href": "/resources/case-studies"}, {"label": "Webinars", "href": "/resources/webinars"}, {"label": "Newsletter", "href": "/resources/newsletter"}, {"label": "Glossary", "href": "/resources/glossary"}, {"label": "Templates", "href": "/resources/templates"}, {"label": "Community", "href": "/resources/community"}, {"label": "Events", "href": "/resources/events"}, {"label": "Podcast", "href": "/resources/podcast"}, {"label": "Research", "href": "/resources/research"}, {"label": "Reports", "href": "/resources/reports"}], "Company": [{"label": "About", "href": "/company/about"}, {"label": "Careers", "href": "/company/careers"}, {"label": "Press", "href": "/company/press"}, {"label": "Partners", "href": "/company/partners"}, {"label": "Investors", "href": "/company/investors"}, {"label": "Brand", "href": "/company/brand"}, {"label": "Contact", "href": "/company/contact"}, {"label": "Offices", "href": "/company/offices"}, {"label": "Diversity", "href": "/company/diversity"}, {"label": "Sustainability", "href": "/company/sustainability"}, {"label": "Legal", "href": "/company/legal"}, {"label": "Imprint", "href": "/company/imprint"}], "Support": [{"label": "Help centre", "href": "/support/help-centre"}, {"label": "Contact support", "href": "/support/contact-support"}, {"label": "System status", "href": "/support/system-status"}, {"label": "Report a bug", "href": "/support/report-a-bug"}, {"label": "Feature requests", "href": "/support/feature-requests"}, {"label": "Service levels", "href": "/support/service-levels"}, {"label": "Onboarding", "href": "/support/onboarding"}, {"label": "Training", "href": "/support/training"}, {"label": "Certification", "href": "/support/certification"}, {"label": "Forums", "href": "/support/forums"}, {"label": "Office hours", "href": "/support/office-hours"}, {"label": "Escalations", "href": "/support/escalations"}], "Legal": [{"label": "Terms of service", "href": "/legal/terms-of-service"}, {"label": "Privacy policy", "href": "/legal/privacy-policy"}, {"label": "Cookie policy", "href": "/legal/cookie-policy"}, {"label": "Acceptable use", "href": "/legal/acceptable-use"}, {"label": "Data processing", "href": "/legal/data-processing"}, {"label": "Subprocessors", "href": "/legal/subprocessors"}, {"label": "Accessibility", "href": "/legal/accessibility"}, {"label": "Modern slavery", "href": "/legal/modern-slavery"}, {"label": "Patents", "href": "/legal/patents"}, {"label": "Trademarks", "href": "/legal/trademarks"}, {"label": "Disclosures", "href": "/legal/disclosures"}, {"label": "Compliance", "href": "/legal/compliance"}], "Regions": [{"label": "United Kingdom", "href": "/regions/united-kingdom"}, {"label": "United States", "href": "/regions/united-states"}, {"label": "Canada", "href": "/regions/canada"}, {"label": "Ireland", "href": "/regions/ireland"}, {"label": "Germany", "href": "/regions/germany"}, {"label": "France", "href": "/regions/france"}, {"label": "Spain", "href": "/regions/spain"}, {"label": "Netherlands", "href": "/regions/netherlands"}, {"label": "Sweden", "href": "/regions/sweden"}, {"label": "Australia", "href": "/regions/australia"}, {"label": "Singapore", "href": "/regions/singapore"}, {"label": "Japan", "href": "/regions/japan"}]}, "consent": {"vendors": 847, "purposes": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], "legitimateInterest": [1, 2, 3, 4, 5, 6, 7]}, "ads": {"slots": [{"name": "leaderboard-top", "sizes": [[970, 250], [728, 90], [300, 250]]}, {"name": "mpu-mid", "sizes": [[970, 250], [728, 90], [300, 250]]}, {"name": "mpu-lower", "sizes": [[970, 250], [728, 90], [300, 250]]}, {"name": "leaderboard-bottom", "sizes": [[970, 250], [728, 90], [300, 250]]}], "targeting": {"section": "policy", "tier": "free", "geo": "gb"}}, "user": {"signedIn": false, "articlesRead": 3, "quota": 5}}}, "page": "/news/[slug]", "buildId": "b7f4c2e19a", "isFallback": false}</script><script>document.querySelectorAll('.newsletter form').forEach(function(f){f.addEventListener('submit',function(e){e.preventDefault();fetch('/subscribe',{method:'POST',body:new FormData(f)})})});</script></body>
+</html>
