@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "knowledge-base": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/absolute/path/to/23-knowledge-base",
+        "run",
+        "python",
+        "-m",
+        "knowledge_base"
+      ],
+      "env": {
+        "KNOWLEDGE_DIR": "/absolute/path/to/23-knowledge-base/knowledge"
+      }
+    }
+  }
+}

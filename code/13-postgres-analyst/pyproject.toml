@@ -1,0 +1,38 @@
+[project]
+name = "mcp-postgres-analyst"
+version = "0.2.0"
+description = "The PostgreSQL analyst MCP server built across posts 13 and 14 of the series"
+readme = "README.md"
+requires-python = ">=3.10"
+
+# Pinned exactly. This project was written and tested against the 2.0 beta that
+# implements protocol revision 2026-07-28. Do not float this pin: the 1.x line
+# uses a completely different module layout (mcp.server.fastmcp, mcp.types).
+dependencies = [
+    "mcp[cli]==2.0.0b2",
+    "asyncpg>=0.30.0",
+    # sqlglot, not sqlparse. sqlparse is a tokeniser and a formatter; it has no
+    # grammar, so it cannot tell you that a DELETE is nested inside a CTE.
+    "sqlglot>=25.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[project.scripts]
+mcp-postgres-analyst = "pg_analyst.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pg_analyst"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

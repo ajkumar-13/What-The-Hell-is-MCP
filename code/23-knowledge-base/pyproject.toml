@@ -1,0 +1,37 @@
+[project]
+name = "mcp-knowledge-base"
+version = "0.1.0"
+description = "The team knowledge-base MCP server from post 23, and a configuration for every client"
+readme = "README.md"
+requires-python = ">=3.10"
+
+# Pinned exactly. This project was written and tested against the 2.0 beta that
+# implements protocol revision 2026-07-28. Do not float this pin: the 1.x line
+# uses a completely different module layout (mcp.server.fastmcp, mcp.types).
+#
+# There is nothing else here on purpose. The ranking in `index.py` is written by
+# hand against the standard library, so the only thing a reader installs before
+# this server starts is the MCP SDK itself.
+dependencies = [
+    "mcp[cli]==2.0.0b2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[project.scripts]
+mcp-knowledge-base = "knowledge_base.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/knowledge_base"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

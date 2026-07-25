@@ -1,0 +1,38 @@
+# A throwaway PostgreSQL for working through posts 13 and 14.
+#
+#   docker compose up -d
+#   docker compose logs -f postgres     # wait for "database system is ready"
+#
+# Everything in ./sql is mounted into the image's init directory and executed in
+# lexical order the first time the volume is created: 001 seeds the tables, then
+# 002 creates the two roles the server logs in as. Both only run on a fresh
+# volume, so after editing them:
+#
+#   docker compose down -v && docker compose up -d
+#
+# Nothing here is production configuration. The passwords are in plain text and
+# the port is published on the host.
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: pg-analyst
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: analytics
+    ports:
+      # Loopback only. Publishing "5432:5432" would bind every interface and
+      # put a database with known passwords on the network.
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - ./sql:/docker-entrypoint-initdb.d:ro
+      - pg-analyst-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d analytics"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pg-analyst-data:

@@ -1,0 +1,22 @@
+{
+  "_comment": [
+    "Copy this to servers.json and edit the paths. The 'mcpServers' key and the",
+    "{command, args, env, cwd} / {url, headers} shapes are what desktop hosts use,",
+    "so a config that works here mostly works there.",
+    "Paths below are relative to code/10-mcp-client, which means they only resolve",
+    "when you run from that directory. Use absolute paths in a real config: the",
+    "host that spawns your server will not share your working directory."
+  ],
+  "mcpServers": {
+    "system-info": {
+      "command": "uv",
+      "args": ["run", "--directory", "../05-first-server", "python", "-m", "system_info"]
+    }
+  },
+  "_http_example": {
+    "remote": {
+      "url": "http://127.0.0.1:8000/mcp",
+      "headers": { "Authorization": "Bearer ..." }
+    }
+  }
+}

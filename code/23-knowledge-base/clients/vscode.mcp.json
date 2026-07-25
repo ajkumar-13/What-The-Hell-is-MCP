@@ -1,0 +1,34 @@
+{
+  "inputs": [
+    {
+      "type": "promptString",
+      "id": "kb-token",
+      "description": "Knowledge base bearer token",
+      "password": true
+    }
+  ],
+  "servers": {
+    "knowledge-base": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "--directory",
+        "${workspaceFolder}/code/23-knowledge-base",
+        "run",
+        "python",
+        "-m",
+        "knowledge_base"
+      ],
+      "env": {
+        "KNOWLEDGE_DIR": "${workspaceFolder}/code/23-knowledge-base/knowledge"
+      }
+    },
+    "knowledge-base-remote": {
+      "type": "http",
+      "url": "http://127.0.0.1:8000/mcp",
+      "headers": {
+        "Authorization": "Bearer ${input:kb-token}"
+      }
+    }
+  }
+}

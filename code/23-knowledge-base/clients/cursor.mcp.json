@@ -1,0 +1,24 @@
+{
+  "mcpServers": {
+    "knowledge-base": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "${workspaceFolder}/code/23-knowledge-base",
+        "run",
+        "python",
+        "-m",
+        "knowledge_base"
+      ],
+      "env": {
+        "KNOWLEDGE_DIR": "${workspaceFolder}/code/23-knowledge-base/knowledge"
+      }
+    },
+    "knowledge-base-remote": {
+      "url": "http://127.0.0.1:8000/mcp",
+      "headers": {
+        "Authorization": "Bearer ${env:KNOWLEDGE_BASE_TOKEN}"
+      }
+    }
+  }
+}

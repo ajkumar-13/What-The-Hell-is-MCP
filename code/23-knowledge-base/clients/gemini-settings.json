@@ -1,0 +1,28 @@
+{
+  "mcpServers": {
+    "knowledge-base": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/absolute/path/to/23-knowledge-base",
+        "run",
+        "python",
+        "-m",
+        "knowledge_base"
+      ],
+      "cwd": "/absolute/path/to/23-knowledge-base",
+      "env": {
+        "KNOWLEDGE_DIR": "/absolute/path/to/23-knowledge-base/knowledge"
+      },
+      "timeout": 30000,
+      "trust": false
+    },
+    "knowledge-base-remote": {
+      "httpUrl": "http://127.0.0.1:8000/mcp",
+      "headers": {
+        "Authorization": "Bearer $KNOWLEDGE_BASE_TOKEN"
+      },
+      "timeout": 30000
+    }
+  }
+}

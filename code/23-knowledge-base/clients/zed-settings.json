@@ -1,0 +1,24 @@
+{
+  "context_servers": {
+    "knowledge-base": {
+      "command": "uv",
+      "args": [
+        "--directory",
+        "/absolute/path/to/23-knowledge-base",
+        "run",
+        "python",
+        "-m",
+        "knowledge_base"
+      ],
+      "env": {
+        "KNOWLEDGE_DIR": "/absolute/path/to/23-knowledge-base/knowledge"
+      }
+    },
+    "knowledge-base-remote": {
+      "url": "http://127.0.0.1:8000/mcp",
+      "headers": {
+        "Authorization": "Bearer REPLACE_WITH_TOKEN"
+      }
+    }
+  }
+}
