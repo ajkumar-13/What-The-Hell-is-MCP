@@ -11,8 +11,8 @@ env/
 # Test caches
 .pytest_cache/
 
-# uv
-uv.lock
+# uv: lockfiles ARE committed. This series pins a pre-release SDK, so a
+# lockfile is what makes a clone reproducible months later.
 
 # IDE
 .vscode/
