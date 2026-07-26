@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Accept, decline, and cancel are three different answers</title>
+  <desc id="d">Three columns. Accept means the user filled the form in and submitted it, arrives as an AcceptedElicitation carrying data, and is the only branch where the tool acts, and even then only if the confirm field is true. Decline means the user actively refused, arrives as a DeclinedElicitation with no data, and the tool reports a refusal. Cancel means the user dismissed the dialog without choosing, by closing it or pressing escape, arrives as a CancelledElicitation, and the tool reports that nothing was decided. A footer notes that none of the three is an error, and that in URL mode an accept means consent was given rather than that the work completed.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .sub{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12.5px;fill:var(--mcp-ink-muted);}
+    .colhead{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:17px;fill:var(--mcp-ink);}
+    .rowlab{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:11.5px;fill:var(--mcp-ink-subtle);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .body{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12.5px;fill:var(--mcp-ink);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .col{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .rule{stroke:var(--mcp-border);stroke-width:1;}
+    .capOk{fill:var(--mcp-success);}
+    .capNo{fill:var(--mcp-alert);}
+    .capDim{fill:var(--mcp-ink-subtle);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-on-fill);}
+    .foot{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+  ]]></style>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="42">Three outcomes, three code paths</text>
+  <text class="sub" x="40" y="62">Collapsing decline and cancel into "no" throws away the difference between a refusal and a closed window.</text>
+
+  <!-- row labels -->
+  <text class="rowlab" x="44" y="150">WHAT THE USER DID</text>
+  <text class="rowlab" x="44" y="238">WHAT ARRIVES</text>
+  <text class="rowlab" x="44" y="316">DOES IT CARRY DATA</text>
+  <text class="rowlab" x="44" y="394">WHAT THE TOOL DOES</text>
+
+  <!-- ================= ACCEPT ================= -->
+  <rect class="col" x="230" y="86" width="220" height="368" rx="10"/>
+  <rect class="capOk" x="230" y="86" width="220" height="34" rx="10"/>
+  <rect class="capOk" x="230" y="106" width="220" height="14"/>
+  <text class="onfill" x="340" y="109" text-anchor="middle">accept</text>
+  <text class="colhead" x="340" y="150" text-anchor="middle">filled it in</text>
+  <text class="small" x="340" y="170" text-anchor="middle">and submitted</text>
+  <line class="rule" x1="246" y1="192" x2="434" y2="192"/>
+  <text class="mono" x="340" y="232" text-anchor="middle">AcceptedElicitation</text>
+  <line class="rule" x1="246" y1="270" x2="434" y2="270"/>
+  <text class="body" x="340" y="312" text-anchor="middle">yes, in .data</text>
+  <line class="rule" x1="246" y1="348" x2="434" y2="348"/>
+  <text class="body" x="340" y="388" text-anchor="middle">acts, but only if</text>
+  <text class="mono" x="340" y="408" text-anchor="middle">data.confirm</text>
+  <text class="body" x="340" y="428" text-anchor="middle">is true</text>
+
+  <!-- ================= DECLINE ================= -->
+  <rect class="col" x="470" y="86" width="220" height="368" rx="10"/>
+  <rect class="capNo" x="470" y="86" width="220" height="34" rx="10"/>
+  <rect class="capNo" x="470" y="106" width="220" height="14"/>
+  <text class="onfill" x="580" y="109" text-anchor="middle">decline</text>
+  <text class="colhead" x="580" y="150" text-anchor="middle">said no</text>
+  <text class="small" x="580" y="170" text-anchor="middle">deliberately</text>
+  <line class="rule" x1="486" y1="192" x2="674" y2="192"/>
+  <text class="mono" x="580" y="232" text-anchor="middle">DeclinedElicitation</text>
+  <line class="rule" x1="486" y1="270" x2="674" y2="270"/>
+  <text class="body" x="580" y="312" text-anchor="middle">no</text>
+  <line class="rule" x1="486" y1="348" x2="674" y2="348"/>
+  <text class="body" x="580" y="388" text-anchor="middle">reports a refusal</text>
+  <text class="small" x="580" y="410" text-anchor="middle">the user decided</text>
+
+  <!-- ================= CANCEL ================= -->
+  <rect class="col" x="710" y="86" width="220" height="368" rx="10"/>
+  <rect class="capDim" x="710" y="86" width="220" height="34" rx="10"/>
+  <rect class="capDim" x="710" y="106" width="220" height="14"/>
+  <text class="onfill" x="820" y="109" text-anchor="middle">cancel</text>
+  <text class="colhead" x="820" y="150" text-anchor="middle">dismissed it</text>
+  <text class="small" x="820" y="170" text-anchor="middle">escape, or closed</text>
+  <line class="rule" x1="726" y1="192" x2="914" y2="192"/>
+  <text class="mono" x="820" y="232" text-anchor="middle">CancelledElicitation</text>
+  <line class="rule" x1="726" y1="270" x2="914" y2="270"/>
+  <text class="body" x="820" y="312" text-anchor="middle">no</text>
+  <line class="rule" x1="726" y1="348" x2="914" y2="348"/>
+  <text class="body" x="820" y="388" text-anchor="middle">reports nothing</text>
+  <text class="body" x="820" y="408" text-anchor="middle">was decided</text>
+  <text class="small" x="820" y="430" text-anchor="middle">nobody chose</text>
+
+  <!-- footer -->
+  <rect class="foot" x="40" y="472" width="890" height="46" rx="8"/>
+  <text class="small" x="58" y="492">None of the three is an error. All three ride back inside inputResponses on the retry, exactly like each other.</text>
+  <text class="small" x="58" y="510">In URL mode an accept means the user consented to the flow, not that the flow finished. Check the outcome yourself.</text>
+</svg>

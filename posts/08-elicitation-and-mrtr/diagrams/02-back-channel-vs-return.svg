@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">The back channel, against return and retry</title>
+  <desc id="d">Two models side by side. On the left, the model used until revision 2025-11-25: the server sends an elicitation/create request back down the open connection and blocks, holding the original tool call in memory while it waits. The whole left column is marked as removed. On the right, the model from 2026-07-28: the server answers the call with an input_required result and stops, holding nothing, and the client comes back later with a second independent tool call carrying the response.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .zone{fill:none;stroke:var(--mcp-border);stroke-width:1;}
+    .gone{fill:none;stroke:var(--mcp-alert);stroke-width:1.5;stroke-dasharray:6 4;}
+    .client{fill:var(--mcp-primary);}
+    .server{fill:var(--mcp-accent);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-on-fill);}
+    .life{stroke:var(--mcp-ink-muted);stroke-width:1;stroke-dasharray:4 5;}
+    .msg{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .badmsg{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;}
+    .hold{fill:var(--mcp-neutral-1);stroke:var(--mcp-alert);stroke-width:1;}
+    .free{fill:var(--mcp-neutral-1);stroke:var(--mcp-success);stroke-width:1;}
+    .tag{fill:var(--mcp-alert);}
+    .tagok{fill:var(--mcp-success);}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arBad" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-alert)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="42">The question travels in a result now, not in a request</text>
+
+  <!-- ============ LEFT: removed ============ -->
+  <rect class="gone" x="40" y="64" width="420" height="440" rx="10"/>
+  <rect class="tag" x="40" y="64" width="150" height="24" rx="8"/>
+  <text class="onfill" x="115" y="81" text-anchor="middle">REMOVED</text>
+  <text class="head"  x="204" y="82">Until 2025-11-25</text>
+
+  <rect class="client" x="70" y="108" width="130" height="34" rx="7"/>
+  <text class="onfill" x="135" y="130" text-anchor="middle">client</text>
+  <rect class="server" x="300" y="108" width="130" height="34" rx="7"/>
+  <text class="onfill" x="365" y="130" text-anchor="middle">server</text>
+
+  <line class="life" x1="135" y1="142" x2="135" y2="470"/>
+  <line class="life" x1="365" y1="142" x2="365" y2="470"/>
+
+  <path class="msg" d="M137,180 L361,180" marker-end="url(#ar)"/>
+  <text class="mono" x="150" y="172">tools/call</text>
+
+  <path class="badmsg" d="M363,236 L139,236" marker-end="url(#arBad)"/>
+  <text class="mono" x="150" y="228">elicitation/create</text>
+  <text class="small" x="150" y="252">a request, going backwards</text>
+
+  <rect class="hold" x="286" y="272" width="158" height="76" rx="8"/>
+  <text class="small" x="365" y="294" text-anchor="middle">the call is still open</text>
+  <text class="small" x="365" y="312" text-anchor="middle">the server holds state</text>
+  <text class="small" x="365" y="330" text-anchor="middle">in memory, blocking</text>
+
+  <path class="badmsg" d="M137,382 L361,382" marker-end="url(#arBad)"/>
+  <text class="mono" x="150" y="374">elicitation result</text>
+
+  <path class="msg" d="M363,428 L139,428" marker-end="url(#ar)"/>
+  <text class="mono" x="150" y="420">tool result</text>
+
+  <text class="small" x="70" y="486">One connection, one machine, start to finish.</text>
+
+  <!-- ============ RIGHT: current ============ -->
+  <rect class="zone" x="500" y="64" width="420" height="440" rx="10"/>
+  <rect class="tagok" x="500" y="64" width="150" height="24" rx="8"/>
+  <text class="onfill" x="575" y="81" text-anchor="middle">2026-07-28</text>
+  <text class="head"  x="664" y="82">Current</text>
+
+  <rect class="client" x="530" y="108" width="130" height="34" rx="7"/>
+  <text class="onfill" x="595" y="130" text-anchor="middle">client</text>
+  <rect class="server" x="760" y="108" width="130" height="34" rx="7"/>
+  <text class="onfill" x="825" y="130" text-anchor="middle">server</text>
+
+  <line class="life" x1="595" y1="142" x2="595" y2="470"/>
+  <line class="life" x1="825" y1="142" x2="825" y2="470"/>
+
+  <path class="msg" d="M597,180 L821,180" marker-end="url(#ar)"/>
+  <text class="mono" x="610" y="172">tools/call</text>
+
+  <path class="msg" d="M823,236 L599,236" marker-end="url(#ar)"/>
+  <text class="mono" x="610" y="228">input_required</text>
+  <text class="small" x="610" y="252">a result, going the normal way</text>
+
+  <rect class="free" x="746" y="272" width="158" height="76" rx="8"/>
+  <text class="small" x="825" y="294" text-anchor="middle">the call is finished</text>
+  <text class="small" x="825" y="312" text-anchor="middle">the server holds nothing</text>
+  <text class="small" x="825" y="330" text-anchor="middle">and can be restarted</text>
+
+  <path class="msg" d="M597,382 L821,382" marker-end="url(#ar)"/>
+  <text class="mono" x="610" y="374">tools/call  (new id)</text>
+
+  <path class="msg" d="M823,428 L599,428" marker-end="url(#ar)"/>
+  <text class="mono" x="610" y="420">complete</text>
+
+  <text class="small" x="530" y="486">Two independent calls. They need not reach the same machine.</text>
+</svg>

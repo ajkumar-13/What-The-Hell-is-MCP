@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" role="img" aria-labelledby="t d">
+  <title id="t">The MRTR loop, message by message</title>
+  <desc id="d">A sequence diagram with three lifelines: the user, the host and its client, and the server. Five numbered messages run down the page. One, the client sends a tools/call. Two, the server answers with an input_required result carrying inputRequests and a sealed requestState, and then forgets everything. Three, the host asks the user off the wire. Four, the client sends a second, independent tools/call carrying the same arguments plus inputResponses and the same requestState. Five, the server returns a complete result. A note marks that step four may reach a different replica than step one, which is why no state can be held in memory between them.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12.5px;fill:var(--mcp-ink);}
+    .num{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .head{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .client{fill:var(--mcp-primary);}
+    .server{fill:var(--mcp-accent);}
+    .userbox{fill:var(--mcp-surface);stroke:var(--mcp-ink-muted);stroke-width:1;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-on-fill);}
+    .life{stroke:var(--mcp-ink-muted);stroke-width:1;stroke-dasharray:4 5;}
+    .msg{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .offwire{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;stroke-dasharray:3 3;}
+    .badge{fill:var(--mcp-ink);}
+    .forget{fill:var(--mcp-alert);}
+    .note{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arM" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="620"/>
+  <text class="title" x="40" y="42">The server does not ask. It answers, and waits to be asked again.</text>
+
+  <!-- lifeline heads -->
+  <rect class="userbox" x="70" y="66" width="150" height="38" rx="8"/>
+  <text class="label" x="145" y="90" text-anchor="middle">user</text>
+
+  <rect class="client" x="380" y="66" width="200" height="38" rx="8"/>
+  <text class="onfill" x="480" y="90" text-anchor="middle">host and its client</text>
+
+  <rect class="server" x="740" y="66" width="150" height="38" rx="8"/>
+  <text class="onfill" x="815" y="90" text-anchor="middle">server</text>
+
+  <line class="life" x1="145" y1="104" x2="145" y2="560"/>
+  <line class="life" x1="480" y1="104" x2="480" y2="560"/>
+  <line class="life" x1="815" y1="104" x2="815" y2="560"/>
+
+  <!-- 1 -->
+  <path class="msg" d="M480,150 L810,150" marker-end="url(#ar)"/>
+  <circle class="badge" cx="470" cy="150" r="11"/>
+  <text class="num" x="470" y="154" text-anchor="middle">1</text>
+  <text class="mono" x="500" y="142">tools/call  { name, arguments, _meta }</text>
+
+  <!-- 2 -->
+  <path class="msg" d="M810,214 L484,214" marker-end="url(#ar)"/>
+  <circle class="badge" cx="825" cy="214" r="11"/>
+  <text class="num" x="825" y="218" text-anchor="middle">2</text>
+  <text class="mono" x="500" y="206">resultType: "input_required"</text>
+  <text class="mono" x="500" y="232">inputRequests + requestState</text>
+
+  <rect class="forget" x="742" y="248" width="146" height="24" rx="6"/>
+  <text class="num" x="815" y="264" text-anchor="middle">then forgets everything</text>
+
+  <!-- 3 -->
+  <path class="offwire" d="M472,320 L150,320" marker-end="url(#arM)"/>
+  <path class="offwire" d="M150,352 L472,352" marker-end="url(#arM)"/>
+  <circle class="badge" cx="470" cy="336" r="11"/>
+  <text class="num" x="470" y="340" text-anchor="middle">3</text>
+  <text class="small" x="180" y="312">the host renders the question</text>
+  <text class="small" x="180" y="372">accept, decline, or cancel</text>
+  <text class="small" x="248" y="344" text-anchor="middle">off the wire</text>
+
+  <!-- 4 -->
+  <path class="msg" d="M480,418 L810,418" marker-end="url(#ar)"/>
+  <circle class="badge" cx="470" cy="418" r="11"/>
+  <text class="num" x="470" y="422" text-anchor="middle">4</text>
+  <text class="mono" x="500" y="410">tools/call  { same arguments, _meta,</text>
+  <text class="mono" x="500" y="436">inputResponses, requestState }</text>
+
+  <!-- 5 -->
+  <path class="msg" d="M810,486 L484,486" marker-end="url(#ar)"/>
+  <circle class="badge" cx="825" cy="486" r="11"/>
+  <text class="num" x="825" y="490" text-anchor="middle">5</text>
+  <text class="mono" x="520" y="478">resultType: "complete"</text>
+
+  <!-- note -->
+  <rect class="note" x="70" y="524" width="820" height="62" rx="8"/>
+  <text class="small" x="88" y="548">Step 4 is a new JSON-RPC request with a new id. It is not a continuation, and it may be answered by a</text>
+  <text class="small" x="88" y="568">different replica than step 1. Everything the server needs to resume is in the message, or it is gone.</text>
+</svg>
