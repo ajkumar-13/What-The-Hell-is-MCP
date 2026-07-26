@@ -152,7 +152,11 @@ what changed.
 - [REFERENCES.md](REFERENCES.md) — every citation in the series.
 - [PLAN.md](PLAN.md) — the master plan and per-post specs, the source of truth.
 - [notation_guide.md](notation_guide.md) — naming and typography conventions.
-- `assets/poster/one-page-of-mcp.svg` — the whole protocol on one canvas, prints at A2.
+- [assets/poster/one-page-of-mcp.svg](assets/poster/one-page-of-mcp.svg) — the whole protocol
+  on one canvas, designed to print at A2.
+- [verify/RESULTS.md](verify/RESULTS.md) — every measured value the posts quote, regenerated
+  by [verify/capture.py](verify/capture.py). If a post and this file disagree, the post is
+  wrong. Ground truth before prose.
 
 ---
 
