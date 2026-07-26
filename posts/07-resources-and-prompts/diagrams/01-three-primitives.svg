@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Who pulls the trigger on each of the three server primitives</title>
+  <desc id="d">Three columns, each headed by the actor that decides, drawn as a distinct silhouette rather than named only in text. The left column shows the model, a hexagon, labelled model-controlled, pulling the trigger on tools through the tools/call method. The middle column shows the application, a window, labelled application-driven, pulling the trigger on resources through resources/read. The right column shows a person, labelled user-controlled, pulling the trigger on prompts through prompts/get. A band across the bottom states the argument: the same underlying data may be exposed as any of the three, so the question is never what the data is but who decides to fetch it.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .actor{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:17px;fill:var(--mcp-ink);}
+    .prim{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:17px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:13px;fill:var(--mcp-ink);}
+    .monos{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .zone{fill:none;stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .glyph{fill:var(--mcp-primary);}
+    .glyph-cut{fill:var(--mcp-on-fill);}
+    .bar{fill:var(--mcp-accent);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .rule{stroke:var(--mcp-border);stroke-width:1;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="38">Three primitives, and who pulls each trigger</text>
+  <text class="small" x="40" y="57">The wording under each figure is the specification's own. The actor differs; the transport, the server, and the code do not.</text>
+
+  <!-- ================= column 1: the model ================= -->
+  <rect class="zone" x="40" y="76" width="280" height="376" rx="10"/>
+  <path class="glyph" d="M180,102 L206,117 L206,147 L180,162 L154,147 L154,117 Z"/>
+  <circle class="glyph-cut" cx="180" cy="132" r="8"/>
+  <text class="actor" x="180" y="192" text-anchor="middle">the model</text>
+  <rect class="chip" x="94" y="204" width="172" height="26" rx="13"/>
+  <text class="label" x="180" y="222" text-anchor="middle">model-controlled</text>
+  <text class="small" x="180" y="252" text-anchor="middle">decides, mid-conversation,</text>
+  <text class="small" x="180" y="268" text-anchor="middle">that it needs to act</text>
+  <path class="flow" d="M180,278 L180,300" marker-end="url(#ar)"/>
+
+  <rect class="box" x="64" y="304" width="232" height="128" rx="8"/>
+  <rect class="bar" x="64" y="304" width="232" height="6" rx="3"/>
+  <text class="prim" x="180" y="336" text-anchor="middle">Tools</text>
+  <text class="mono" x="180" y="358" text-anchor="middle">tools/call</text>
+  <text class="small" x="180" y="384" text-anchor="middle">Read from a name, a description,</text>
+  <text class="small" x="180" y="400" text-anchor="middle">and an input schema. Nothing in</text>
+  <text class="small" x="180" y="416" text-anchor="middle">the call carries human intent.</text>
+
+  <!-- ================= column 2: the application ================= -->
+  <rect class="zone" x="340" y="76" width="280" height="376" rx="10"/>
+  <rect class="glyph" x="444" y="102" width="72" height="60" rx="7"/>
+  <rect class="glyph-cut" x="452" y="120" width="56" height="34" rx="3"/>
+  <text class="actor" x="480" y="192" text-anchor="middle">the application</text>
+  <rect class="chip" x="386" y="204" width="188" height="26" rx="13"/>
+  <text class="label" x="480" y="222" text-anchor="middle">application-driven</text>
+  <text class="small" x="480" y="252" text-anchor="middle">attaches context by its own rule,</text>
+  <text class="small" x="480" y="268" text-anchor="middle">or because a user picked it</text>
+  <path class="flow" d="M480,278 L480,300" marker-end="url(#ar)"/>
+
+  <rect class="box" x="364" y="304" width="232" height="128" rx="8"/>
+  <rect class="bar" x="364" y="304" width="232" height="6" rx="3"/>
+  <text class="prim" x="480" y="336" text-anchor="middle">Resources</text>
+  <text class="mono" x="480" y="358" text-anchor="middle">resources/read</text>
+  <text class="small" x="480" y="384" text-anchor="middle">Addressed by URI. Cacheable,</text>
+  <text class="small" x="480" y="400" text-anchor="middle">subscribable, completable. The</text>
+  <text class="small" x="480" y="416" text-anchor="middle">host decides what and when.</text>
+
+  <!-- ================= column 3: the user ================= -->
+  <rect class="zone" x="640" y="76" width="280" height="376" rx="10"/>
+  <circle class="glyph" cx="780" cy="116" r="17"/>
+  <path class="glyph" d="M752,162 C752,134 808,134 808,162 Z"/>
+  <text class="actor" x="780" y="192" text-anchor="middle">the user</text>
+  <rect class="chip" x="694" y="204" width="172" height="26" rx="13"/>
+  <text class="label" x="780" y="222" text-anchor="middle">user-controlled</text>
+  <text class="small" x="780" y="252" text-anchor="middle">picks it from a menu, or types</text>
+  <text class="small" x="780" y="268" text-anchor="middle">it as a command</text>
+  <path class="flow" d="M780,278 L780,300" marker-end="url(#ar)"/>
+
+  <rect class="box" x="664" y="304" width="232" height="128" rx="8"/>
+  <rect class="bar" x="664" y="304" width="232" height="6" rx="3"/>
+  <text class="prim" x="780" y="336" text-anchor="middle">Prompts</text>
+  <text class="mono" x="780" y="358" text-anchor="middle">prompts/get</text>
+  <text class="small" x="780" y="384" text-anchor="middle">Expands into pre-filled messages</text>
+  <text class="small" x="780" y="400" text-anchor="middle">the server wrote. The opening</text>
+  <text class="small" x="780" y="416" text-anchor="middle">move, not the answer.</text>
+
+  <!-- ================= bottom rule ================= -->
+  <rect class="chip" x="40" y="470" width="880" height="48" rx="8"/>
+  <text class="label" x="56" y="492">The same data can legitimately be all three.</text>
+  <text class="small" x="56" y="510">The question is never what the data is. It is who should decide to fetch it, and that decision is the whole of this post.</text>
+</svg>

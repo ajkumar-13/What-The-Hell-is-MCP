@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Three levels of test for an MCP server, and what each one cannot see</title>
+  <desc id="d">Three stacked panels, one per level of testing. The top panel is unit tests: a test calls your own function directly, with no protocol and no client involved, so it catches logic, parsing and clamping but cannot see the published schema or the result shape. The middle panel is in-memory protocol tests, where a real client object and a real server object talk through the full protocol path with no process boundary between them, so it catches schemas, annotations, the isError flag and the multi round-trip, but cannot see anything that only breaks across a pipe. The bottom panel is a live host, which runs the server as a separate process over standard input and output, and is the only level that can catch a stray print writing onto the protocol channel. Measured run times sit in the header of each panel: twenty-three unit tests in 1.48 seconds, twenty-eight in-memory protocol tests in 1.47 seconds, and minutes of manual work for the live host.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .client{fill:var(--mcp-primary);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+    .bound{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;stroke-dasharray:4 4;}
+    .solidbound{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .tick{stroke:var(--mcp-success);stroke-width:1.5;fill:none;stroke-linecap:round;}
+    .cross{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;stroke-linecap:round;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="36">Three levels of test, and what each one cannot see</text>
+  <text class="small" x="40" y="58">Times are real runs of code/23-knowledge-base on one machine. Adding the protocol costs almost nothing.</text>
+
+  <!-- ================= LEVEL 1 ================= -->
+  <rect class="zone" x="40" y="78" width="880" height="132" rx="10"/>
+  <rect class="chip" x="56" y="90" width="72" height="22" rx="5"/>
+  <text class="label" x="92" y="105" text-anchor="middle">Level 1</text>
+  <text class="head" x="142" y="107">Unit tests on your own functions</text>
+  <rect class="chip" x="774" y="90" width="130" height="22" rx="5"/>
+  <text class="mono" x="839" y="105" text-anchor="middle">23 tests, 1.48 s</text>
+  <line class="rule" x1="56" y1="122" x2="904" y2="122"/>
+
+  <rect class="box" x="56" y="146" width="100" height="32" rx="6"/>
+  <text class="mono" x="106" y="166" text-anchor="middle">test</text>
+  <path class="flow" d="M158,162 L184,162" marker-end="url(#ar)"/>
+  <rect class="box" x="188" y="146" width="112" height="32" rx="6"/>
+  <text class="mono" x="244" y="166" text-anchor="middle">your function</text>
+  <text class="tiny" x="56" y="198">no client, no server, no protocol</text>
+
+  <text class="label" x="330" y="143">Catches</text>
+  <path class="tick" d="M336,159 l3,3.5 l6,-8"/>
+  <text class="small" x="352" y="163">ranking, parsing, clamping, edge cases</text>
+  <path class="tick" d="M336,177 l3,3.5 l6,-8"/>
+  <text class="small" x="352" y="181">every branch of your own logic</text>
+  <path class="tick" d="M336,195 l3,3.5 l6,-8"/>
+  <text class="small" x="352" y="199">missing fixtures and uncommitted data</text>
+
+  <text class="label" x="640" y="143">Cannot see</text>
+  <path class="cross" d="M646,154 l7,7 M653,154 l-7,7"/>
+  <text class="small" x="664" y="163">the published input and output schema</text>
+  <path class="cross" d="M646,172 l7,7 M653,172 l-7,7"/>
+  <text class="small" x="664" y="181">the result shape, and isError</text>
+  <path class="cross" d="M646,190 l7,7 M653,190 l-7,7"/>
+  <text class="small" x="664" y="199">anything the SDK generates for you</text>
+
+  <!-- ================= LEVEL 2 ================= -->
+  <rect class="zone" x="40" y="222" width="880" height="132" rx="10"/>
+  <rect class="chip" x="56" y="234" width="72" height="22" rx="5"/>
+  <text class="label" x="92" y="249" text-anchor="middle">Level 2</text>
+  <text class="head" x="142" y="251">In-memory protocol tests</text>
+  <text class="mono" x="352" y="251">Client(server_object)</text>
+  <rect class="chip" x="774" y="234" width="130" height="22" rx="5"/>
+  <text class="mono" x="839" y="249" text-anchor="middle">28 tests, 1.47 s</text>
+  <line class="rule" x1="56" y1="266" x2="904" y2="266"/>
+
+  <rect class="client" x="56" y="290" width="96" height="32" rx="6"/>
+  <text class="onfill" x="104" y="310" text-anchor="middle">client</text>
+  <line class="bound" x1="178" y1="282" x2="178" y2="330"/>
+  <rect class="server" x="204" y="290" width="96" height="32" rx="6"/>
+  <text class="onfill" x="252" y="310" text-anchor="middle">server</text>
+  <path class="flow" d="M154,300 L200,300" marker-end="url(#ar)"/>
+  <path class="flow" d="M202,314 L156,314" marker-end="url(#ar)"/>
+  <text class="tiny" x="56" y="342">one process, real protocol path, no pipe</text>
+
+  <text class="label" x="330" y="287">Catches</text>
+  <path class="tick" d="M336,303 l3,3.5 l6,-8"/>
+  <text class="small" x="352" y="307">published schemas and annotations</text>
+  <path class="tick" d="M336,321 l3,3.5 l6,-8"/>
+  <text class="small" x="352" y="325">resultType, structuredContent, isError</text>
+  <path class="tick" d="M336,339 l3,3.5 l6,-8"/>
+  <text class="small" x="352" y="343">the MRTR round trip, all four answers</text>
+
+  <text class="label" x="640" y="287">Cannot see</text>
+  <path class="cross" d="M646,298 l7,7 M653,298 l-7,7"/>
+  <text class="small" x="664" y="307">a stray print() corrupting stdout</text>
+  <path class="cross" d="M646,316 l7,7 M653,316 l-7,7"/>
+  <text class="small" x="664" y="325">packaging and host configuration</text>
+  <path class="cross" d="M646,334 l7,7 M653,334 l-7,7"/>
+  <text class="small" x="664" y="343">anything about the process boundary</text>
+
+  <!-- ================= LEVEL 3 ================= -->
+  <rect class="zone" x="40" y="366" width="880" height="132" rx="10"/>
+  <rect class="chip" x="56" y="378" width="72" height="22" rx="5"/>
+  <text class="label" x="92" y="393" text-anchor="middle">Level 3</text>
+  <text class="head" x="142" y="395">A live host, running the real process</text>
+  <rect class="chip" x="774" y="378" width="130" height="22" rx="5"/>
+  <text class="mono" x="839" y="393" text-anchor="middle">minutes, by hand</text>
+  <line class="rule" x1="56" y1="410" x2="904" y2="410"/>
+
+  <rect class="client" x="56" y="434" width="96" height="32" rx="6"/>
+  <text class="onfill" x="104" y="454" text-anchor="middle">host</text>
+  <line class="solidbound" x1="176" y1="426" x2="176" y2="474"/>
+  <line class="solidbound" x1="182" y1="426" x2="182" y2="474"/>
+  <rect class="server" x="204" y="434" width="96" height="32" rx="6"/>
+  <text class="onfill" x="252" y="454" text-anchor="middle">server</text>
+  <path class="flow" d="M154,444 L200,444" marker-end="url(#ar)"/>
+  <path class="flow" d="M202,458 L156,458" marker-end="url(#ar)"/>
+  <text class="tiny" x="56" y="486">two processes, stdout carries every frame</text>
+
+  <text class="label" x="330" y="431">Catches</text>
+  <path class="tick" d="M336,447 l3,3.5 l6,-8"/>
+  <text class="small" x="352" y="451">a stray print() on the protocol channel</text>
+  <path class="tick" d="M336,465 l3,3.5 l6,-8"/>
+  <text class="small" x="352" y="469">the launch command and the config file</text>
+  <path class="tick" d="M336,483 l3,3.5 l6,-8"/>
+  <text class="small" x="352" y="487">what a model does with your descriptions</text>
+
+  <text class="label" x="640" y="431">Cannot see</text>
+  <path class="cross" d="M646,442 l7,7 M653,442 l-7,7"/>
+  <text class="small" x="664" y="451">little, but it is manual and stateful</text>
+  <path class="cross" d="M646,460 l7,7 M653,460 l-7,7"/>
+  <text class="small" x="664" y="469">not deterministic, so not a CI gate</text>
+  <path class="cross" d="M646,478 l7,7 M653,478 l-7,7"/>
+  <text class="small" x="664" y="487">run it before you publish, not on push</text>
+
+  <text class="tiny" x="40" y="522">Each level catches what the one above it structurally cannot. Level 2 is the one most servers are missing.</text>
+</svg>

@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 720" role="img" aria-labelledby="t d">
+  <title id="t">A client opening a subscriptions/listen stream, and an update flowing back down it</title>
+  <desc id="d">A sequence diagram with two lifelines, a client on the left and a server on the right. The client sends subscriptions/listen carrying a notifications filter object whose four fields are shown in full: toolsListChanged, promptsListChanged, resourcesListChanged, and a resourceSubscriptions array naming one URI. The server answers with notifications/subscriptions/acknowledged, which must be the first message on the stream and carries the subscription id in the reserved meta key. Later, work on the server changes the resource, the server publishes an update, and notifications/resources/updated travels back down the still-open stream carrying only the URI. The client then issues an ordinary resources/read to fetch the new content, because the notification never carries it. Annotations down the left margin explain each step.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .monos{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .client{fill:var(--mcp-primary);}
+    .server{fill:var(--mcp-accent);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .lifeline{stroke:var(--mcp-ink-muted);stroke-width:1;stroke-dasharray:4 4;fill:none;}
+    .stream{stroke:var(--mcp-accent);stroke-width:1.5;fill:none;}
+    .num{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .numbg{fill:var(--mcp-ink);}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arT" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="720"/>
+  <text class="title" x="32" y="38">Opting in with subscriptions/listen, and one update coming back</text>
+  <text class="small" x="32" y="57">Four filter fields, all optional. Omitting one means not subscribing to it, and the server must not send what was not asked for.</text>
+
+  <!-- lifelines -->
+  <rect class="client" x="210" y="84" width="170" height="42" rx="8"/>
+  <text class="onfill" x="295" y="110" text-anchor="middle">client</text>
+  <rect class="server" x="610" y="84" width="170" height="42" rx="8"/>
+  <text class="onfill" x="695" y="110" text-anchor="middle">server</text>
+  <path class="lifeline" d="M295,126 L295,660"/>
+  <path class="lifeline" d="M695,126 L695,660"/>
+
+  <!-- the open stream marker -->
+  <path class="stream" d="M700,340 L700,650"/>
+  <text class="small" x="708" y="356">the stream</text>
+  <text class="small" x="708" y="372">stays open</text>
+
+  <!-- ============ 1. listen ============ -->
+  <text class="small" x="32" y="152">An ordinary POST over</text>
+  <text class="small" x="32" y="168">HTTP. The response is a</text>
+  <text class="small" x="32" y="184">long-lived event stream,</text>
+  <text class="small" x="32" y="200">not a second connection.</text>
+  <circle class="numbg" cx="272" cy="164" r="10"/>
+  <text class="num" x="272" y="168" text-anchor="middle">1</text>
+  <path class="flow" d="M295,168 L695,168" marker-end="url(#ar)"/>
+  <text class="mono" x="495" y="160" text-anchor="middle">subscriptions/listen</text>
+
+  <rect class="chip" x="330" y="180" width="336" height="132" rx="8"/>
+  <text class="monos" x="344" y="202">"notifications": {</text>
+  <text class="monos" x="344" y="220">  "toolsListChanged":      false,</text>
+  <text class="monos" x="344" y="238">  "promptsListChanged":    false,</text>
+  <text class="monos" x="344" y="256">  "resourcesListChanged":  true,</text>
+  <text class="monos" x="344" y="274">  "resourceSubscriptions": [</text>
+  <text class="monos" x="344" y="292">    "system://processes/top" ] }</text>
+
+  <!-- ============ 2. acknowledged ============ -->
+  <text class="small" x="32" y="330">This one is first, always.</text>
+  <text class="small" x="32" y="346">The server must not send</text>
+  <text class="small" x="32" y="362">any notification before it,</text>
+  <text class="small" x="32" y="378">and it echoes the subset</text>
+  <text class="small" x="32" y="394">it agreed to honor.</text>
+  <circle class="numbg" cx="718" cy="346" r="10"/>
+  <text class="num" x="718" y="350" text-anchor="middle">2</text>
+  <path class="flow" d="M695,346 L295,346" marker-end="url(#ar)"/>
+  <text class="mono" x="495" y="338" text-anchor="middle">notifications/subscriptions/acknowledged</text>
+
+  <rect class="chip" x="330" y="358" width="336" height="68" rx="8"/>
+  <text class="monos" x="344" y="380">"_meta": { "io.modelcontextprotocol/</text>
+  <text class="monos" x="344" y="398">             subscriptionId": 1 }</text>
+  <text class="small" x="344" y="418">The id of the listen request that opened the stream.</text>
+
+  <!-- ============ 3. something changes ============ -->
+  <rect class="box" x="716" y="446" width="212" height="70" rx="8"/>
+  <text class="label" x="730" y="468">Something changes</text>
+  <text class="small" x="730" y="486">A tool ends a process, so</text>
+  <text class="small" x="730" y="502">the top-ten table is stale.</text>
+  <path class="thin" d="M716,481 L700,481" marker-end="url(#arT)"/>
+  <text class="monos" x="730" y="536">ctx.notify_resource_updated</text>
+
+  <!-- ============ 4. update ============ -->
+  <text class="small" x="32" y="562">Only the types the filter</text>
+  <text class="small" x="32" y="578">asked for travel here.</text>
+  <text class="small" x="32" y="594">Progress and log messages</text>
+  <text class="small" x="32" y="610">never do.</text>
+  <circle class="numbg" cx="718" cy="578" r="10"/>
+  <text class="num" x="718" y="582" text-anchor="middle">3</text>
+  <path class="flow" d="M695,578 L295,578" marker-end="url(#ar)"/>
+  <text class="mono" x="495" y="570" text-anchor="middle">notifications/resources/updated</text>
+  <rect class="chip" x="330" y="588" width="336" height="30" rx="6"/>
+  <text class="monos" x="344" y="608">"uri": "system://processes/top"</text>
+
+  <!-- ============ 5. re-read ============ -->
+  <circle class="numbg" cx="272" cy="646" r="10"/>
+  <text class="num" x="272" y="650" text-anchor="middle">4</text>
+  <path class="flow" d="M295,646 L695,646" marker-end="url(#ar)"/>
+  <text class="mono" x="495" y="638" text-anchor="middle">resources/read</text>
+
+  <!-- ============ bottom rule ============ -->
+  <rect class="chip" x="32" y="666" width="896" height="42" rx="8"/>
+  <text class="small" x="48" y="683">The notification names the URI and nothing else, so step 4 is where the new content actually arrives. This mechanism replaced</text>
+  <text class="small" x="48" y="700">resources/subscribe, which no longer exists, and the server still never initiates a request: the stream is one response, held open.</text>
+</svg>

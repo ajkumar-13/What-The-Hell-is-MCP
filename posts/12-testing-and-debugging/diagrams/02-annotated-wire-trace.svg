@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 720" role="img" aria-labelledby="t d">
+  <title id="t">One tools/call request and its three possible responses, annotated for debugging</title>
+  <desc id="d">A client on the left sends one tools/call request to a server on the right. The request is printed in full, with its mirrored HTTP headers and its params and metadata fields, and four numbered annotations name the checks to make in order: the protocol version header must equal the protocol version in the metadata or the server answers with error minus thirty-two thousand and twenty; the client capabilities are re-sent on every request and a missing elicitation key produces minus thirty-two thousand and twenty-one; the name and parameter headers must mirror the body; and the arguments must be compared against the published input schema rather than the Python signature. Below, three possible responses are shown side by side. The first is a success carrying isError false. The second is a successful response carrying isError true, which is a tool that ran and failed and which nothing raises on. The third is a JSON-RPC error object with a numeric code and no result member, which the client does raise on. The second and third are the two places a failure hides.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .monom{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .monon{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:600;font-size:11px;fill:var(--mcp-ink);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .code{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .num{fill:var(--mcp-neutral-2);stroke:var(--mcp-ink);stroke-width:1;}
+    .client{fill:var(--mcp-primary);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .ok{fill:var(--mcp-success);stroke:var(--mcp-ink);stroke-width:1;}
+    .bad{fill:var(--mcp-alert);stroke:var(--mcp-ink);stroke-width:1;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .glyph{stroke:var(--mcp-on-fill);stroke-width:1.5;fill:none;stroke-linecap:round;}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="720"/>
+  <text class="title" x="40" y="36">Reading a wire trace: one request, three responses</text>
+  <text class="small" x="40" y="58">Messages follow the specification's own annotated trace for revision 2026-07-28. Two of the three responses are failures.</text>
+
+  <!-- ============ actors and the request arrow ============ -->
+  <rect class="client" x="40" y="76" width="150" height="30" rx="6"/>
+  <text class="onfill" x="115" y="96" text-anchor="middle">client</text>
+  <rect class="server" x="770" y="76" width="150" height="30" rx="6"/>
+  <text class="onfill" x="845" y="96" text-anchor="middle">server</text>
+  <path class="flow" d="M196,91 L764,91" marker-end="url(#ar)"/>
+  <text class="mono" x="480" y="84" text-anchor="middle">tools/call</text>
+
+  <!-- ============ the request ============ -->
+  <rect class="zone" x="40" y="118" width="880" height="262" rx="10"/>
+  <text class="head" x="56" y="142">Request · read these four, in this order</text>
+  <line class="rule" x1="56" y1="150" x2="904" y2="150"/>
+
+  <rect class="code" x="52" y="158" width="452" height="214" rx="8"/>
+  <text class="mono" x="64" y="174">POST /mcp HTTP/1.1</text>
+  <text class="mono" x="64" y="188">MCP-Protocol-Version: 2026-07-28</text>
+  <text class="mono" x="64" y="202">Mcp-Method: tools/call</text>
+  <text class="mono" x="64" y="216">Mcp-Name: create_weather_gist</text>
+  <text class="mono" x="64" y="230">Mcp-Param-Region: us-west1</text>
+  <text class="mono" x="64" y="258">{"jsonrpc":"2.0","id":3,"method":"tools/call",</text>
+  <text class="mono" x="64" y="272"> "params":{</text>
+  <text class="mono" x="64" y="286">   "name":"create_weather_gist",</text>
+  <text class="mono" x="64" y="300">   "arguments":{"location":"Seattle, WA",</text>
+  <text class="mono" x="64" y="314">                "region":"us-west1"},</text>
+  <text class="mono" x="64" y="328">   "_meta":{</text>
+  <text class="mono" x="64" y="342">     "io.modelcontextprotocol/protocolVersion":</text>
+  <text class="mono" x="64" y="356">       "2026-07-28", ... clientCapabilities ...</text>
+
+  <circle class="num" cx="531" cy="172" r="9"/>
+  <text class="monon" x="531" y="176" text-anchor="middle">1</text>
+  <text class="small" x="550" y="176">MCP-Protocol-Version must equal the protocolVersion</text>
+  <text class="small" x="550" y="192">in _meta. A difference is -32020, and HTTP 400.</text>
+
+  <circle class="num" cx="531" cy="220" r="9"/>
+  <text class="monon" x="531" y="224" text-anchor="middle">2</text>
+  <text class="small" x="550" y="224">clientCapabilities is re-sent on every request.</text>
+  <text class="small" x="550" y="240">No elicitation key means a tool that asks gets -32021.</text>
+
+  <circle class="num" cx="531" cy="268" r="9"/>
+  <text class="monon" x="531" y="272" text-anchor="middle">3</text>
+  <text class="small" x="550" y="272">Mcp-Name and each Mcp-Param-* mirror a body field.</text>
+  <text class="small" x="550" y="288">The server must verify every one of them.</text>
+
+  <circle class="num" cx="531" cy="316" r="9"/>
+  <text class="monon" x="531" y="320" text-anchor="middle">4</text>
+  <text class="small" x="550" y="320">Compare arguments against the published inputSchema,</text>
+  <text class="small" x="550" y="336">not against your Python signature. They differ.</text>
+
+  <!-- ============ the response arrow ============ -->
+  <path class="flow" d="M764,408 L196,408" marker-end="url(#ar)"/>
+  <text class="small" x="480" y="400" text-anchor="middle">server to client, one of three responses. Read resultType first, then isError.</text>
+
+  <!-- ============ response A: success ============ -->
+  <rect class="zone" x="40" y="418" width="280" height="214" rx="10"/>
+  <rect class="ok" x="54" y="432" width="98" height="22" rx="5"/>
+  <path class="glyph" d="M64,443 l3,3.5 l6,-8"/>
+  <text class="onfill" x="79" y="447">Success</text>
+  <line class="rule" x1="54" y1="466" x2="306" y2="466"/>
+  <rect class="code" x="54" y="476" width="252" height="100" rx="6"/>
+  <text class="mono" x="64" y="492">"resultType": "complete",</text>
+  <text class="mono" x="64" y="506">"content": [ ... ],</text>
+  <text class="mono" x="64" y="520">"structuredContent": { ... },</text>
+  <text class="mono" x="64" y="534">"isError": false</text>
+  <text class="monom" x="64" y="562">HTTP 200</text>
+  <text class="small" x="54" y="596">Validate structuredContent against</text>
+  <text class="small" x="54" y="611">the tool's outputSchema, then hand</text>
+  <text class="small" x="54" y="626">the content to the model.</text>
+
+  <!-- ============ response B: isError ============ -->
+  <rect class="zone" x="340" y="418" width="280" height="214" rx="10"/>
+  <rect class="bad" x="354" y="432" width="204" height="22" rx="5"/>
+  <path class="glyph" d="M364,437 l7,7 M371,437 l-7,7"/>
+  <text class="onfill" x="379" y="447">Failure, and nothing raises</text>
+  <line class="rule" x1="354" y1="466" x2="606" y2="466"/>
+  <rect class="code" x="354" y="476" width="252" height="100" rx="6"/>
+  <text class="mono" x="364" y="492">"resultType": "complete",</text>
+  <text class="mono" x="364" y="506">"content": [{"type":"text","text":</text>
+  <text class="mono" x="364" y="520">  "Error executing tool find_process:</text>
+  <text class="mono" x="364" y="534">   2 validation errors ..."}],</text>
+  <text class="mono" x="364" y="548">"isError": true</text>
+  <text class="monom" x="364" y="566">HTTP 200</text>
+  <text class="small" x="354" y="596">The call returned normally. A client</text>
+  <text class="small" x="354" y="611">built on try and except hands this</text>
+  <text class="small" x="354" y="626">text to the model as the answer.</text>
+
+  <!-- ============ response C: protocol error ============ -->
+  <rect class="zone" x="640" y="418" width="280" height="214" rx="10"/>
+  <rect class="bad" x="654" y="432" width="216" height="22" rx="5"/>
+  <path class="glyph" d="M664,437 l7,7 M671,437 l-7,7"/>
+  <text class="onfill" x="679" y="447">Failure, and the client raises</text>
+  <line class="rule" x1="654" y1="466" x2="906" y2="466"/>
+  <rect class="code" x="654" y="476" width="252" height="100" rx="6"/>
+  <text class="mono" x="664" y="492">"error": {</text>
+  <text class="mono" x="664" y="506">  "code": -32602,</text>
+  <text class="mono" x="664" y="520">  "message": "Invalid params"</text>
+  <text class="mono" x="664" y="534">}</text>
+  <text class="monom" x="664" y="552">and no "result" member at all</text>
+  <text class="small" x="654" y="596">Unknown method, a header that</text>
+  <text class="small" x="654" y="611">disagrees with the body, a missing</text>
+  <text class="small" x="654" y="626">capability. You will find these.</text>
+
+  <!-- ============ the rule ============ -->
+  <rect class="zone" x="40" y="646" width="880" height="48" rx="8"/>
+  <text class="label" x="56" y="666">The rule</text>
+  <text class="small" x="130" y="666">A JSON-RPC error object means the server could not act on the request at all.</text>
+  <text class="small" x="130" y="683">isError: true means the request was fine, the tool ran, and it failed. Both responses leave the server with HTTP 200.</text>
+</svg>

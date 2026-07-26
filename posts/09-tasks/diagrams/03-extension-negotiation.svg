@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">The client declares the tasks extension; the server decides per request</title>
+  <desc id="d">On the left, a client sends the identical capability declaration on every request: a _meta block naming io.modelcontextprotocol/tasks inside clientCapabilities extensions. Two arrows carry two requests carrying that same declaration to the server on the right, which answers one with resultType complete and the other with resultType task. Underneath, a panel shows what does not exist: a tools/list entry carrying an execution taskSupport field, struck through and marked as removed, because there is no per-tool declaration and no per-request opt-in flag in this revision.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .monofill{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:500;font-size:13.5px;fill:var(--mcp-on-fill);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-on-fill);}
+    .client{fill:var(--mcp-primary);}
+    .server{fill:var(--mcp-accent);}
+    .card{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .panel{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .strike{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;}
+    .gone{fill:var(--mcp-alert);}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="40" y="42">The client declares. The server decides, one request at a time.</text>
+
+  <!-- client -->
+  <rect class="client" x="40" y="72" width="390" height="44" rx="8"/>
+  <text class="onfill" x="60" y="100">client</text>
+  <text class="small" x="40" y="136">the same block on every request, including tasks/get, tasks/update and tasks/cancel</text>
+
+  <rect class="card" x="40" y="146" width="390" height="176" rx="8"/>
+  <text class="mono" x="58" y="174">"_meta": {</text>
+  <text class="mono" x="58" y="196">  "io.modelcontextprotocol/clientCapabilities": {</text>
+  <text class="mono" x="58" y="218">    "extensions": {</text>
+  <text class="mono" x="58" y="240">      "io.modelcontextprotocol/tasks": {}</text>
+  <text class="mono" x="58" y="262">    }</text>
+  <text class="mono" x="58" y="284">  }</text>
+  <text class="mono" x="58" y="306">}</text>
+
+  <!-- arrows -->
+  <path class="flow" d="M438,186 L554,186" marker-end="url(#ar)"/>
+  <path class="flow" d="M438,286 L554,286" marker-end="url(#ar)"/>
+  <text class="small" x="446" y="176">request A</text>
+  <text class="small" x="446" y="276">request B</text>
+
+  <!-- server -->
+  <rect class="server" x="560" y="72" width="360" height="44" rx="8"/>
+  <text class="onfill" x="580" y="100">server</text>
+  <text class="small" x="560" y="136">same declaration, different answer</text>
+
+  <rect class="card" x="560" y="148" width="360" height="76" rx="8"/>
+  <text class="mono" x="580" y="180">resultType: "complete"</text>
+  <text class="small" x="580" y="204">a CallToolResult, the job was quick</text>
+
+  <rect class="card" x="560" y="248" width="360" height="76" rx="8"/>
+  <text class="mono" x="580" y="280">resultType: "task"</text>
+  <text class="small" x="580" y="304">a CreateTaskResult with a taskId</text>
+
+  <!-- what is not here -->
+  <rect class="panel" x="40" y="356" width="880" height="118" rx="8"/>
+  <text class="label" x="60" y="384">What is not here</text>
+  <text class="mono" x="60" y="412">{ "name": "render_video", "inputSchema": { ... },</text>
+  <text class="mono" x="60" y="434">    "execution": { "taskSupport": "required" } }</text>
+  <line class="strike" x1="58" y1="429" x2="392" y2="429"/>
+  <text class="small" x="410" y="434">removed by SEP-2663; zero occurrences in the 2026-07-28 schema</text>
+  <text class="small" x="60" y="458">There is no per-tool declaration and no per-request opt-in flag. A client cannot ask for a task, and a server cannot promise one in advance.</text>
+
+  <text class="small" x="40" y="504">A server MUST NOT return a task to a client that did not declare the extension on that request, "regardless of prior declarations".</text>
+</svg>

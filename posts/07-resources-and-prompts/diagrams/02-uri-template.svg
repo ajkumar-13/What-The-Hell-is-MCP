@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 620" role="img" aria-labelledby="t d">
+  <title id="t">A URI template resolving, with the allowlist as the gate between the request and the handler</title>
+  <desc id="d">Three resources/read requests enter from the left and travel rightward through two stages before reaching the handler. Stage one matches the URI against the template system colon slash slash disk slash brace disk brace and binds a variable. Stage two is drawn as a gate with two posts: the server's own allowlist of known disk names. The first request, for disk root, passes both stages and reaches the handler. The second, for disk etc, matches the template and binds the variable but is stopped at the gate, returning error minus 32602 with the message Unknown disk quote etc quote, Known disks colon root. The third, a path-traversal string, never matches the template at all and is rejected one stage earlier with the message Unknown resource, so the handler is never entered. The lesson band at the bottom warns that the early rejection is an accident of this template's shape and not a defense you designed.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .monos{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .zone{fill:none;stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .post{fill:var(--mcp-warn);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .dead{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;stroke-dasharray:4 4;}
+    .ok-mark{stroke:var(--mcp-success);stroke-width:1.5;fill:none;stroke-linecap:round;}
+    .bad-mark{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;stroke-linecap:round;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arD" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="620"/>
+  <text class="title" x="32" y="38">One template, three URIs, two different places to fail</text>
+  <text class="small" x="32" y="57">Template: system://disk/{disk}. Allowlist: one entry, named root. Both rejections below were captured from the test suite.</text>
+
+  <!-- ============ column headers and zones ============ -->
+  <rect class="zone" x="32" y="76" width="224" height="454" rx="10"/>
+  <text class="head" x="48" y="102">the request</text>
+  <text class="small" x="48" y="120">params.uri, as sent</text>
+
+  <rect class="zone" x="286" y="76" width="180" height="454" rx="10"/>
+  <text class="head" x="302" y="102">1. the matcher</text>
+  <text class="small" x="302" y="120">RFC 6570, in the SDK</text>
+
+  <rect class="zone" x="496" y="76" width="180" height="454" rx="10"/>
+  <rect class="post" x="496" y="76" width="10" height="454"/>
+  <rect class="post" x="666" y="76" width="10" height="454"/>
+  <text class="head" x="516" y="102">2. the gate</text>
+  <text class="small" x="516" y="120">your allowlist</text>
+
+  <rect class="zone" x="706" y="76" width="222" height="454" rx="10"/>
+  <text class="head" x="722" y="102">3. the handler, or the error</text>
+  <text class="small" x="722" y="120">what the client received</text>
+
+  <!-- ============ lane 1: root ============ -->
+  <rect class="box" x="48" y="164" width="192" height="60" rx="8"/>
+  <text class="monos" x="62" y="186">resources/read</text>
+  <text class="mono" x="62" y="208">system://disk/root</text>
+  <path class="flow" d="M240,194 L286,194" marker-end="url(#ar)"/>
+  <path class="ok-mark" d="M304,194 l5,6 l10,-13"/>
+  <text class="mono" x="326" y="198">disk = "root"</text>
+  <path class="flow" d="M466,194 L512,194" marker-end="url(#ar)"/>
+  <path class="ok-mark" d="M522,194 l5,6 l10,-13"/>
+  <text class="mono" x="544" y="198">on the list</text>
+  <path class="flow" d="M676,194 L706,194" marker-end="url(#ar)"/>
+  <rect class="box" x="722" y="160" width="190" height="68" rx="8"/>
+  <text class="mono" x="736" y="182">disk_usage("root")</text>
+  <text class="small" x="736" y="202">The handler runs and returns</text>
+  <text class="small" x="736" y="218">five lines of plain text.</text>
+
+  <!-- ============ lane 2: etc ============ -->
+  <rect class="box" x="48" y="292" width="192" height="60" rx="8"/>
+  <text class="monos" x="62" y="314">resources/read</text>
+  <text class="mono" x="62" y="336">system://disk/etc</text>
+  <path class="flow" d="M240,322 L286,322" marker-end="url(#ar)"/>
+  <path class="ok-mark" d="M304,322 l5,6 l10,-13"/>
+  <text class="mono" x="326" y="326">disk = "etc"</text>
+  <path class="flow" d="M466,322 L512,322" marker-end="url(#ar)"/>
+  <path class="bad-mark" d="M540,314 l14,14 M554,314 l-14,14"/>
+  <text class="small" x="516" y="352">not on the list</text>
+  <path class="dead" d="M566,322 L706,322" marker-end="url(#arD)"/>
+  <rect class="box" x="722" y="278" width="190" height="94" rx="8"/>
+  <text class="mono" x="736" y="300">-32602</text>
+  <text class="mono" x="736" y="320">Unknown disk 'etc'.</text>
+  <text class="mono" x="736" y="336">Known disks: root.</text>
+  <text class="small" x="736" y="358">Your allowlist raised this.</text>
+
+  <!-- ============ lane 3: traversal ============ -->
+  <rect class="box" x="48" y="412" width="192" height="76" rx="8"/>
+  <text class="monos" x="62" y="434">resources/read</text>
+  <text class="mono" x="62" y="456">system://disk/</text>
+  <text class="mono" x="62" y="472">../../etc/passwd</text>
+  <path class="flow" d="M240,450 L286,450" marker-end="url(#ar)"/>
+  <path class="bad-mark" d="M312,442 l14,14 M326,442 l-14,14"/>
+  <text class="small" x="302" y="480">no match at all</text>
+  <path class="dead" d="M340,450 L496,450"/>
+  <text class="small" x="516" y="446">never</text>
+  <text class="small" x="516" y="462">reached</text>
+  <path class="dead" d="M676,450 L706,450" marker-end="url(#arD)"/>
+  <rect class="box" x="722" y="404" width="190" height="94" rx="8"/>
+  <text class="mono" x="736" y="426">Unknown resource:</text>
+  <text class="mono" x="736" y="442">system://disk/</text>
+  <text class="mono" x="736" y="458">../../etc/passwd</text>
+  <text class="small" x="736" y="480">The SDK raised this. Your</text>
+  <text class="small" x="736" y="496">handler was never entered.</text>
+
+  <!-- ============ bottom rule ============ -->
+  <rect class="chip" x="32" y="548" width="896" height="52" rx="8"/>
+  <text class="label" x="48" y="570">Lane 3 stops early because a simple {disk} expansion does not match a value containing a slash. That is the shape of the template, not a check.</text>
+  <text class="small" x="48" y="588">Widen the template and lane 3 walks straight into your handler. The gate in stage 2 is the only part of this picture you control.</text>
+</svg>

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">A synchronous call against a task, on the same timeline</title>
+  <desc id="d">Two timelines of equal length. The upper one is a synchronous tools/call: a single wide bar shows one request held open for the whole job, and a note says a proxy timeout, a deploy or a dropped connection inside that window loses the work. The lower one is the same job run as a task: a short exchange creates it and returns a taskId, a run of short tasks/get polls follows at the interval the server suggested, and a final short exchange returns the completed status with the result inlined. Both finish at the same point on the axis, so the difference is not speed but who holds the connection.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12.5px;fill:var(--mcp-ink);}
+    .axis{stroke:var(--mcp-ink-subtle);stroke-width:0.75;fill:none;}
+    .tick{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .rule{stroke:var(--mcp-border);stroke-width:1;fill:none;}
+    .held{fill:var(--mcp-neutral-1);stroke:var(--mcp-alert);stroke-width:1.5;}
+    .short{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .poll{fill:var(--mcp-surface);stroke:var(--mcp-primary);stroke-width:1.5;}
+  ]]></style>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="40" y="42">The work takes the same time. What changes is who holds the connection.</text>
+
+  <!-- upper: synchronous -->
+  <text class="label" x="40" y="90">synchronous</text>
+  <text class="small" x="40" y="110">one request, held open</text>
+
+  <text class="mono" x="232" y="130">tools/call</text>
+  <text class="mono" x="860" y="130" text-anchor="end">resultType: "complete"</text>
+  <rect class="held" x="232" y="140" width="628" height="36" rx="6"/>
+  <text class="small" x="546" y="163" text-anchor="middle">one request stays open while the server works</text>
+
+  <line class="axis" x1="200" y1="196" x2="920" y2="196"/>
+  <line class="tick" x1="232" y1="176" x2="232" y2="196"/>
+  <line class="tick" x1="860" y1="176" x2="860" y2="196"/>
+  <text class="small" x="232" y="214">t = 0</text>
+  <text class="small" x="860" y="214" text-anchor="end">t = the whole job</text>
+
+  <text class="small" x="232" y="240">A proxy timeout, a deploy, or a dropped connection inside this window loses the work.</text>
+
+  <line class="rule" x1="40" y1="272" x2="920" y2="272"/>
+
+  <!-- lower: as a task -->
+  <text class="label" x="40" y="306">as a task</text>
+  <text class="small" x="40" y="326">many short requests</text>
+
+  <text class="mono" x="232" y="370">tools/call</text>
+  <text class="mono" x="554" y="370" text-anchor="middle">tasks/get</text>
+  <text class="mono" x="860" y="370" text-anchor="end">status: "completed"</text>
+
+  <rect class="short" x="232" y="380" width="64" height="36" rx="6"/>
+  <rect class="poll" x="372" y="380" width="44" height="36" rx="6"/>
+  <rect class="poll" x="452" y="380" width="44" height="36" rx="6"/>
+  <rect class="poll" x="532" y="380" width="44" height="36" rx="6"/>
+  <rect class="poll" x="612" y="380" width="44" height="36" rx="6"/>
+  <rect class="poll" x="692" y="380" width="44" height="36" rx="6"/>
+  <rect class="short" x="796" y="380" width="64" height="36" rx="6"/>
+
+  <line class="axis" x1="200" y1="434" x2="920" y2="434"/>
+  <line class="tick" x1="232" y1="416" x2="232" y2="434"/>
+  <line class="tick" x1="860" y1="416" x2="860" y2="434"/>
+  <text class="small" x="232" y="452">t = 0</text>
+  <text class="small" x="860" y="452" text-anchor="end">t = the whole job</text>
+
+  <text class="small" x="232" y="470">taskId minted</text>
+  <text class="small" x="554" y="470" text-anchor="middle">one every pollIntervalMs</text>
+
+  <text class="small" x="40" y="494">Each exchange is short and self-contained, so any of them may be answered by a different replica. A client that crashes resumes from the</text>
+  <text class="small" x="40" y="512">stored taskId, and a client that would rather be told than ask subscribes with subscriptions/listen and waits for notifications/tasks.</text>
+</svg>

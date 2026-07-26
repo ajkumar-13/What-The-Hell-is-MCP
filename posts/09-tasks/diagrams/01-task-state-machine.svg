@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">The task lifecycle, and the method behind each transition</title>
+  <desc id="d">A state machine with five states. A client tools/call returns a result tagged resultType task, which creates the task in the working state. Working and input_required sit inside a dashed box of non-terminal states: the server moves working to input_required when it needs client input, and the client moves it back with tasks/update. Three arrows leave that box to the terminal states completed, failed and cancelled, driven respectively by the work finishing, by a JSON-RPC fault, and by a tasks/cancel request. tasks/get only reads the machine; it never moves it.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12.5px;fill:var(--mcp-ink);}
+    .monofill{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:500;font-size:13.5px;fill:var(--mcp-on-fill);}
+    .state{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .client{fill:var(--mcp-primary);}
+    .zone{fill:none;stroke:var(--mcp-ink-subtle);stroke-width:1;stroke-dasharray:5 5;}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .barok{fill:var(--mcp-success);}
+    .barbad{fill:var(--mcp-alert);}
+    .barneu{fill:var(--mcp-warn);}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="40" y="44">The task lifecycle, and the method behind each transition</text>
+  <text class="small" x="40" y="68">One method creates a task. One method leaves input_required. tasks/get only reads.</text>
+
+  <!-- entry -->
+  <text class="small" x="40" y="177">the client's request</text>
+  <rect class="client" x="40" y="191" width="170" height="52" rx="8"/>
+  <text class="monofill" x="125" y="222" text-anchor="middle">tools/call</text>
+  <text class="mono" x="40" y="265">resultType: "task"</text>
+  <text class="small" x="40" y="284">the server decides, per request</text>
+
+  <path class="flow" d="M210,217 L272,217" marker-end="url(#ar)"/>
+
+  <!-- non-terminal zone -->
+  <rect class="zone" x="280" y="146" width="290" height="312" rx="10"/>
+  <text class="small" x="292" y="168">non-terminal</text>
+
+  <rect class="state" x="306" y="182" width="238" height="70" rx="8"/>
+  <text class="mono" x="425" y="217" text-anchor="middle">working</text>
+  <text class="small" x="425" y="237" text-anchor="middle">the server is doing the job</text>
+
+  <rect class="state" x="306" y="352" width="238" height="70" rx="8"/>
+  <text class="mono" x="425" y="387" text-anchor="middle">input_required</text>
+  <text class="small" x="425" y="407" text-anchor="middle">inputRequests ride on tasks/get</text>
+
+  <path class="flow" d="M410,252 L410,346" marker-end="url(#ar)"/>
+  <path class="flow" d="M442,346 L442,252" marker-end="url(#ar)"/>
+  <text class="small" x="398" y="290" text-anchor="end">server needs</text>
+  <text class="small" x="398" y="308" text-anchor="end">an answer</text>
+  <text class="mono" x="456" y="290">tasks/update</text>
+  <text class="small" x="456" y="308">answers it</text>
+
+  <!-- exits -->
+  <path class="flow" d="M570,195 L664,171" marker-end="url(#ar)"/>
+  <path class="flow" d="M570,307 L664,307" marker-end="url(#ar)"/>
+  <path class="flow" d="M570,415 L664,427" marker-end="url(#ar)"/>
+  <text class="small" x="578" y="163">work ends</text>
+  <text class="small" x="578" y="297">protocol fault</text>
+  <text class="mono" x="578" y="410">tasks/cancel</text>
+
+  <!-- terminal states -->
+  <rect class="state" x="670" y="136" width="250" height="70" rx="8"/>
+  <rect class="barok" x="670" y="136" width="8" height="70"/>
+  <text class="mono" x="694" y="167">completed</text>
+  <text class="small" x="694" y="188">the result is inside the task</text>
+
+  <rect class="state" x="670" y="272" width="250" height="70" rx="8"/>
+  <rect class="barbad" x="670" y="272" width="8" height="70"/>
+  <text class="mono" x="694" y="303">failed</text>
+  <text class="small" x="694" y="324">a JSON-RPC error is inside it</text>
+
+  <rect class="state" x="670" y="392" width="250" height="70" rx="8"/>
+  <rect class="barneu" x="670" y="392" width="8" height="70"/>
+  <text class="mono" x="694" y="423">cancelled</text>
+  <text class="small" x="694" y="444">requested, never guaranteed</text>
+
+  <text class="small" x="40" y="494">completed, failed and cancelled are terminal and immutable. A tool result with isError: true still lands in completed: the error is in the</text>
+  <text class="small" x="40" y="512">result, not in the status. failed is reserved for JSON-RPC faults. tasks/cancel is cooperative, so the server acknowledges but need not stop.</text>
+</svg>
