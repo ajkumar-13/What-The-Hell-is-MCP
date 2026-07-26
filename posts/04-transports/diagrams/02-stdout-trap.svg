@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">The stdout trap, and the arrangement that avoids it</title>
+  <desc id="d">Two panels. On the left, a server that calls print writes the word connected onto standard output, the same pipe that carries JSON-RPC frames, so the client parser meets a line that is not JSON and reports a parse failure. On the right, the same server logs through the logging module instead, so standard output carries only frames and the diagnostic travels on standard error to the host log. A cross marks the print call and a tick marks the logging call.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:16px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11.5px;fill:var(--mcp-ink);}
+    .monobad{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11.5px;fill:var(--mcp-alert);}
+    .monodim{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11.5px;fill:var(--mcp-ink-subtle);}
+    .zone{fill:none;stroke:var(--mcp-border);stroke-width:1;}
+    .chip{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .chipbad{fill:var(--mcp-surface);stroke:var(--mcp-alert);stroke-width:1.5;}
+    .srv{fill:var(--mcp-surface);stroke:var(--mcp-accent);stroke-width:1.5;}
+    .cli{fill:var(--mcp-surface);stroke:var(--mcp-primary);stroke-width:1.5;}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .badstroke{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;}
+    .okstroke{stroke:var(--mcp-success);stroke-width:1.5;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arM" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="42">A stray line on stdout stops the frame stream from being JSON</text>
+
+  <!-- ================= LEFT: the trap ================= -->
+  <rect class="zone" x="40" y="66" width="420" height="430" rx="10"/>
+  <text class="head"  x="62" y="98">print() writes to stdout</text>
+  <text class="small" x="62" y="118">The same pipe the protocol uses.</text>
+
+  <rect class="srv" x="62" y="132" width="376" height="66" rx="8"/>
+  <text class="mono" x="78" y="158">print("connected")</text>
+  <text class="mono" x="78" y="182">return {"cpu": 12.4}</text>
+  <path class="badstroke" d="M404,146 L418,160 M418,146 L404,160"/>
+
+  <path class="flow" d="M250,198 L250,236" marker-end="url(#ar)"/>
+  <text class="mono" x="258" y="222">stdout</text>
+
+  <rect class="chipbad" x="110" y="240" width="280" height="30" rx="6"/>
+  <text class="monobad" x="122" y="260">connected</text>
+  <text class="small"   x="378" y="260" text-anchor="end">not JSON</text>
+
+  <rect class="chip" x="110" y="280" width="280" height="30" rx="6"/>
+  <text class="mono" x="122" y="300">{"jsonrpc":"2.0","id":1,...}</text>
+
+  <path class="flow" d="M250,310 L250,344" marker-end="url(#ar)"/>
+
+  <rect class="cli" x="62" y="346" width="376" height="46" rx="8"/>
+  <text class="label" x="250" y="374" text-anchor="middle">client parser</text>
+
+  <text class="monobad" x="62" y="416">Failed to parse JSONRPC message</text>
+  <text class="monobad" x="62" y="434">Invalid JSON: expected value at</text>
+  <text class="monobad" x="62" y="452">line 1 column 1  'connected'</text>
+  <text class="small"   x="62" y="478">The connection breaks at that byte, not at your tool.</text>
+
+  <!-- ================= RIGHT: the fix ================= -->
+  <rect class="zone" x="500" y="66" width="420" height="430" rx="10"/>
+  <text class="head"  x="522" y="98">logging writes to stderr</text>
+  <text class="small" x="522" y="118">A second pipe, collected separately.</text>
+
+  <rect class="srv" x="522" y="132" width="376" height="66" rx="8"/>
+  <text class="mono" x="538" y="158">log.info("connected")</text>
+  <text class="mono" x="538" y="182">return {"cpu": 12.4}</text>
+  <path class="okstroke" d="M866,152 L873,160 L886,144"/>
+
+  <path class="flow"      d="M610,198 L610,236" marker-end="url(#ar)"/>
+  <path class="flow-thin" d="M830,198 L830,236" marker-end="url(#arM)"/>
+  <text class="mono" x="618" y="222">stdout</text>
+  <text class="mono" x="822" y="222" text-anchor="end">stderr</text>
+
+  <rect class="chip" x="522" y="240" width="210" height="30" rx="6"/>
+  <text class="mono" x="534" y="260">{"jsonrpc":"2.0",...}</text>
+
+  <rect class="chip" x="760" y="240" width="140" height="30" rx="6"/>
+  <text class="mono" x="772" y="260">connected</text>
+
+  <path class="flow"      d="M610,270 L610,344" marker-end="url(#ar)"/>
+  <path class="flow-thin" d="M830,270 L830,344" marker-end="url(#arM)"/>
+
+  <rect class="cli" x="522" y="346" width="210" height="46" rx="8"/>
+  <text class="label" x="627" y="374" text-anchor="middle">client parser</text>
+
+  <rect class="chip" x="760" y="346" width="140" height="46" rx="8"/>
+  <text class="label" x="830" y="374" text-anchor="middle">host log</text>
+
+  <text class="small" x="522" y="416">The frame stream stays valid.</text>
+  <text class="small" x="522" y="434">Your diagnostics still reach you.</text>
+  <text class="small" x="522" y="452">A client may capture, forward, or ignore stderr,</text>
+  <text class="small" x="522" y="470">and must not read it as a sign of failure.</text>
+
+  <text class="monodim" x="40" y="524">The rule is one line long: the server must not write anything to stdout that is not a valid MCP message.</text>
+</svg>

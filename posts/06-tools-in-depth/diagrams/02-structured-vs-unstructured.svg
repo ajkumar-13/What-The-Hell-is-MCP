@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">The same tool returning a formatted string and returning a dataclass</title>
+  <desc id="d">Two columns comparing two versions of one tool. On the left the function is annotated to return a string, so the output schema wraps the whole report in a single result field and the model receives one block of prose it has to read. On the right the function is annotated to return a dataclass with class-body annotations, so the server publishes a real JSON Schema naming every field and its type, and the result carries machine-readable structured content alongside the text. Notes under each column say what the model can and cannot do with each shape.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .zone{fill:none;stroke:var(--mcp-border);stroke-width:1;}
+    .code{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .tagA{fill:var(--mcp-warn);}
+    .tagB{fill:var(--mcp-accent);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="40">One tool, two return annotations</text>
+  <text class="small" x="40" y="60">The return type is the only difference. Everything below it follows from that one line.</text>
+
+  <!-- ================= LEFT ================= -->
+  <rect class="zone" x="40" y="76" width="430" height="436" rx="10"/>
+  <rect class="tagA" x="56" y="92" width="120" height="22" rx="5"/>
+  <text class="onfill" x="116" y="107" text-anchor="middle">returns str</text>
+  <text class="head" x="188" y="108">A formatted report</text>
+
+  <rect class="code" x="56" y="126" width="398" height="72" rx="8"/>
+  <text class="mono" x="70" y="146">def get_system_info() -&gt; str:</text>
+  <text class="mono" x="70" y="162">    return (f"System Information:\n"</text>
+  <text class="mono" x="70" y="178">            f"- CPU Usage: {cpu:.1f}%\n" …)</text>
+
+  <path class="flow" d="M255,198 L255,220" marker-end="url(#ar)"/>
+
+  <text class="label" x="56" y="242">Published outputSchema</text>
+  <rect class="code" x="56" y="252" width="398" height="72" rx="8"/>
+  <text class="mono" x="70" y="272">{ "type": "object",</text>
+  <text class="mono" x="70" y="288">  "properties": { "result": { "type": "string" } },</text>
+  <text class="mono" x="70" y="304">  "required": ["result"] }</text>
+
+  <text class="label" x="56" y="348">What the model receives</text>
+  <rect class="code" x="56" y="358" width="398" height="72" rx="8"/>
+  <text class="mono" x="70" y="378">"System Information:</text>
+  <text class="mono" x="70" y="394"> - CPU Usage: 19.9%</text>
+  <text class="mono" x="70" y="410"> - Memory: 85.3% used (6GB / 7GB) …"</text>
+
+  <path class="rule" d="M56,446 L454,446"/>
+  <text class="small" x="56" y="466">One string. To use a number the model has to read it out</text>
+  <text class="small" x="56" y="482">of prose, and a client has nothing to validate against.</text>
+  <text class="small" x="56" y="498">Rename a field and no consumer can tell.</text>
+
+  <!-- ================= RIGHT ================= -->
+  <rect class="zone" x="490" y="76" width="430" height="436" rx="10"/>
+  <rect class="tagB" x="506" y="92" width="200" height="22" rx="5"/>
+  <text class="onfill" x="606" y="107" text-anchor="middle">returns SystemSnapshot</text>
+  <text class="head" x="718" y="108">A dataclass</text>
+
+  <rect class="code" x="506" y="126" width="398" height="72" rx="8"/>
+  <text class="mono" x="520" y="146">@dataclass</text>
+  <text class="mono" x="520" y="162">class SystemSnapshot:</text>
+  <text class="mono" x="520" y="178">    cpu_percent: float   # class-body annotation</text>
+
+  <path class="flow" d="M705,198 L705,220" marker-end="url(#ar)"/>
+
+  <text class="label" x="506" y="242">Published outputSchema</text>
+  <rect class="code" x="506" y="252" width="398" height="72" rx="8"/>
+  <text class="mono" x="520" y="272">{ "type": "object", "title": "SystemSnapshot",</text>
+  <text class="mono" x="520" y="288">  "properties": { "cpu_percent": {"type": "number"},</text>
+  <text class="mono" x="520" y="304">                  "memory_percent": {"type":"number"} … } }</text>
+
+  <text class="label" x="506" y="348">What the model receives</text>
+  <rect class="code" x="506" y="358" width="398" height="72" rx="8"/>
+  <text class="mono" x="520" y="378">{ "cpu_percent": 19.9,</text>
+  <text class="mono" x="520" y="394">  "memory_percent": 85.3,</text>
+  <text class="mono" x="520" y="410">  "memory_used_gb": 6, "memory_total_gb": 7, … }</text>
+
+  <path class="rule" d="M506,446 L904,446"/>
+  <text class="small" x="506" y="466">Named, typed fields. The host can render a table, the client</text>
+  <text class="small" x="506" y="482">can validate the shape, and a renamed field breaks loudly</text>
+  <text class="small" x="506" y="498">instead of quietly. The text block still carries the same JSON.</text>
+</svg>

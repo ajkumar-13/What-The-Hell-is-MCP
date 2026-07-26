@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">A Python signature becomes a JSON Schema</title>
+  <desc id="d">On the left, the decorated Python function find_process, whose parameters are name annotated as str with no default and limit annotated as int with a default of 25. On the right, the JSON Schema the software development kit generated from that signature, reproduced exactly as it appears on the wire. Two leader lines connect each parameter to its schema property. The panels along the bottom state the rule the diagram exists to teach: a parameter without a default is listed in required, and a parameter with one carries a default keyword and is left out of required.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .note{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink);}
+    .cap{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12.5px;fill:var(--mcp-ink);}
+    .monodim{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12.5px;fill:var(--mcp-ink-subtle);}
+    .kname{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12.5px;fill:var(--mcp-primary);}
+    .klimit{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12.5px;fill:var(--mcp-accent);}
+    .panel{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .sqA{fill:var(--mcp-primary);}
+    .sqB{fill:var(--mcp-accent);}
+    .lead{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="42">You write the signature; the SDK writes the schema</text>
+  <text class="small" x="40" y="62">The object on the right was generated from the function on the left and is reproduced exactly as it goes over the wire.</text>
+
+  <!-- ============ left: the signature ============ -->
+  <text class="cap" x="40" y="88">tools.py</text>
+  <rect class="panel" x="40" y="96" width="380" height="240" rx="10"/>
+
+  <text class="mono"   x="58" y="122">@mcp.tool(</text>
+  <text class="mono"   x="58" y="141">    title="Find processes by name",</text>
+  <text class="mono"   x="58" y="160">    annotations=READ_ONLY,</text>
+  <text class="mono"   x="58" y="179">)</text>
+  <text class="mono"   x="58" y="198">def find_process(</text>
+  <text class="kname"  x="58" y="217">    name: str,</text>
+  <text class="klimit" x="58" y="236">    limit: int = 25,</text>
+  <text class="mono"   x="58" y="255">) -&gt; ProcessMatches:</text>
+  <text class="monodim" x="58" y="274">    """Find running processes</text>
+  <text class="monodim" x="58" y="293">    whose name contains `name`,</text>
+  <text class="monodim" x="58" y="312">    case-insensitively."""</text>
+
+  <rect class="sqA" x="44" y="209" width="4" height="12" rx="2"/>
+  <rect class="sqB" x="44" y="228" width="4" height="12" rx="2"/>
+
+  <rect class="chip" x="40" y="356" width="380" height="74" rx="8"/>
+  <text class="note"  x="56" y="380">The parts the leader lines do not cover</text>
+  <text class="small" x="56" y="400">The docstring becomes the tool's description.</text>
+  <text class="small" x="56" y="420">The return type becomes outputSchema. Post 06.</text>
+
+  <!-- ============ leader lines ============ -->
+  <path class="lead" d="M420,215 C466,215 494,179 540,179" marker-end="url(#ar)"/>
+  <path class="lead" d="M420,234 C466,234 494,255 540,255" marker-end="url(#ar)"/>
+
+  <!-- ============ right: the schema ============ -->
+  <text class="cap" x="540" y="88">inputSchema, as published by tools/list</text>
+  <rect class="panel" x="540" y="96" width="380" height="334" rx="10"/>
+
+  <text class="mono"   x="558" y="122">{</text>
+  <text class="mono"   x="558" y="141">  "type": "object",</text>
+  <text class="mono"   x="558" y="160">  "properties": {</text>
+  <text class="kname"  x="558" y="179">    "name": {</text>
+  <text class="mono"   x="558" y="198">      "title": "Name",</text>
+  <text class="mono"   x="558" y="217">      "type": "string"</text>
+  <text class="mono"   x="558" y="236">    },</text>
+  <text class="klimit" x="558" y="255">    "limit": {</text>
+  <text class="klimit" x="558" y="274">      "default": 25,</text>
+  <text class="mono"   x="558" y="293">      "title": "Limit",</text>
+  <text class="mono"   x="558" y="312">      "type": "integer"</text>
+  <text class="mono"   x="558" y="331">    }</text>
+  <text class="mono"   x="558" y="350">  },</text>
+  <text class="kname"  x="558" y="369">  "required": ["name"],</text>
+  <text class="mono"   x="558" y="388">  "title": "find_processArguments"</text>
+  <text class="mono"   x="558" y="407">}</text>
+
+  <rect class="sqA" x="544" y="171" width="4" height="12" rx="2"/>
+  <rect class="sqA" x="544" y="361" width="4" height="12" rx="2"/>
+  <rect class="sqB" x="544" y="247" width="4" height="12" rx="2"/>
+
+  <!-- ============ the rule ============ -->
+  <rect class="chip" x="40" y="452" width="420" height="60" rx="8"/>
+  <rect class="sqA" x="56" y="468" width="10" height="10" rx="2"/>
+  <text class="note"  x="76" y="477">No default, so the parameter is required</text>
+  <text class="small" x="76" y="497">A client that omits it gets an error instead of a result.</text>
+
+  <rect class="chip" x="500" y="452" width="420" height="60" rx="8"/>
+  <rect class="sqB" x="516" y="468" width="10" height="10" rx="2"/>
+  <text class="note"  x="536" y="477">A default, so the parameter is optional</text>
+  <text class="small" x="536" y="497">The value appears as default, and the name stays out of required.</text>
+</svg>

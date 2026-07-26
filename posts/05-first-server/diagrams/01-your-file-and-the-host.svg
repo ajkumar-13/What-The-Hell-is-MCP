@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Your file, the host, and the pipe between them</title>
+  <desc id="d">A host process on the left and the reader's Python server process on the right, connected by three labelled streams. A dashed arrow at the top shows the host spawning the server with a uv command at startup. Below it, standard input carries one JSON-RPC request per line from host to server, standard output carries one JSON-RPC response per line back, and standard error carries human-readable log lines that the host files into a log rather than parsing. The diagram argues that standard output belongs to the protocol and standard error belongs to you.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .note{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12.5px;fill:var(--mcp-ink);}
+    .monodim{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink-subtle);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-on-fill);}
+    .panel{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .client{fill:var(--mcp-primary);}
+    .server{fill:var(--mcp-accent);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .spawn{stroke:var(--mcp-ink-muted);stroke-width:1;stroke-dasharray:5 4;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="42">Your file is a child process, and three streams do all the work</text>
+  <text class="small" x="40" y="62">There is no server to deploy and no port to open. The host starts your file and talks to it through pipes.</text>
+
+  <!-- ============ Host panel ============ -->
+  <rect class="panel" x="40" y="96" width="250" height="300" rx="10"/>
+  <path class="client" d="M40,106 a10,10 0 0 1 10,-10 h230 a10,10 0 0 1 10,10 v22 h-250 z"/>
+  <text class="onfill" x="58" y="119">Host process</text>
+
+  <text class="label"  x="58" y="156">Claude Desktop, Cursor,</text>
+  <text class="label"  x="58" y="174">VS Code, your own CLI</text>
+  <text class="small"  x="58" y="198">Owns the model, the conversation,</text>
+  <text class="small"  x="58" y="214">and the permission prompt.</text>
+
+  <rect class="chip" x="58" y="236" width="214" height="60" rx="8"/>
+  <text class="note"  x="72" y="258">client</text>
+  <text class="small" x="72" y="278">One per connected server.</text>
+
+  <text class="small" x="58" y="326">It reads its configuration file</text>
+  <text class="small" x="58" y="342">once, at startup, and finds</text>
+  <text class="small" x="58" y="358">a command and its arguments.</text>
+
+  <!-- ============ Server panel ============ -->
+  <rect class="panel" x="640" y="96" width="280" height="300" rx="10"/>
+  <path class="server" d="M640,106 a10,10 0 0 1 10,-10 h260 a10,10 0 0 1 10,10 v22 h-280 z"/>
+  <text class="onfill" x="658" y="119">Your server process</text>
+
+  <text class="mono"  x="658" y="156">python -m system_info</text>
+  <text class="small" x="658" y="176">Started by the host, not by you.</text>
+
+  <rect class="chip" x="658" y="196" width="244" height="52" rx="8"/>
+  <text class="mono"  x="672" y="216">app.py</text>
+  <text class="small" x="672" y="236">MCPServer("system-info")</text>
+
+  <rect class="chip" x="658" y="258" width="244" height="52" rx="8"/>
+  <text class="mono"  x="672" y="278">tools.py</text>
+  <text class="small" x="672" y="298">@mcp.tool() on a plain function</text>
+
+  <text class="small" x="658" y="336">Exits when the host closes the</text>
+  <text class="small" x="658" y="352">pipe. Nothing to shut down.</text>
+
+  <!-- ============ spawn ============ -->
+  <path class="spawn" d="M290,146 H640" marker-end="url(#arm)"/>
+  <text class="small" x="336" y="138">spawn, once, at host startup</text>
+  <text class="monodim" x="316" y="166">uv --directory ... run python -m system_info</text>
+
+  <!-- ============ stdin ============ -->
+  <path class="flow" d="M290,224 H640" marker-end="url(#ar)"/>
+  <rect class="chip" x="386" y="196" width="158" height="22" rx="6"/>
+  <text class="mono" x="400" y="212">stdin</text>
+  <text class="small" x="440" y="212">host to server</text>
+  <text class="small" x="326" y="244">One JSON-RPC request per line.</text>
+
+  <!-- ============ stdout ============ -->
+  <path class="flow" d="M640,290 H290" marker-end="url(#ar)"/>
+  <rect class="chip" x="386" y="262" width="158" height="22" rx="6"/>
+  <text class="mono" x="400" y="278">stdout</text>
+  <text class="small" x="447" y="278">server to host</text>
+  <text class="note"  x="326" y="310">This stream is the protocol.</text>
+  <text class="small" x="326" y="326">A stray print() lands here and is parsed.</text>
+
+  <!-- ============ stderr ============ -->
+  <path class="flow-thin" d="M640,364 H480 V436" marker-end="url(#arm)"/>
+  <rect class="chip" x="510" y="342" width="120" height="22" rx="6"/>
+  <text class="mono" x="524" y="358">stderr</text>
+  <text class="small" x="571" y="358">for you</text>
+
+  <rect class="chip" x="350" y="436" width="300" height="64" rx="8"/>
+  <text class="note"  x="366" y="458">The host's log file</text>
+  <text class="monodim" x="366" y="478">mcp-server-system-info.log</text>
+  <text class="small" x="366" y="494">Collected, shown to you, never parsed.</text>
+</svg>

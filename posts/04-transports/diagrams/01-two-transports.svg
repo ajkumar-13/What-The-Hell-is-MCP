@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">The two MCP transports, side by side</title>
+  <desc id="d">Two panels of equal size. On the left, the stdio transport: a host spawns the server as a child process, and three pipes run between them, standard input carrying requests down, standard output carrying JSON-RPC frames up one object per line, and standard error carrying logs up. On the right, the Streamable HTTP transport: the same host sends an ordinary POST to a single endpoint, carrying protocol version and method headers, and the server answers either with one JSON object or with an event stream scoped to that request. Neither panel is drawn as the larger or more advanced option.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:16px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11.5px;fill:var(--mcp-ink);}
+    .monodim{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11.5px;fill:var(--mcp-ink-subtle);}
+    .zone{fill:none;stroke:var(--mcp-border);stroke-width:1;}
+    .chip{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .client{fill:var(--mcp-primary);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-on-fill);}
+    .srv{fill:var(--mcp-surface);stroke:var(--mcp-accent);stroke-width:1.5;}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arM" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="42">One message format, two ways for the bytes to travel</text>
+
+  <!-- ================= LEFT: stdio ================= -->
+  <rect class="zone" x="40" y="66" width="420" height="430" rx="10"/>
+  <text class="head"  x="62" y="98">stdio</text>
+  <text class="small" x="62" y="118">The host spawns your program as a child process.</text>
+
+  <rect class="client" x="62" y="134" width="376" height="44" rx="8"/>
+  <text class="onfill" x="250" y="161" text-anchor="middle">host, containing one client</text>
+
+  <path class="flow"      d="M120,180 L120,294" marker-end="url(#ar)"/>
+  <path class="flow"      d="M250,294 L250,180" marker-end="url(#ar)"/>
+  <path class="flow-thin" d="M380,294 L380,180" marker-end="url(#arM)"/>
+
+  <text class="mono"  x="126" y="214">stdin</text>
+  <text class="small" x="126" y="230">requests in</text>
+  <text class="mono"  x="256" y="214">stdout</text>
+  <text class="small" x="256" y="230">frames out</text>
+  <text class="mono"  x="386" y="214">stderr</text>
+  <text class="small" x="386" y="230">logs out</text>
+
+  <rect class="srv" x="62" y="296" width="376" height="52" rx="8"/>
+  <text class="label" x="250" y="320" text-anchor="middle">your server process</text>
+  <text class="small" x="250" y="338" text-anchor="middle">one process per client connection</text>
+
+  <rect class="chip" x="62" y="368" width="376" height="62" rx="6"/>
+  <text class="mono" x="76" y="394">{"jsonrpc":"2.0","id":1,...}\n</text>
+  <text class="mono" x="76" y="416">{"jsonrpc":"2.0","id":2,...}\n</text>
+
+  <text class="small" x="62" y="452">One JSON object per line. Nothing else, ever.</text>
+  <text class="small" x="62" y="470">No port, no URL, no certificate.</text>
+
+  <!-- ================= RIGHT: Streamable HTTP ================= -->
+  <rect class="zone" x="500" y="66" width="420" height="430" rx="10"/>
+  <text class="head"  x="522" y="98">Streamable HTTP</text>
+  <text class="small" x="522" y="118">Your program listens. Any client may POST to it.</text>
+
+  <rect class="client" x="522" y="134" width="376" height="44" rx="8"/>
+  <text class="onfill" x="710" y="161" text-anchor="middle">host, containing one client</text>
+
+  <path class="flow" d="M710,180 L710,192" marker-end="url(#ar)"/>
+
+  <rect class="chip" x="522" y="196" width="376" height="80" rx="6"/>
+  <text class="mono" x="536" y="220">POST /mcp HTTP/1.1</text>
+  <text class="mono" x="536" y="242">MCP-Protocol-Version: 2026-07-28</text>
+  <text class="mono" x="536" y="264">Mcp-Method: tools/call</text>
+
+  <path class="flow" d="M710,278 L710,294" marker-end="url(#ar)"/>
+
+  <rect class="srv" x="522" y="296" width="376" height="52" rx="8"/>
+  <text class="label" x="710" y="320" text-anchor="middle">your server, one endpoint</text>
+  <text class="small" x="710" y="338" text-anchor="middle">127.0.0.1:8000/mcp</text>
+
+  <rect class="chip" x="522" y="368" width="376" height="62" rx="6"/>
+  <text class="mono" x="536" y="394">200 OK   application/json</text>
+  <text class="mono" x="536" y="416">200 OK   text/event-stream</text>
+
+  <text class="small" x="522" y="452">One object, or a stream scoped to this request.</text>
+  <text class="small" x="522" y="470">No session header. Any replica may answer.</text>
+
+  <text class="monodim" x="40" y="524">The JSON-RPC messages are identical on both. Only the framing and the metadata carrier differ.</text>
+</svg>

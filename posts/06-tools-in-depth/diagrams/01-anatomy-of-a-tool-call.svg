@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Anatomy of a tool call, request and result side by side</title>
+  <desc id="d">Two panels. The left panel is a tools/call request, broken into four labelled fields: method, name, arguments, and the required per-request metadata object. The right panel is the result that came back, broken into four labelled fields: resultType, an array of content blocks, structuredContent carrying the same data as machine-readable JSON, and isError, which is false here. A short arrow runs from the request panel to the result panel. Notes underneath record which fields are required, and that a client validates structuredContent against the tool's declared output schema.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .monohead{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:13px;fill:var(--mcp-ink-muted);}
+    .zone{fill:none;stroke:var(--mcp-border);stroke-width:1;}
+    .note{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .chipC{fill:var(--mcp-primary);}
+    .chipS{fill:var(--mcp-accent);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="40">Anatomy of a tool call</text>
+  <text class="small" x="40" y="60">One request and the result it produced, field by field. Both were captured from the system-info server over standard input and output.</text>
+
+  <!-- ================= LEFT: request ================= -->
+  <rect class="zone" x="40" y="78" width="380" height="392" rx="10"/>
+  <text class="head" x="56" y="104">Request</text>
+  <text class="monohead" x="122" y="104">tools/call</text>
+  <text class="small" x="56" y="122">Client side. name, arguments and _meta all sit inside params.</text>
+
+  <rect class="chipC" x="52" y="138" width="100" height="22" rx="5"/>
+  <text class="onfill" x="102" y="153" text-anchor="middle">method</text>
+  <text class="mono" x="162" y="153">"tools/call"</text>
+
+  <rect class="chipC" x="52" y="170" width="100" height="22" rx="5"/>
+  <text class="onfill" x="102" y="185" text-anchor="middle">name</text>
+  <text class="mono" x="162" y="185">"find_process"</text>
+
+  <rect class="chipC" x="52" y="202" width="100" height="22" rx="5"/>
+  <text class="onfill" x="102" y="217" text-anchor="middle">arguments</text>
+  <text class="mono" x="162" y="217">{ "name": "explorer",</text>
+  <text class="mono" x="162" y="233">  "limit": 2 }</text>
+
+  <rect class="chipC" x="52" y="250" width="100" height="22" rx="5"/>
+  <text class="onfill" x="102" y="265" text-anchor="middle">_meta</text>
+  <text class="mono" x="162" y="265">{ "…/protocolVersion": "2026-07-28",</text>
+  <text class="mono" x="162" y="281">  "…/clientCapabilities": {},</text>
+  <text class="mono" x="162" y="297">  "…/clientInfo": { … } }</text>
+
+  <path class="rule" d="M52,314 L410,314"/>
+  <text class="small" x="52" y="334">name and _meta are required. A tool that takes no</text>
+  <text class="small" x="52" y="350">parameters may leave arguments out entirely.</text>
+
+  <rect class="note" x="52" y="366" width="358" height="52" rx="8"/>
+  <text class="label" x="66" y="388">Prefix shortened to …/ for width</text>
+  <text class="small" x="66" y="406">The full key is io.modelcontextprotocol/protocolVersion.</text>
+
+  <text class="small" x="52" y="444">Every argument here must satisfy the tool's inputSchema.</text>
+
+  <!-- ================= arrow ================= -->
+  <path class="flow" d="M420,250 L446,250" marker-end="url(#ar)"/>
+
+  <!-- ================= RIGHT: result ================= -->
+  <rect class="zone" x="450" y="78" width="470" height="392" rx="10"/>
+  <text class="head" x="466" y="104">Result</text>
+  <text class="monohead" x="524" y="104">CallToolResult</text>
+  <text class="small" x="466" y="122">Server side. This is the response that call actually produced.</text>
+
+  <rect class="chipS" x="464" y="138" width="136" height="22" rx="5"/>
+  <text class="onfill" x="532" y="153" text-anchor="middle">resultType</text>
+  <text class="mono" x="610" y="153">"complete"</text>
+
+  <rect class="chipS" x="464" y="170" width="136" height="22" rx="5"/>
+  <text class="onfill" x="532" y="185" text-anchor="middle">content</text>
+  <text class="mono" x="610" y="185">[ { "type": "text",</text>
+  <text class="mono" x="610" y="201">    "text": "{\"query\": \"explorer\", …}" } ]</text>
+
+  <rect class="chipS" x="464" y="218" width="136" height="22" rx="5"/>
+  <text class="onfill" x="532" y="233" text-anchor="middle">structuredContent</text>
+  <text class="mono" x="610" y="233">{ "query": "explorer", "total_matches": 1,</text>
+  <text class="mono" x="610" y="249">  "returned": 1,</text>
+  <text class="mono" x="610" y="265">  "processes": [ { "pid": 8852, … } ] }</text>
+
+  <rect class="chipS" x="464" y="282" width="136" height="22" rx="5"/>
+  <text class="onfill" x="532" y="297" text-anchor="middle">isError</text>
+  <text class="mono" x="610" y="297">false</text>
+
+  <path class="rule" d="M464,314 L906,314"/>
+  <text class="small" x="464" y="334">content is required and may be an empty array. structuredContent</text>
+  <text class="small" x="464" y="350">and isError are optional, and isError defaults to false.</text>
+
+  <rect class="note" x="464" y="366" width="442" height="52" rx="8"/>
+  <text class="label" x="478" y="388">The client checks structuredContent against outputSchema</text>
+  <text class="small" x="478" y="406">Missing or non-conforming structured data fails on the client, not the server.</text>
+
+  <text class="small" x="464" y="444">The text block repeats the structured data, for clients that ignore it.</text>
+
+  <!-- ================= bottom band ================= -->
+  <rect class="note" x="40" y="484" width="880" height="34" rx="8"/>
+  <text class="small" x="56" y="505">There is no earlier message in this exchange. No handshake, no session identifier, nothing carried over from a previous call.</text>
+</svg>

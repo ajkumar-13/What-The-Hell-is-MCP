@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">A decision tree for a server that does not appear in the host</title>
+  <desc id="d">Five questions stacked in a column on the left, each with an arrow to the right leading to the fix that applies when the answer is no. In order: does the server run standalone and hang, is every path in the configuration absolute, is the configuration valid JSON without a byte order mark, was the host quit rather than merely closed, and is standard output free of everything except protocol frames. A yes on all five leads to the terminal node at the bottom, which says to read the host's own log file and names its path.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .note{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12.5px;fill:var(--mcp-ink);}
+    .tag{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:11px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .monodim{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink-subtle);}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .bad{fill:var(--mcp-alert);}
+    .ok{fill:var(--mcp-success);}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="42">My server does not appear in the host</text>
+  <text class="small" x="40" y="62">Work down the column. The first question you cannot answer yes to is your bug, and each one rules out a whole class of cause.</text>
+
+  <text class="tag" x="40" y="90">CHECK, IN ORDER</text>
+  <text class="tag" x="490" y="90">IF THE ANSWER IS NO, THE FIX</text>
+
+  <!-- ============ 1 ============ -->
+  <rect class="box" x="40" y="104" width="380" height="48" rx="8"/>
+  <text class="note" x="58" y="124">1. Does it run standalone, and hang?</text>
+  <text class="mono" x="58" y="143">uv run python -m system_info</text>
+
+  <path class="flow-thin" d="M420,128 H490" marker-end="url(#arm)"/>
+  <text class="tag" x="443" y="122">no</text>
+
+  <rect class="chip" x="490" y="104" width="430" height="48" rx="8"/>
+  <rect class="bad" x="506" y="121" width="4" height="14" rx="2"/>
+  <text class="small" x="520" y="126">Read the traceback. That is the whole problem.</text>
+  <text class="small" x="520" y="144">No module named 'mcp': the dependencies are not installed.</text>
+
+  <path class="flow" d="M230,152 V172" marker-end="url(#ar)"/>
+  <text class="tag" x="238" y="167">yes</text>
+
+  <!-- ============ 2 ============ -->
+  <rect class="box" x="40" y="172" width="380" height="48" rx="8"/>
+  <text class="note" x="58" y="192">2. Is every path in the config absolute?</text>
+  <text class="monodim" x="58" y="211">"command": "C:\\Users\\you\\.local\\bin\\uv.exe"</text>
+
+  <path class="flow-thin" d="M420,196 H490" marker-end="url(#arm)"/>
+  <text class="tag" x="443" y="190">no</text>
+
+  <rect class="chip" x="490" y="172" width="430" height="48" rx="8"/>
+  <rect class="bad" x="506" y="189" width="4" height="14" rx="2"/>
+  <text class="small" x="520" y="194">Paste the output of which uv, or Get-Command uv.</text>
+  <text class="small" x="520" y="212">A graphical host does not inherit your shell's PATH.</text>
+
+  <path class="flow" d="M230,220 V240" marker-end="url(#ar)"/>
+  <text class="tag" x="238" y="235">yes</text>
+
+  <!-- ============ 3 ============ -->
+  <rect class="box" x="40" y="240" width="380" height="48" rx="8"/>
+  <text class="note" x="58" y="260">3. Is the config valid JSON, with no BOM?</text>
+  <text class="small" x="58" y="279">BOM: a byte order mark, invisible in every editor.</text>
+
+  <path class="flow-thin" d="M420,264 H490" marker-end="url(#arm)"/>
+  <text class="tag" x="443" y="258">no</text>
+
+  <rect class="chip" x="490" y="240" width="430" height="48" rx="8"/>
+  <rect class="bad" x="506" y="257" width="4" height="14" rx="2"/>
+  <text class="small" x="520" y="262">Double every backslash, then rewrite the file without a BOM.</text>
+  <text class="small" x="520" y="280">The first bytes must be 7B, not EF BB BF.</text>
+
+  <path class="flow" d="M230,288 V308" marker-end="url(#ar)"/>
+  <text class="tag" x="238" y="303">yes</text>
+
+  <!-- ============ 4 ============ -->
+  <rect class="box" x="40" y="308" width="380" height="48" rx="8"/>
+  <text class="note" x="58" y="328">4. Was the host quit, not just closed?</text>
+  <text class="small" x="58" y="347">The config is read once, at startup, and never again.</text>
+
+  <path class="flow-thin" d="M420,332 H490" marker-end="url(#arm)"/>
+  <text class="tag" x="443" y="326">no</text>
+
+  <rect class="chip" x="490" y="308" width="430" height="48" rx="8"/>
+  <rect class="bad" x="506" y="325" width="4" height="14" rx="2"/>
+  <text class="small" x="520" y="330">Kill every leftover host process, then start it again.</text>
+  <text class="small" x="520" y="348">A surviving process never re-reads its configuration.</text>
+
+  <path class="flow" d="M230,356 V376" marker-end="url(#ar)"/>
+  <text class="tag" x="238" y="371">yes</text>
+
+  <!-- ============ 5 ============ -->
+  <rect class="box" x="40" y="376" width="380" height="48" rx="8"/>
+  <text class="note" x="58" y="396">5. Is stdout nothing but protocol?</text>
+  <text class="small" x="58" y="415">No print(), no banner, no debugger output.</text>
+
+  <path class="flow-thin" d="M420,400 H490" marker-end="url(#arm)"/>
+  <text class="tag" x="443" y="394">no</text>
+
+  <rect class="chip" x="490" y="376" width="430" height="48" rx="8"/>
+  <rect class="bad" x="506" y="393" width="4" height="14" rx="2"/>
+  <text class="small" x="520" y="398">Send every log line to stderr, and delete every print().</text>
+  <text class="mono"  x="520" y="416">logging.basicConfig(stream=sys.stderr)</text>
+
+  <path class="flow" d="M230,424 V446" marker-end="url(#ar)"/>
+  <text class="tag" x="238" y="440">yes</text>
+
+  <!-- ============ terminal ============ -->
+  <rect class="box" x="40" y="446" width="880" height="56" rx="8"/>
+  <rect class="ok" x="58" y="465" width="4" height="16" rx="2"/>
+  <text class="note" x="72" y="470">All five clear? The host already wrote down what went wrong.</text>
+  <text class="monodim" x="72" y="491">%APPDATA%\Claude\logs\mcp-server-system-info.log        ~/Library/Logs/Claude/mcp*.log</text>
+</svg>

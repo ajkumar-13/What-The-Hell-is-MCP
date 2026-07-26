@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Two paths out of one tools/call, and what the model sees at the end of each</title>
+  <desc id="d">A single tools/call request at the top splits into two paths. The left path is a protocol error: the server could not act on the request, so it answers with a JSON-RPC error object carrying a numeric code and no result member, the client handles it, and the model usually never sees it. The right path is a tool execution error: the request was valid and the tool ran and failed, so the server answers with a successful result whose isError field is true and whose content explains what went wrong, and the client feeds that text to the model, which can correct its argument and call again. A band at the bottom states the rule that decides which path applies.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .zone{fill:none;stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .code{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .stop{fill:var(--mcp-alert);}
+    .go{fill:var(--mcp-success);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .loop{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;stroke-dasharray:4 4;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arD" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="38">Two paths out of one tools/call</text>
+  <text class="small" x="40" y="57">Both responses leave the server with HTTP status 200. Only one of them carries an error member.</text>
+
+  <!-- shared start -->
+  <rect class="box" x="330" y="72" width="300" height="40" rx="8"/>
+  <text class="label" x="480" y="90" text-anchor="middle">tools/call arrives</text>
+  <text class="small" x="480" y="105" text-anchor="middle">name: find_process</text>
+
+  <path class="flow" d="M400,112 L400,128 L240,128 L240,152" marker-end="url(#ar)"/>
+  <path class="flow" d="M560,112 L560,128 L720,128 L720,152" marker-end="url(#ar)"/>
+
+  <!-- ============ LEFT: protocol error ============ -->
+  <rect class="zone" x="40" y="158" width="400" height="290" rx="10"/>
+  <rect class="stop" x="56" y="172" width="130" height="22" rx="5"/>
+  <text class="onfill" x="121" y="187" text-anchor="middle">protocol error</text>
+  <text class="head" x="200" y="188">The request itself</text>
+
+  <text class="small" x="56" y="214">Unknown method. Missing required _meta. A tool name</text>
+  <text class="small" x="56" y="230">the server does not have. An internal failure.</text>
+
+  <rect class="code" x="56" y="242" width="368" height="98" rx="8"/>
+  <text class="mono" x="70" y="262">{ "jsonrpc": "2.0", "id": 4,</text>
+  <text class="mono" x="70" y="278">  "error": {</text>
+  <text class="mono" x="70" y="294">    "code": -32601,</text>
+  <text class="mono" x="70" y="310">    "message": "Method not found" } }</text>
+  <text class="mono" x="70" y="330">no result member at all</text>
+
+  <path class="flow" d="M240,340 L240,368" marker-end="url(#ar)"/>
+
+  <rect class="box" x="110" y="374" width="260" height="52" rx="8"/>
+  <text class="label" x="240" y="394" text-anchor="middle">the client handles it</text>
+  <text class="small" x="240" y="412" text-anchor="middle">a model may be shown it, and rarely recovers</text>
+
+  <!-- ============ RIGHT: execution error ============ -->
+  <rect class="zone" x="520" y="158" width="400" height="290" rx="10"/>
+  <rect class="go" x="536" y="172" width="150" height="22" rx="5"/>
+  <text class="onfill" x="611" y="187" text-anchor="middle">execution error</text>
+  <text class="head" x="700" y="188">The work</text>
+
+  <text class="small" x="536" y="214">A value out of range. An upstream call that failed. A</text>
+  <text class="small" x="536" y="230">business rule that said no. An expired handle.</text>
+
+  <rect class="code" x="536" y="242" width="368" height="98" rx="8"/>
+  <text class="mono" x="550" y="262">{ "jsonrpc": "2.0", "id": 5,</text>
+  <text class="mono" x="550" y="278">  "result": { "resultType": "complete",</text>
+  <text class="mono" x="550" y="294">    "isError": true,</text>
+  <text class="mono" x="550" y="310">    "content": [ { "type": "text", … } ] } }</text>
+  <text class="mono" x="550" y="330">a successful response</text>
+
+  <path class="flow" d="M720,340 L720,368" marker-end="url(#ar)"/>
+
+  <rect class="box" x="590" y="374" width="260" height="52" rx="8"/>
+  <text class="label" x="720" y="394" text-anchor="middle">fed back to the model</text>
+  <text class="small" x="720" y="412" text-anchor="middle">it reads the message and calls again with a fix</text>
+
+  <path class="loop" d="M850,400 L900,400 L900,64 L640,64" marker-end="url(#arD)"/>
+  <text class="small" x="770" y="58" text-anchor="middle">retry, with a corrected argument</text>
+
+  <!-- ============ bottom rule ============ -->
+  <rect class="code" x="40" y="466" width="880" height="50" rx="8"/>
+  <text class="label" x="56" y="488">The rule: an error that originates inside the tool belongs in the result, with isError set.</text>
+  <text class="small" x="56" y="506">An error in finding the tool, or in the shape of the request, belongs in the JSON-RPC error object.</text>
+</svg>
