@@ -758,6 +758,28 @@ a Server-Sent Events (SSE) stream, and a `main` that sends `server/discover` and
 uv run --with httpx python raw_discover.py http://127.0.0.1:8000/mcp
 ```
 
+Pointed at the server built in [Post 05](../05-first-server/index.md), it prints this:
+
+```
+server        system-info 2.0.0b2
+versions      2026-07-28
+capabilities  completions, prompts, resources, tools
+cacheable     0 ms, scope private
+
+4 tools
+  get_system_info          required: nothing
+  find_process             required: name
+  terminate_process        required: pid
+  watch_cpu                required: nothing
+```
+
+Four things in that output are worth pausing on. The negotiated revision is the one this
+series targets. The capability list came from `server/discover` rather than from a
+handshake. The `cacheable` line is the `ttlMs` and `cacheScope` pair every list result now
+carries, here declining to be cached. And `terminate_process` requires only `pid`, even
+though the tool cannot run without a human approving it, because the approval is not
+something the caller supplies. [Post 08](../08-elicitation-and-mrtr/index.md) explains why.
+
 It is roughly sixty lines, and it is a complete, conformant MCP client for two methods.
 That is the honest measure of how much protocol there is here. When something goes wrong in
 [Post 05](../05-first-server/index.md) and later, this script is the fastest way to find out

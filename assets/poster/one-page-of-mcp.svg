@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 1700" role="img" aria-labelledby="t d">
+  <title id="t">One page of MCP, revision 2026-07-28</title>
+  <desc id="d">A single-sheet reference for the Model Context Protocol at revision 2026-07-28, laid out in eight panels. It covers the three roles of host, client and server; the three primitives and who triggers each; the shape of a self-describing request and its reserved metadata keys; the full method list including what was removed; the result types and the multi round-trip request loop that replaced the server-to-client channel; the split between protocol errors and tool execution errors; the two transports; and a short security checklist. Designed to print at A2.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .postertitle{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:44px;fill:var(--mcp-ink);}
+    .sub{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:17px;fill:var(--mcp-ink-muted);}
+    .panelhead{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:21px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:13.5px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:13.5px;fill:var(--mcp-ink);}
+    .monodim{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:13.5px;fill:var(--mcp-ink-subtle);}
+    .panel{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .client{fill:var(--mcp-primary);}
+    .server{fill:var(--mcp-accent);}
+    .ok{fill:var(--mcp-success);}
+    .bad{fill:var(--mcp-alert);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .strike{stroke:var(--mcp-alert);stroke-width:1.5;}
+    .rule{stroke:var(--mcp-border);stroke-width:1;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1200" height="1700"/>
+
+  <!-- ================= HEADER ================= -->
+  <text class="postertitle" x="60" y="82">One page of MCP</text>
+  <text class="sub" x="60" y="112">Model Context Protocol, revision 2026-07-28. The revision where the protocol became stateless.</text>
+  <line class="rule" x1="60" y1="134" x2="1140" y2="134"/>
+
+  <!-- ================= 1. ROLES ================= -->
+  <rect class="panel" x="60" y="156" width="530" height="250" rx="10"/>
+  <text class="panelhead" x="82" y="188">1 · The three roles</text>
+
+  <rect class="box" x="82" y="206" width="486" height="112" rx="8"/>
+  <text class="small" x="94" y="226">HOST — owns the model, the conversation, and consent</text>
+  <rect class="client" x="100" y="236" width="128" height="42" rx="6"/>
+  <text class="onfill" x="164" y="262" text-anchor="middle">client</text>
+  <rect class="client" x="238" y="236" width="128" height="42" rx="6"/>
+  <text class="onfill" x="302" y="262" text-anchor="middle">client</text>
+  <rect class="client" x="376" y="236" width="128" height="42" rx="6"/>
+  <text class="onfill" x="440" y="262" text-anchor="middle">client</text>
+  <text class="small" x="94" y="300">one client per connected server</text>
+
+  <path class="flow" d="M164,318 L164,344" marker-end="url(#ar)"/>
+  <path class="flow" d="M302,318 L302,344" marker-end="url(#ar)"/>
+  <path class="flow" d="M440,318 L440,344" marker-end="url(#ar)"/>
+
+  <rect class="server" x="100" y="350" width="128" height="40" rx="6"/>
+  <text class="onfill" x="164" y="375" text-anchor="middle">server</text>
+  <rect class="server" x="238" y="350" width="128" height="40" rx="6"/>
+  <text class="onfill" x="302" y="375" text-anchor="middle">server</text>
+  <rect class="server" x="376" y="350" width="128" height="40" rx="6"/>
+  <text class="onfill" x="440" y="375" text-anchor="middle">server</text>
+
+  <!-- ================= 2. PRIMITIVES ================= -->
+  <rect class="panel" x="610" y="156" width="530" height="250" rx="10"/>
+  <text class="panelhead" x="632" y="188">2 · Who pulls the trigger</text>
+
+  <rect class="box" x="632" y="208" width="486" height="52" rx="8"/>
+  <text class="label" x="648" y="230">Tool</text>
+  <text class="small" x="648" y="250">the MODEL decides</text>
+  <text class="mono" x="960" y="242">tools/call</text>
+
+  <rect class="box" x="632" y="270" width="486" height="52" rx="8"/>
+  <text class="label" x="648" y="292">Resource</text>
+  <text class="small" x="648" y="312">the APPLICATION decides</text>
+  <text class="mono" x="960" y="304">resources/read</text>
+
+  <rect class="box" x="632" y="332" width="486" height="52" rx="8"/>
+  <text class="label" x="648" y="354">Prompt</text>
+  <text class="small" x="648" y="374">the USER decides</text>
+  <text class="mono" x="960" y="366">prompts/get</text>
+
+  <!-- ================= 3. THE MESSAGE ================= -->
+  <rect class="panel" x="60" y="426" width="530" height="356" rx="10"/>
+  <text class="panelhead" x="82" y="458">3 · One self-describing message</text>
+  <text class="small" x="82" y="480">Nothing is negotiated first, so everything travels per request.</text>
+
+  <rect class="box" x="82" y="494" width="486" height="176" rx="8"/>
+  <text class="mono" x="98" y="518">{ "jsonrpc": "2.0", "id": 7,</text>
+  <text class="mono" x="98" y="540">  "method": "tools/call",</text>
+  <text class="mono" x="98" y="562">  "params": {</text>
+  <text class="mono" x="98" y="584">    "name": "get_system_info",</text>
+  <text class="mono" x="98" y="606">    "_meta": {</text>
+  <text class="mono" x="98" y="628">      ".../protocolVersion": "2026-07-28",</text>
+  <text class="mono" x="98" y="650">      ".../clientCapabilities": {} } } }</text>
+
+  <text class="label" x="82" y="700">Reserved keys</text>
+  <text class="small" x="82" y="722">protocolVersion and clientCapabilities are REQUIRED on every request.</text>
+  <text class="small" x="82" y="742">clientInfo, logLevel, serverInfo, subscriptionId are optional.</text>
+  <text class="small" x="82" y="762">progressToken, traceparent, tracestate, baggage carry no prefix.</text>
+
+  <!-- ================= 4. METHODS ================= -->
+  <rect class="panel" x="610" y="426" width="530" height="356" rx="10"/>
+  <text class="panelhead" x="632" y="458">4 · Every method</text>
+
+  <text class="mono" x="632" y="486">server/discover</text>
+  <text class="small" x="880" y="486">servers must implement</text>
+  <text class="mono" x="632" y="510">tools/list · tools/call</text>
+  <text class="mono" x="632" y="534">resources/list · resources/read</text>
+  <text class="mono" x="632" y="558">resources/templates/list</text>
+  <text class="mono" x="632" y="582">prompts/list · prompts/get</text>
+  <text class="mono" x="632" y="606">completion/complete</text>
+  <text class="mono" x="632" y="630">subscriptions/listen</text>
+  <text class="small" x="880" y="630">one stream, opt in</text>
+  <text class="mono" x="632" y="654">notifications/progress</text>
+  <text class="mono" x="632" y="678">notifications/cancelled</text>
+
+  <line class="rule" x1="632" y1="698" x2="1118" y2="698"/>
+  <text class="label" x="632" y="722">Removed in this revision</text>
+  <text class="monodim" x="632" y="746">initialize · ping · logging/setLevel</text>
+  <line class="strike" x1="632" y1="741" x2="960" y2="741"/>
+  <text class="monodim" x="632" y="768">resources/subscribe · roots/list_changed</text>
+  <line class="strike" x1="632" y1="763" x2="1010" y2="763"/>
+
+  <!-- ================= 5. MRTR ================= -->
+  <rect class="panel" x="60" y="802" width="1080" height="300" rx="10"/>
+  <text class="panelhead" x="82" y="834">5 · There is no back channel. A server that needs input returns, and is retried.</text>
+  <text class="small" x="82" y="856">This is MRTR, the multi round-trip request. It replaced every server-to-client request.</text>
+
+  <rect class="client" x="82" y="880" width="150" height="44" rx="6"/>
+  <text class="onfill" x="157" y="908" text-anchor="middle">client</text>
+  <rect class="server" x="958" y="880" width="150" height="44" rx="6"/>
+  <text class="onfill" x="1033" y="908" text-anchor="middle">server</text>
+
+  <path class="flow" d="M234,894 L954,894" marker-end="url(#ar)"/>
+  <text class="mono" x="420" y="886">1  tools/call  { name, arguments, _meta }</text>
+
+  <path class="flow" d="M954,942 L236,942" marker-end="url(#ar)"/>
+  <text class="mono" x="400" y="934">2  resultType: "input_required" + inputRequests + requestState</text>
+
+  <rect class="box" x="420" y="962" width="360" height="40" rx="6"/>
+  <text class="small" x="600" y="987" text-anchor="middle">3  the host asks the user</text>
+
+  <path class="flow" d="M234,1030 L954,1030" marker-end="url(#ar)"/>
+  <text class="mono" x="400" y="1022">4  tools/call again + inputResponses + requestState</text>
+
+  <path class="flow" d="M954,1074 L236,1074" marker-end="url(#ar)"/>
+  <text class="mono" x="470" y="1066">5  resultType: "complete"</text>
+
+  <!-- ================= 6. ERRORS ================= -->
+  <rect class="panel" x="60" y="1122" width="530" height="268" rx="10"/>
+  <text class="panelhead" x="82" y="1154">6 · Two kinds of failure</text>
+
+  <rect class="box" x="82" y="1174" width="486" height="88" rx="8"/>
+  <rect class="bad" x="82" y="1174" width="6" height="88" rx="3"/>
+  <text class="label" x="104" y="1198">Protocol error</text>
+  <text class="mono"  x="104" y="1220">"error": { "code": -32602 }</text>
+  <text class="small" x="104" y="1244">The client handles it. The model never sees it.</text>
+
+  <rect class="box" x="82" y="1276" width="486" height="88" rx="8"/>
+  <rect class="ok" x="82" y="1276" width="6" height="88" rx="3"/>
+  <text class="label" x="104" y="1300">Tool execution error</text>
+  <text class="mono"  x="104" y="1322">"result": { "isError": true }</text>
+  <text class="small" x="104" y="1346">A successful response. Fed back so the model can retry.</text>
+
+  <!-- ================= 7. TRANSPORTS ================= -->
+  <rect class="panel" x="610" y="1122" width="530" height="268" rx="10"/>
+  <text class="panelhead" x="632" y="1154">7 · Two transports</text>
+
+  <rect class="box" x="632" y="1174" width="486" height="88" rx="8"/>
+  <text class="label" x="654" y="1198">stdio</text>
+  <text class="small" x="654" y="1220">The host spawns your process.</text>
+  <text class="small" x="654" y="1242">stdout IS the protocol. Log to stderr, never print.</text>
+
+  <rect class="box" x="632" y="1276" width="486" height="88" rx="8"/>
+  <text class="label" x="654" y="1300">Streamable HTTP</text>
+  <text class="small" x="654" y="1322">One endpoint, ordinary POSTs.</text>
+  <text class="small" x="654" y="1344">No session, so round-robin balancing just works.</text>
+
+  <!-- ================= 8. SECURITY ================= -->
+  <rect class="panel" x="60" y="1410" width="1080" height="212" rx="10"/>
+  <text class="panelhead" x="82" y="1442">8 · Six things the protocol will not do for you</text>
+
+  <text class="small" x="82"  y="1476">1 · Tool descriptions are untrusted input to the model.</text>
+  <text class="small" x="82"  y="1502">Injection lands at tools/list, before any approval prompt fires.</text>
+  <text class="small" x="82"  y="1534">2 · Annotations are hints. readOnlyHint enforces nothing.</text>
+  <text class="small" x="82"  y="1560">3 · Never accept a token not issued for you. Never forward one upstream.</text>
+
+  <text class="small" x="620" y="1476">4 · Validate Origin. Bind local servers to 127.0.0.1.</text>
+  <text class="small" x="620" y="1502">5 · Resource template variables are untrusted. Use an allowlist.</text>
+  <text class="small" x="620" y="1534">6 · Private data + untrusted content + an outbound channel</text>
+  <text class="small" x="620" y="1560">is the lethal trifecta. Remove one of the three.</text>
+
+  <line class="rule" x1="60" y1="1650" x2="1140" y2="1650"/>
+  <text class="small" x="60" y="1676">What The Hell is MCP — a free 24-post series. Prose CC-BY 4.0, code MIT.</text>
+</svg>

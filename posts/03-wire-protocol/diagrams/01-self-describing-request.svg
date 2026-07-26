@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">One self-describing request</title>
+  <desc id="d">A single tools/call request written out as JSON. Six reserved keys inside its _meta object are each connected by a leader line to a short note on the right explaining what that key tells the server: the protocol revision, the client's capabilities on this request, self-reported client identity, an opt-in log level, an opt-in progress token, and W3C trace context. The point of the diagram is that nothing was negotiated earlier, so everything the server needs is present in this one message.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .note{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12.5px;fill:var(--mcp-ink);}
+    .monodim{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12.5px;fill:var(--mcp-ink-subtle);}
+    .key{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12.5px;fill:var(--mcp-primary);}
+    .panel{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .req{fill:var(--mcp-alert);}
+    .lead{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+  ]]></style>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="42">Everything the server needs, in one message</text>
+  <text class="small" x="40" y="62">There is no earlier message to remember, so the request carries its own context.</text>
+
+  <!-- ============ JSON panel ============ -->
+  <rect class="panel" x="40" y="80" width="470" height="392" rx="10"/>
+
+  <text class="mono" x="58" y="106">{</text>
+  <text class="mono" x="58" y="125">  "jsonrpc": "2.0",</text>
+  <text class="mono" x="58" y="144">  "id": 7,</text>
+  <text class="mono" x="58" y="163">  "method": "tools/call",</text>
+  <text class="mono" x="58" y="182">  "params": {</text>
+  <text class="mono" x="58" y="201">    "name": "get_system_info",</text>
+  <text class="mono" x="58" y="220">    "arguments": {},</text>
+  <text class="mono" x="58" y="239">    "_meta": {</text>
+
+  <text class="key"  x="58" y="266">      ".../protocolVersion": "2026-07-28",</text>
+  <text class="key"  x="58" y="292">      ".../clientCapabilities": {},</text>
+  <text class="key"  x="58" y="318">      ".../clientInfo": {"name": "demo"},</text>
+  <text class="key"  x="58" y="344">      ".../logLevel": "info",</text>
+  <text class="key"  x="58" y="370">      "progressToken": 42,</text>
+  <text class="key"  x="58" y="396">      "traceparent": "00-4bf9c2...-01"</text>
+
+  <text class="mono" x="58" y="422">    }</text>
+  <text class="mono" x="58" y="441">  }</text>
+  <text class="mono" x="58" y="460">}</text>
+
+  <!-- required markers -->
+  <rect class="req" x="44" y="256" width="4" height="14" rx="2"/>
+  <rect class="req" x="44" y="282" width="4" height="14" rx="2"/>
+
+  <text class="monodim" x="58" y="490">.../  =  io.modelcontextprotocol/</text>
+
+  <!-- ============ leader lines ============ -->
+  <path class="lead" d="M470,262 C525,262 520,128 552,128"/>
+  <path class="lead" d="M470,288 C525,288 520,196 552,196"/>
+  <path class="lead" d="M470,314 C525,314 520,264 552,264"/>
+  <path class="lead" d="M470,340 C525,340 520,332 552,332"/>
+  <path class="lead" d="M470,366 C525,366 520,394 552,394"/>
+  <path class="lead" d="M470,392 C525,392 520,456 552,456"/>
+
+  <!-- ============ annotations ============ -->
+  <rect class="chip" x="552" y="102" width="368" height="52" rx="8"/>
+  <text class="note"  x="566" y="122">protocolVersion</text>
+  <text class="small" x="566" y="140">Which revision this message speaks. Required.</text>
+
+  <rect class="chip" x="552" y="170" width="368" height="52" rx="8"/>
+  <text class="note"  x="566" y="190">clientCapabilities</text>
+  <text class="small" x="566" y="208">Required, and scoped to this request alone.</text>
+
+  <rect class="chip" x="552" y="238" width="368" height="52" rx="8"/>
+  <text class="note"  x="566" y="258">clientInfo</text>
+  <text class="small" x="566" y="276">Self-reported. Good for logs, never for security.</text>
+
+  <rect class="chip" x="552" y="306" width="368" height="52" rx="8"/>
+  <text class="note"  x="566" y="326">logLevel</text>
+  <text class="small" x="566" y="344">Opt in. No key means no log notifications.</text>
+
+  <rect class="chip" x="552" y="368" width="368" height="52" rx="8"/>
+  <text class="note"  x="566" y="388">progressToken</text>
+  <text class="small" x="566" y="406">Opt into progress on this request's stream.</text>
+
+  <rect class="chip" x="552" y="430" width="368" height="52" rx="8"/>
+  <text class="note"  x="566" y="450">traceparent</text>
+  <text class="small" x="566" y="468">W3C Trace Context. Unprefixed on purpose.</text>
+
+  <rect class="req" x="552" y="500" width="4" height="12" rx="2"/>
+  <text class="small" x="566" y="510">A request missing either required key is malformed, and the server must reject it with -32602.</text>
+</svg>

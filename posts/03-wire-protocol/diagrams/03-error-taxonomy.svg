@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Two kinds of failure, and only one is an error</title>
+  <desc id="d">Two columns comparing how failures travel. On the left, a protocol error: the request was malformed or the method was unknown, so the response carries a JSON-RPC error object with a numeric code, no result, and the model never sees it because the client handles it. On the right, a tool execution error: the request was well formed and the tool ran but failed, so the response is a successful result whose isError field is true and whose content carries the message, which the client feeds back to the model so it can correct itself and retry.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .zone{fill:none;stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .code{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .stopfill{fill:var(--mcp-alert);}
+    .gofill{fill:var(--mcp-success);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flowdim{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;stroke-dasharray:4 4;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arD" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="42">A tool that fails is not a protocol error</text>
+  <text class="small" x="40" y="62">Both responses have HTTP status 200. Only one of them has an "error" member.</text>
+
+  <!-- ============ LEFT: protocol error ============ -->
+  <rect class="zone" x="40" y="82" width="420" height="424" rx="10"/>
+  <text class="head" x="60" y="110">Protocol error</text>
+  <text class="small" x="60" y="128">The server could not act on the request at all.</text>
+
+  <rect class="box" x="60" y="146" width="380" height="34" rx="6"/>
+  <text class="small" x="72" y="168">Unknown method, missing required _meta, bad params</text>
+
+  <path class="flow" d="M250,180 L250,208" marker-end="url(#ar)"/>
+
+  <rect class="code" x="60" y="214" width="380" height="126" rx="8"/>
+  <text class="mono" x="74" y="236">{</text>
+  <text class="mono" x="74" y="255">  "jsonrpc": "2.0",</text>
+  <text class="mono" x="74" y="274">  "id": 7,</text>
+  <text class="mono" x="74" y="293">  "error": { "code": -32602,</text>
+  <text class="mono" x="74" y="312">             "message": "Invalid params" }</text>
+  <text class="mono" x="74" y="331">}</text>
+
+  <rect class="stopfill" x="60" y="356" width="150" height="26" rx="6"/>
+  <text class="onfill" x="135" y="374" text-anchor="middle">no result member</text>
+
+  <path class="flowdim" d="M250,340 L250,404" marker-end="url(#arD)"/>
+
+  <rect class="box" x="130" y="410" width="240" height="40" rx="8"/>
+  <text class="label" x="250" y="428" text-anchor="middle">the client handles it</text>
+  <text class="small" x="250" y="443" text-anchor="middle">the model never sees this</text>
+
+  <text class="small" x="60" y="480">Codes: -32700, -32600, -32601, -32602, -32603,</text>
+  <text class="small" x="60" y="496">plus -32020, -32021, -32022.</text>
+
+  <!-- ============ RIGHT: execution error ============ -->
+  <rect class="zone" x="500" y="82" width="420" height="424" rx="10"/>
+  <text class="head" x="520" y="110">Tool execution error</text>
+  <text class="small" x="520" y="128">The request was fine. The work failed.</text>
+
+  <rect class="box" x="520" y="146" width="380" height="34" rx="6"/>
+  <text class="small" x="532" y="168">Row not found, timeout, upstream refused, bad input value</text>
+
+  <path class="flow" d="M710,180 L710,208" marker-end="url(#ar)"/>
+
+  <rect class="code" x="520" y="214" width="380" height="126" rx="8"/>
+  <text class="mono" x="534" y="236">{</text>
+  <text class="mono" x="534" y="255">  "jsonrpc": "2.0", "id": 8,</text>
+  <text class="mono" x="534" y="274">  "result": { "resultType": "complete",</text>
+  <text class="mono" x="534" y="293">    "isError": true,</text>
+  <text class="mono" x="534" y="312">    "content": [{"type":"text","text":"..."}] }</text>
+  <text class="mono" x="534" y="331">}</text>
+
+  <rect class="gofill" x="520" y="356" width="185" height="26" rx="6"/>
+  <text class="onfill" x="612" y="374" text-anchor="middle">a successful response</text>
+
+  <path class="flow" d="M710,340 L710,404" marker-end="url(#ar)"/>
+
+  <rect class="box" x="590" y="410" width="240" height="40" rx="8"/>
+  <text class="label" x="710" y="428" text-anchor="middle">fed back to the model</text>
+  <text class="small" x="710" y="443" text-anchor="middle">so it can correct and retry</text>
+
+  <text class="small" x="520" y="480">Send the reason, not just the word "failed".</text>
+  <text class="small" x="520" y="496">A model can only fix what it can read.</text>
+</svg>

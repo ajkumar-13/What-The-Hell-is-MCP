@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Stateful sessions against stateless requests</title>
+  <desc id="d">Two deployments side by side. On the left, the model used until revision 2025-11-25: a client holds a session id minted during an initialize handshake, and the load balancer is forced to route every later request back to the one replica that holds that session in memory, leaving the other two replicas unusable for that client. On the right, the model from 2026-07-28: each request carries its own context, the load balancer distributes requests round robin, and all three replicas serve any request. The session id is shown crossed out to mark it as removed.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11.5px;fill:var(--mcp-ink);}
+    .monodim{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11.5px;fill:var(--mcp-ink-subtle);}
+    .zone{fill:none;stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .client{fill:var(--mcp-primary);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-on-fill);}
+    .srv{fill:var(--mcp-surface);stroke:var(--mcp-accent);stroke-width:1.5;}
+    .idle{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .pin{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;}
+    .ok{stroke:var(--mcp-success);stroke-width:1.5;fill:none;}
+    .strike{stroke:var(--mcp-alert);stroke-width:1.5;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arR" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-alert)"/>
+    </marker>
+    <marker id="arG" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-success)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="42">The session was the thing that stopped a server from scaling</text>
+
+  <!-- ================= LEFT: stateful ================= -->
+  <rect class="zone" x="40" y="66" width="415" height="440" rx="10"/>
+  <text class="head"  x="60" y="92">Until 2025-11-25</text>
+  <text class="small" x="60" y="110">One replica holds the session. The balancer has no choice.</text>
+
+  <rect class="client" x="60" y="130" width="120" height="40" rx="8"/>
+  <text class="onfill" x="120" y="155" text-anchor="middle">client</text>
+
+  <rect class="box" x="60" y="186" width="200" height="30" rx="6"/>
+  <text class="mono" x="70" y="206">Mcp-Session-Id: a91f</text>
+  <line class="strike" x1="66" y1="201" x2="254" y2="201"/>
+
+  <rect class="box" x="60" y="242" width="120" height="36" rx="6"/>
+  <text class="label" x="120" y="265" text-anchor="middle">balancer</text>
+
+  <path class="pin" d="M120,278 L120,318" marker-end="url(#arR)"/>
+  <text class="small" x="132" y="302">pinned</text>
+
+  <rect class="srv" x="60" y="326" width="120" height="46" rx="8"/>
+  <text class="label" x="120" y="348" text-anchor="middle">replica 1</text>
+  <text class="small" x="120" y="364" text-anchor="middle">holds a91f</text>
+
+  <rect class="idle" x="200" y="326" width="110" height="46" rx="8"/>
+  <text class="small" x="255" y="348" text-anchor="middle">replica 2</text>
+  <text class="small" x="255" y="364" text-anchor="middle">unusable</text>
+
+  <rect class="idle" x="325" y="326" width="110" height="46" rx="8"/>
+  <text class="small" x="380" y="348" text-anchor="middle">replica 3</text>
+  <text class="small" x="380" y="364" text-anchor="middle">unusable</text>
+
+  <text class="small" x="60" y="410">Restart replica 1 and the conversation dies with it.</text>
+  <text class="small" x="60" y="428">Scaling out adds capacity nobody can reach.</text>
+  <text class="small" x="60" y="446">The handshake had to happen before any real work.</text>
+
+  <!-- ================= RIGHT: stateless ================= -->
+  <rect class="zone" x="505" y="66" width="415" height="440" rx="10"/>
+  <text class="head"  x="525" y="92">From 2026-07-28</text>
+  <text class="small" x="525" y="110">Every request carries its own context. Any replica answers.</text>
+
+  <rect class="client" x="525" y="130" width="120" height="40" rx="8"/>
+  <text class="onfill" x="585" y="155" text-anchor="middle">client</text>
+
+  <rect class="box" x="525" y="186" width="230" height="30" rx="6"/>
+  <text class="mono" x="535" y="206">_meta: version, capabilities</text>
+
+  <rect class="box" x="525" y="242" width="120" height="36" rx="6"/>
+  <text class="label" x="585" y="265" text-anchor="middle">balancer</text>
+
+  <path class="ok" d="M570,278 L555,318" marker-end="url(#arG)"/>
+  <path class="ok" d="M590,278 L700,318" marker-end="url(#arG)"/>
+  <path class="ok" d="M605,278 L830,318" marker-end="url(#arG)"/>
+  <text class="small" x="640" y="302">round robin</text>
+
+  <rect class="srv" x="497" y="326" width="115" height="46" rx="8"/>
+  <text class="label" x="554" y="348" text-anchor="middle">replica 1</text>
+  <text class="small" x="554" y="364" text-anchor="middle">identical</text>
+
+  <rect class="srv" x="642" y="326" width="115" height="46" rx="8"/>
+  <text class="label" x="699" y="348" text-anchor="middle">replica 2</text>
+  <text class="small" x="699" y="364" text-anchor="middle">identical</text>
+
+  <rect class="srv" x="772" y="326" width="115" height="46" rx="8"/>
+  <text class="label" x="829" y="348" text-anchor="middle">replica 3</text>
+  <text class="small" x="829" y="364" text-anchor="middle">identical</text>
+
+  <text class="small" x="525" y="410">Restart any replica and the next request simply lands elsewhere.</text>
+  <text class="small" x="525" y="428">State that must persist becomes a server-minted handle,</text>
+  <text class="small" x="525" y="446">passed back as an ordinary tool argument.</text>
+
+  <text class="monodim" x="40" y="528">The crossed-out header is removed, not optional. There is no session to resume.</text>
+</svg>
