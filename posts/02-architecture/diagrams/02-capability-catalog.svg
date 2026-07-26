@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">The unified capability catalog, and a name collision</title>
+  <desc id="d">On the left, a three-column lookup table maps the tool name the model sees to the client that owns the connection and to the server behind it. On the right, three server cards list the tool names each server actually exposes. Two of those servers both export a tool called search; those rows are tinted and marked with a warning triangle, and a note explains that the host prefixes each name with the local identifier it gave the connection and strips the prefix again before it sends the call.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFF;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;--mcp-grid:rgba(26,26,26,0.06);}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;--mcp-grid:rgba(241,238,232,0.08);}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:13px;fill:var(--mcp-ink);}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .client{fill:var(--mcp-primary);}
+    .server{fill:var(--mcp-accent);}
+    .hi{fill:var(--mcp-warn);opacity:0.16;}
+    .warnline{stroke:var(--mcp-warn);stroke-width:1;fill:none;}
+    .grid{stroke:var(--mcp-grid);stroke-width:0.75;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .rule{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="32" y="40">One catalog, many servers</text>
+  <text class="small" x="32" y="60">The host calls tools/list on every connection and merges the answers into a single name-to-connection map.</text>
+  <text class="small" x="32" y="78">The model picks a name from the left column. It never picks a server.</text>
+
+  <!-- table -->
+  <rect class="box" x="32" y="100" width="536" height="242" rx="6"/>
+
+  <rect class="hi" x="33" y="174" width="534" height="42"/>
+  <rect class="hi" x="33" y="216" width="534" height="42"/>
+
+  <path class="grid" d="M252,100 L252,342"/>
+  <path class="grid" d="M348,100 L348,342"/>
+  <path class="rule" d="M32,132 L568,132"/>
+  <path class="grid" d="M32,174 L568,174"/>
+  <path class="grid" d="M32,216 L568,216"/>
+  <path class="grid" d="M32,258 L568,258"/>
+  <path class="grid" d="M32,300 L568,300"/>
+
+  <text class="small" x="62" y="121">name the model sees</text>
+  <text class="small" x="300" y="121" text-anchor="middle">client</text>
+  <text class="small" x="360" y="121">connection it resolves to</text>
+
+  <text class="mono" x="62" y="157">files.read_file</text>
+  <text class="mono" x="300" y="157" text-anchor="middle">A</text>
+  <text class="small" x="360" y="157">files server</text>
+
+  <text class="mono" x="62" y="199">files.search</text>
+  <text class="mono" x="300" y="199" text-anchor="middle">A</text>
+  <text class="small" x="360" y="199">files server</text>
+
+  <text class="mono" x="62" y="241">docs.search</text>
+  <text class="mono" x="300" y="241" text-anchor="middle">B</text>
+  <text class="small" x="360" y="241">docs server</text>
+
+  <text class="mono" x="62" y="283">docs.fetch_page</text>
+  <text class="mono" x="300" y="283" text-anchor="middle">B</text>
+  <text class="small" x="360" y="283">docs server</text>
+
+  <text class="mono" x="62" y="325">db.run_query</text>
+  <text class="mono" x="300" y="325" text-anchor="middle">C</text>
+  <text class="small" x="360" y="325">db server</text>
+
+  <path class="warnline" d="M44,188 L51,200 L37,200 Z"/>
+  <path class="warnline" d="M44,192 L44,196"/>
+  <path class="warnline" d="M44,230 L51,242 L37,242 Z"/>
+  <path class="warnline" d="M44,234 L44,238"/>
+
+  <!-- connectors -->
+  <path class="flow-thin" d="M568,153 C590,153 596,174 614,174" marker-end="url(#arm)"/>
+  <path class="flow-thin" d="M568,195 C590,195 596,174 614,174" marker-end="url(#arm)"/>
+  <path class="flow-thin" d="M568,237 C590,237 596,270 614,270" marker-end="url(#arm)"/>
+  <path class="flow-thin" d="M568,279 C590,279 596,270 614,270" marker-end="url(#arm)"/>
+  <path class="flow-thin" d="M568,321 C590,321 596,356 614,356" marker-end="url(#arm)"/>
+
+  <!-- server cards -->
+  <text class="small" x="616" y="121">what each server actually exposes</text>
+
+  <rect class="box" x="616" y="132" width="312" height="84" rx="6"/>
+  <rect class="hi" x="644" y="190" width="268" height="22"/>
+  <circle class="server" cx="634" cy="154" r="6"/>
+  <text class="label" x="650" y="158">files server</text>
+  <text class="mono" x="650" y="184">read_file</text>
+  <text class="mono" x="650" y="204">search</text>
+  <path class="warnline" d="M632,194 L639,206 L625,206 Z"/>
+  <path class="warnline" d="M632,198 L632,202"/>
+
+  <rect class="box" x="616" y="228" width="312" height="84" rx="6"/>
+  <rect class="hi" x="644" y="266" width="268" height="22"/>
+  <circle class="server" cx="634" cy="250" r="6"/>
+  <text class="label" x="650" y="254">docs server</text>
+  <text class="mono" x="650" y="280">search</text>
+  <text class="mono" x="650" y="300">fetch_page</text>
+  <path class="warnline" d="M632,270 L639,282 L625,282 Z"/>
+  <path class="warnline" d="M632,274 L632,278"/>
+
+  <rect class="box" x="616" y="324" width="312" height="64" rx="6"/>
+  <circle class="server" cx="634" cy="346" r="6"/>
+  <text class="label" x="650" y="350">db server</text>
+  <text class="mono" x="650" y="376">run_query</text>
+
+  <!-- collision callout -->
+  <rect class="chip" x="32" y="364" width="536" height="126" rx="8"/>
+  <path class="warnline" d="M52,382 L60,396 L44,396 Z"/>
+  <path class="warnline" d="M52,387 L52,392"/>
+  <text class="label" x="70" y="393">Two servers, one tool name</text>
+  <text class="small" x="48" y="418">Both servers export a tool literally called search.</text>
+  <text class="small" x="48" y="438">The host cannot offer the model two entries with the same name, so it prefixes each</text>
+  <text class="small" x="48" y="458">one with the local identifier it gave that connection in configuration.</text>
+  <text class="small" x="48" y="478">It strips the prefix off again before it sends tools/call down the wire.</text>
+
+  <!-- right-hand note -->
+  <text class="label" x="616" y="414">Prefix on the connection</text>
+  <text class="small" x="616" y="436">Tool names are unique inside a server,</text>
+  <text class="small" x="616" y="454">never across servers. The name a server</text>
+  <text class="small" x="616" y="472">reports for itself is not guaranteed to be</text>
+  <text class="small" x="616" y="490">unique, so it is the wrong thing to key on.</text>
+</svg>

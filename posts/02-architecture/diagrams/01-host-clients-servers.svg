@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">One host, three clients, three servers</title>
+  <desc id="d">A single host application on the left contains the model, the conversation and the consent gate, plus three separate client objects stacked beneath them. Each client has one arrow, labelled one to one, crossing the protocol boundary to its own server on the right, and each server then reaches a different backing system: a project folder, a PostgreSQL database, and a remote issue tracker web API. The picture argues that clients are per-connection objects inside the host, never shared and never talking to each other.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFF;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;--mcp-grid:rgba(26,26,26,0.06);}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;--mcp-grid:rgba(241,238,232,0.08);}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:13px;fill:var(--mcp-ink);}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .hostbox{fill:var(--mcp-neutral-1);stroke:var(--mcp-primary);stroke-width:1.5;}
+    .chip{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .backing{fill:var(--mcp-bg);stroke:var(--mcp-ink-subtle);stroke-width:1;stroke-dasharray:5 4;}
+    .client{fill:var(--mcp-primary);}
+    .server{fill:var(--mcp-accent);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .lifeline{stroke:var(--mcp-ink-subtle);stroke-width:1;stroke-dasharray:4 5;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="32" y="40">One host, three clients, three servers</text>
+  <text class="small" x="32" y="62">Each client owns exactly one server connection. Nothing about that connection is shared with another client.</text>
+
+  <!-- protocol boundary -->
+  <text class="small" x="458" y="92" text-anchor="middle">protocol boundary</text>
+  <path class="lifeline" d="M458,100 L458,484"/>
+
+  <!-- host container -->
+  <rect class="hostbox" x="32" y="96" width="316" height="392" rx="10"/>
+  <text class="label" x="48" y="122">Host</text>
+  <text class="small" x="48" y="140">Claude Desktop, Cursor, your own command line</text>
+
+  <rect class="chip" x="48" y="150" width="284" height="92" rx="6"/>
+  <circle class="client" cx="60" cy="168" r="3"/>
+  <text class="small" x="72" y="172">owns the model that chooses</text>
+  <circle class="client" cx="60" cy="190" r="3"/>
+  <text class="small" x="72" y="194">owns the conversation and its history</text>
+  <circle class="client" cx="60" cy="212" r="3"/>
+  <text class="small" x="72" y="216">owns consent, approval and permissions</text>
+
+  <text class="small" x="48" y="264">and creates one client per connected server</text>
+
+  <!-- client A -->
+  <rect class="box" x="48" y="276" width="284" height="58" rx="6"/>
+  <circle class="client" cx="68" cy="305" r="6"/>
+  <text class="label" x="86" y="301">Client A</text>
+  <text class="small" x="86" y="320">transport, request ids, cached lists</text>
+
+  <!-- client B -->
+  <rect class="box" x="48" y="346" width="284" height="58" rx="6"/>
+  <circle class="client" cx="68" cy="375" r="6"/>
+  <text class="label" x="86" y="371">Client B</text>
+  <text class="small" x="86" y="390">transport, request ids, cached lists</text>
+
+  <!-- client C -->
+  <rect class="box" x="48" y="416" width="284" height="58" rx="6"/>
+  <circle class="client" cx="68" cy="445" r="6"/>
+  <text class="label" x="86" y="441">Client C</text>
+  <text class="small" x="86" y="460">transport, request ids, cached lists</text>
+
+  <!-- client to server links -->
+  <path class="flow" d="M332,305 L566,305" marker-end="url(#ar)"/>
+  <path class="flow" d="M332,375 L566,375" marker-end="url(#ar)"/>
+  <path class="flow" d="M332,445 L566,445" marker-end="url(#ar)"/>
+  <text class="mono" x="412" y="297" text-anchor="middle">1 : 1</text>
+  <text class="mono" x="412" y="367" text-anchor="middle">1 : 1</text>
+  <text class="mono" x="412" y="437" text-anchor="middle">1 : 1</text>
+
+  <!-- servers -->
+  <rect class="box" x="568" y="276" width="196" height="58" rx="6"/>
+  <circle class="server" cx="588" cy="305" r="6"/>
+  <text class="label" x="606" y="301">files server</text>
+  <text class="small" x="606" y="320">local process</text>
+
+  <rect class="box" x="568" y="346" width="196" height="58" rx="6"/>
+  <circle class="server" cx="588" cy="375" r="6"/>
+  <text class="label" x="606" y="371">database server</text>
+  <text class="small" x="606" y="390">local process</text>
+
+  <rect class="box" x="568" y="416" width="196" height="58" rx="6"/>
+  <circle class="server" cx="588" cy="445" r="6"/>
+  <text class="label" x="606" y="441">tracker server</text>
+  <text class="small" x="606" y="460">remote service</text>
+
+  <!-- server to backing system -->
+  <path class="flow-thin" d="M764,305 L794,305" marker-end="url(#arm)"/>
+  <path class="flow-thin" d="M764,375 L794,375" marker-end="url(#arm)"/>
+  <path class="flow-thin" d="M764,445 L794,445" marker-end="url(#arm)"/>
+
+  <rect class="backing" x="800" y="276" width="128" height="58" rx="6"/>
+  <text class="small" x="864" y="301" text-anchor="middle">your project</text>
+  <text class="small" x="864" y="318" text-anchor="middle">folder</text>
+
+  <rect class="backing" x="800" y="346" width="128" height="58" rx="6"/>
+  <text class="small" x="864" y="371" text-anchor="middle">a PostgreSQL</text>
+  <text class="small" x="864" y="388" text-anchor="middle">database</text>
+
+  <rect class="backing" x="800" y="416" width="128" height="58" rx="6"/>
+  <text class="small" x="864" y="441" text-anchor="middle">issue tracker</text>
+  <text class="small" x="864" y="458" text-anchor="middle">web API</text>
+
+  <!-- footer and legend -->
+  <text class="small" x="32" y="512">No client talks to another client, and no server sees another.</text>
+  <circle class="client" cx="476" cy="508" r="6"/>
+  <text class="small" x="490" y="512">client side</text>
+  <circle class="server" cx="580" cy="508" r="6"/>
+  <text class="small" x="594" y="512">server side</text>
+  <rect class="backing" x="684" y="502" width="12" height="12" rx="2"/>
+  <text class="small" x="704" y="512">backing system, outside MCP</text>
+</svg>

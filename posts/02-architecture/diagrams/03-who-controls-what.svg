@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Who pulls the trigger on each primitive</title>
+  <desc id="d">A three by three control matrix. The rows are the primitives tools, resources and prompts; the columns are the model, the host and the user, with the resulting wire method in a fourth column. Exactly one cell per row carries a filled disc with a play triangle, meaning that party starts the interaction: the model for tools, the host for resources, the user for prompts. The other cells carry either a barred circle, meaning that party can block it, an outlined ring, meaning it may take part, or a plain dash, meaning it does not choose.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFF;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;--mcp-grid:rgba(26,26,26,0.06);}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;--mcp-grid:rgba(241,238,232,0.08);}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .prim{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:16px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:13px;fill:var(--mcp-ink);}
+    .server{fill:var(--mcp-accent);}
+    .fire{fill:var(--mcp-primary);}
+    .onfill{fill:var(--mcp-on-fill);}
+    .ringsolid{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .ringopen{fill:none;stroke:var(--mcp-border);stroke-width:1;}
+    .bar{fill:var(--mcp-ink);}
+    .dot{fill:var(--mcp-ink-subtle);}
+    .grid{stroke:var(--mcp-grid);stroke-width:0.75;fill:none;}
+    .rule{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .dash{stroke:var(--mcp-ink-subtle);stroke-width:1;fill:none;}
+  ]]></style>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="32" y="40">Who pulls the trigger</text>
+  <text class="small" x="32" y="62">Each primitive names one party that is allowed to start it. Every path still runs through the host.</text>
+
+  <text class="small" x="32" y="104">primitive</text>
+  <text class="head" x="323" y="104" text-anchor="middle">the model</text>
+  <text class="head" x="505" y="104" text-anchor="middle">the host</text>
+  <text class="head" x="687" y="104" text-anchor="middle">the user</text>
+  <text class="small" x="853" y="104" text-anchor="middle">on the wire</text>
+
+  <path class="rule" d="M32,114 L928,114"/>
+  <path class="grid" d="M232,114 L232,474"/>
+  <path class="grid" d="M414,114 L414,474"/>
+  <path class="grid" d="M596,114 L596,474"/>
+  <path class="grid" d="M778,114 L778,474"/>
+  <path class="grid" d="M32,238 L928,238"/>
+  <path class="grid" d="M32,356 L928,356"/>
+
+  <!-- ROW 1: tools -->
+  <circle class="server" cx="52" cy="160" r="6"/>
+  <text class="prim" x="68" y="165">Tools</text>
+  <text class="small" x="32" y="190">actions the server can run</text>
+  <text class="small" x="32" y="208">on your behalf</text>
+
+  <circle class="fire" cx="323" cy="166" r="18"/>
+  <path class="onfill" d="M318,158 L331,166 L318,174 Z"/>
+  <text class="small" x="323" y="206" text-anchor="middle">picks the tool</text>
+  <text class="small" x="323" y="222" text-anchor="middle">and the arguments</text>
+
+  <circle class="ringsolid" cx="505" cy="166" r="18"/>
+  <rect class="bar" x="495" y="164" width="20" height="4" rx="1"/>
+  <text class="small" x="505" y="206" text-anchor="middle">can refuse to send it,</text>
+  <text class="small" x="505" y="222" text-anchor="middle">and shows what it is</text>
+
+  <circle class="ringsolid" cx="687" cy="166" r="18"/>
+  <rect class="bar" x="677" y="164" width="20" height="4" rx="1"/>
+  <text class="small" x="687" y="206" text-anchor="middle">confirms, or says no,</text>
+  <text class="small" x="687" y="222" text-anchor="middle">through the host</text>
+
+  <text class="mono" x="853" y="170" text-anchor="middle">tools/call</text>
+  <text class="small" x="853" y="192" text-anchor="middle">model-controlled</text>
+
+  <!-- ROW 2: resources -->
+  <circle class="server" cx="52" cy="278" r="6"/>
+  <text class="prim" x="68" y="283">Resources</text>
+  <text class="small" x="32" y="308">data the server can hand</text>
+  <text class="small" x="32" y="326">over for reading</text>
+
+  <circle class="ringopen" cx="323" cy="284" r="18"/>
+  <circle class="dot" cx="323" cy="284" r="3"/>
+  <text class="small" x="323" y="324" text-anchor="middle">may suggest one,</text>
+  <text class="small" x="323" y="340" text-anchor="middle">if the host asks it to</text>
+
+  <circle class="fire" cx="505" cy="284" r="18"/>
+  <path class="onfill" d="M500,276 L513,284 L500,292 Z"/>
+  <text class="small" x="505" y="324" text-anchor="middle">decides what context</text>
+  <text class="small" x="505" y="340" text-anchor="middle">to attach, and when</text>
+
+  <circle class="ringopen" cx="687" cy="284" r="18"/>
+  <circle class="dot" cx="687" cy="284" r="3"/>
+  <text class="small" x="687" y="324" text-anchor="middle">may pick one from</text>
+  <text class="small" x="687" y="340" text-anchor="middle">a list, if offered</text>
+
+  <text class="mono" x="853" y="288" text-anchor="middle">resources/read</text>
+  <text class="small" x="853" y="310" text-anchor="middle">application-driven</text>
+
+  <!-- ROW 3: prompts -->
+  <circle class="server" cx="52" cy="396" r="6"/>
+  <text class="prim" x="68" y="401">Prompts</text>
+  <text class="small" x="32" y="426">ready-made ways to start</text>
+  <text class="small" x="32" y="444">a piece of work</text>
+
+  <path class="dash" d="M309,402 L337,402"/>
+  <text class="small" x="323" y="442" text-anchor="middle">does not choose</text>
+  <text class="small" x="323" y="458" text-anchor="middle">a prompt</text>
+
+  <circle class="ringopen" cx="505" cy="402" r="18"/>
+  <circle class="dot" cx="505" cy="402" r="3"/>
+  <text class="small" x="505" y="442" text-anchor="middle">renders the menu</text>
+  <text class="small" x="505" y="458" text-anchor="middle">and fills arguments</text>
+
+  <circle class="fire" cx="687" cy="402" r="18"/>
+  <path class="onfill" d="M682,394 L695,402 L682,410 Z"/>
+  <text class="small" x="687" y="442" text-anchor="middle">picks it deliberately,</text>
+  <text class="small" x="687" y="458" text-anchor="middle">by name</text>
+
+  <text class="mono" x="853" y="406" text-anchor="middle">prompts/get</text>
+  <text class="small" x="853" y="428" text-anchor="middle">user-controlled</text>
+
+  <!-- legend -->
+  <circle class="fire" cx="44" cy="500" r="9"/>
+  <path class="onfill" d="M41,496 L47,500 L41,504 Z"/>
+  <text class="small" x="58" y="504">starts it</text>
+
+  <circle class="ringsolid" cx="164" cy="500" r="9"/>
+  <rect class="bar" x="158" y="498" width="12" height="3" rx="1"/>
+  <text class="small" x="178" y="504">can block it</text>
+
+  <circle class="ringopen" cx="298" cy="500" r="9"/>
+  <circle class="dot" cx="298" cy="500" r="2.5"/>
+  <text class="small" x="312" y="504">may take part</text>
+
+  <path class="dash" d="M424,500 L448,500"/>
+  <text class="small" x="456" y="504">does not choose</text>
+
+  <text class="small" x="596" y="504">The model never picks a server, only a tool.</text>
+</svg>

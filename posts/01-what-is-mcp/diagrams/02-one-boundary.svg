@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">The same nodes, each wired once to a single protocol boundary</title>
+  <desc id="d">The same four AI applications on the left and six data sources on the right sit in exactly the same positions as the previous figure, but the crossing lines are gone. A tall panel down the middle is labeled as the Model Context Protocol boundary at revision 2026-07-28 and lists the methods that cross it. Each application draws one short arrow into the panel and each data source receives one short arrow out of it, so ten connections replace twenty-four.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFF;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink-muted);letter-spacing:0;}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:13px;fill:var(--mcp-ink);}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .client{fill:var(--mcp-primary);}
+    .server{fill:var(--mcp-accent);}
+    .band{fill:var(--mcp-ink);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-on-fill);}
+    .flow-ok{stroke:var(--mcp-success);stroke-width:1.5;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .count{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+  ]]></style>
+
+  <defs>
+    <marker id="ar-ok" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-success)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="480" y="46" text-anchor="middle">The same nodes, each wired once</text>
+
+  <text class="head" x="144" y="78" text-anchor="middle">AI applications</text>
+  <text class="head" x="816" y="78" text-anchor="middle">Data sources</text>
+
+  <g class="flow-ok" marker-end="url(#ar-ok)">
+    <line x1="232" y1="118" x2="382" y2="118"/>
+    <line x1="232" y1="224" x2="382" y2="224"/>
+    <line x1="232" y1="330" x2="382" y2="330"/>
+    <line x1="232" y1="436" x2="382" y2="436"/>
+    <line x1="570" y1="117" x2="720" y2="117"/>
+    <line x1="570" y1="181" x2="720" y2="181"/>
+    <line x1="570" y1="245" x2="720" y2="245"/>
+    <line x1="570" y1="309" x2="720" y2="309"/>
+    <line x1="570" y1="373" x2="720" y2="373"/>
+    <line x1="570" y1="437" x2="720" y2="437"/>
+  </g>
+
+  <rect class="box" x="390" y="96" width="180" height="364" rx="10"/>
+  <path class="band" d="M390,130 L390,106 A10,10 0 0 1 400,96 L560,96 A10,10 0 0 1 570,106 L570,130 Z"/>
+  <text class="onfill" x="480" y="118" text-anchor="middle">protocol boundary</text>
+
+  <text class="title" x="480" y="172" text-anchor="middle">Model Context</text>
+  <text class="title" x="480" y="196" text-anchor="middle">Protocol</text>
+  <text class="small" x="480" y="218" text-anchor="middle">revision 2026-07-28</text>
+
+  <line class="flow-thin" x1="414" y1="238" x2="546" y2="238"/>
+
+  <text class="mono" x="480" y="266" text-anchor="middle">server/discover</text>
+  <text class="mono" x="480" y="290" text-anchor="middle">tools/call</text>
+  <text class="mono" x="480" y="314" text-anchor="middle">resources/read</text>
+  <text class="mono" x="480" y="338" text-anchor="middle">prompts/get</text>
+
+  <line class="flow-thin" x1="414" y1="362" x2="546" y2="362"/>
+
+  <text class="small" x="480" y="388" text-anchor="middle">one interface,</text>
+  <text class="small" x="480" y="406" text-anchor="middle">spoken by both sides</text>
+
+  <g>
+    <rect class="client" x="56" y="96" width="176" height="44" rx="6"/>
+    <text class="onfill" x="144" y="123" text-anchor="middle">Desktop assistant</text>
+    <rect class="client" x="56" y="202" width="176" height="44" rx="6"/>
+    <text class="onfill" x="144" y="229" text-anchor="middle">Editor agent</text>
+    <rect class="client" x="56" y="308" width="176" height="44" rx="6"/>
+    <text class="onfill" x="144" y="335" text-anchor="middle">Terminal agent</text>
+    <rect class="client" x="56" y="414" width="176" height="44" rx="6"/>
+    <text class="onfill" x="144" y="441" text-anchor="middle">Support bot</text>
+  </g>
+
+  <g>
+    <rect class="server" x="728" y="99" width="176" height="36" rx="6"/>
+    <text class="onfill" x="816" y="122" text-anchor="middle">PostgreSQL</text>
+    <rect class="server" x="728" y="163" width="176" height="36" rx="6"/>
+    <text class="onfill" x="816" y="186" text-anchor="middle">Slack</text>
+    <rect class="server" x="728" y="227" width="176" height="36" rx="6"/>
+    <text class="onfill" x="816" y="250" text-anchor="middle">GitHub</text>
+    <rect class="server" x="728" y="291" width="176" height="36" rx="6"/>
+    <text class="onfill" x="816" y="314" text-anchor="middle">Jira</text>
+    <rect class="server" x="728" y="355" width="176" height="36" rx="6"/>
+    <text class="onfill" x="816" y="378" text-anchor="middle">Filesystem</text>
+    <rect class="server" x="728" y="419" width="176" height="36" rx="6"/>
+    <text class="onfill" x="816" y="442" text-anchor="middle">Metrics API</text>
+  </g>
+
+  <rect class="chip" x="268" y="478" width="424" height="30" rx="15"/>
+  <text class="count" x="480" y="497" text-anchor="middle">4 + 6 = 10 implementations, one shared interface</text>
+</svg>

@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Host, client, server, data source, and the trust boundary between them</title>
+  <desc id="d">On the left a large outlined panel labeled Host contains the user, the model, and a client, and a caption saying the host owns the model, the conversation, and consent. A dashed vertical line labeled trust boundary separates the host from a server panel on the right, with an arrow carrying tools slash call across the line and an arrow carrying the result back. Beyond the server sits a data source, marked as outside MCP, reached by the server's own driver rather than by the protocol.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFF;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:13px;fill:var(--mcp-ink);}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .hostbox{fill:var(--mcp-surface);stroke:var(--mcp-primary);stroke-width:1.5;}
+    .srvbox{fill:var(--mcp-surface);stroke:var(--mcp-accent);stroke-width:1.5;}
+    .chip{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .chipc{fill:var(--mcp-surface);stroke:var(--mcp-primary);stroke-width:1;}
+    .client{fill:var(--mcp-primary);}
+    .server{fill:var(--mcp-accent);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .lifeline{stroke:var(--mcp-ink-muted);stroke-width:1;stroke-dasharray:6 6;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="480" y="46" text-anchor="middle">Three roles, and the line the protocol runs along</text>
+
+  <line class="lifeline" x1="488" y1="96" x2="488" y2="430"/>
+  <text class="small" x="488" y="84" text-anchor="middle">trust boundary</text>
+  <text class="small" x="488" y="472" text-anchor="middle">MCP messages cross here</text>
+
+  <rect class="hostbox" x="48" y="110" width="392" height="300" rx="10"/>
+  <path class="client" d="M48,142 L48,120 A10,10 0 0 1 58,110 L430,110 A10,10 0 0 1 440,120 L440,142 Z"/>
+  <text class="onfill" x="68" y="132">Host</text>
+  <text class="small" x="68" y="166">Claude Desktop, Cursor, VS Code, your own app.</text>
+
+  <rect class="chipc" x="68" y="186" width="168" height="44" rx="6"/>
+  <text class="label" x="152" y="213" text-anchor="middle">User</text>
+  <rect class="chipc" x="252" y="186" width="168" height="44" rx="6"/>
+  <text class="label" x="336" y="213" text-anchor="middle">Model</text>
+
+  <text class="small" x="68" y="258">the host picks the tool</text>
+  <line class="flow" x1="336" y1="230" x2="336" y2="272" marker-end="url(#ar)"/>
+
+  <rect class="hostbox" x="68" y="274" width="352" height="112" rx="8"/>
+  <path class="client" d="M68,304 L68,282 A8,8 0 0 1 76,274 L412,274 A8,8 0 0 1 420,282 L420,304 Z"/>
+  <text class="onfill" x="88" y="295">Client</text>
+  <text class="small" x="88" y="326">one per connected server</text>
+  <text class="small" x="88" y="346">owns the transport and the request ids</text>
+  <text class="small" x="88" y="366">caches what the server offers</text>
+
+  <line class="flow" x1="420" y1="316" x2="548" y2="316" marker-end="url(#ar)"/>
+  <text class="mono" x="484" y="304" text-anchor="middle">tools/call</text>
+  <line class="flow" x1="548" y1="352" x2="420" y2="352" marker-end="url(#ar)"/>
+  <text class="small" x="484" y="372" text-anchor="middle">result</text>
+
+  <rect class="srvbox" x="548" y="250" width="216" height="140" rx="8"/>
+  <path class="server" d="M548,282 L548,258 A8,8 0 0 1 556,250 L756,250 A8,8 0 0 1 764,258 L764,282 Z"/>
+  <text class="onfill" x="568" y="272">Server</text>
+  <text class="small" x="568" y="308">your code</text>
+  <text class="small" x="568" y="330">tools · resources · prompts</text>
+  <text class="small" x="568" y="352">a local process or a web service</text>
+  <text class="small" x="568" y="374">holds the credentials</text>
+
+  <line class="flow" x1="764" y1="316" x2="806" y2="316" marker-end="url(#ar)"/>
+
+  <rect class="chip" x="812" y="280" width="118" height="90" rx="8"/>
+  <text class="label" x="871" y="312" text-anchor="middle">Data source</text>
+  <text class="small" x="871" y="334" text-anchor="middle">a database, files,</text>
+  <text class="small" x="871" y="352" text-anchor="middle">an API</text>
+  <text class="small" x="871" y="396" text-anchor="middle">outside MCP</text>
+
+  <text class="small" x="244" y="452" text-anchor="middle">Owns the model, the conversation, and consent.</text>
+  <text class="small" x="740" y="452" text-anchor="middle">Offers capabilities. Decides nothing about consent.</text>
+</svg>

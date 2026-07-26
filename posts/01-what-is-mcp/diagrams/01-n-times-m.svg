@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Four AI applications wired by hand to six data sources</title>
+  <desc id="d">Four boxes on the left stand for AI applications and six boxes on the right stand for data sources. Every application is joined to every data source by its own separate line, so twenty-four lines cross the middle of the picture and no single path can be followed by eye. A label underneath states that four applications times six data sources equals twenty-four integrations, each one written, authenticated, and maintained on its own.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFF;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink-muted);letter-spacing:0;}
+    .chip{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .client{fill:var(--mcp-primary);}
+    .server{fill:var(--mcp-accent);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-on-fill);}
+    .wire{stroke:var(--mcp-alert);stroke-width:1;fill:none;opacity:0.6;}
+    .count{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+  ]]></style>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="480" y="46" text-anchor="middle">One connector per pair, written by hand</text>
+
+  <text class="head" x="144" y="78" text-anchor="middle">AI applications</text>
+  <text class="head" x="816" y="78" text-anchor="middle">Data sources</text>
+
+  <g class="wire">
+    <line x1="232" y1="118" x2="728" y2="117"/>
+    <line x1="232" y1="118" x2="728" y2="181"/>
+    <line x1="232" y1="118" x2="728" y2="245"/>
+    <line x1="232" y1="118" x2="728" y2="309"/>
+    <line x1="232" y1="118" x2="728" y2="373"/>
+    <line x1="232" y1="118" x2="728" y2="437"/>
+    <line x1="232" y1="224" x2="728" y2="117"/>
+    <line x1="232" y1="224" x2="728" y2="181"/>
+    <line x1="232" y1="224" x2="728" y2="245"/>
+    <line x1="232" y1="224" x2="728" y2="309"/>
+    <line x1="232" y1="224" x2="728" y2="373"/>
+    <line x1="232" y1="224" x2="728" y2="437"/>
+    <line x1="232" y1="330" x2="728" y2="117"/>
+    <line x1="232" y1="330" x2="728" y2="181"/>
+    <line x1="232" y1="330" x2="728" y2="245"/>
+    <line x1="232" y1="330" x2="728" y2="309"/>
+    <line x1="232" y1="330" x2="728" y2="373"/>
+    <line x1="232" y1="330" x2="728" y2="437"/>
+    <line x1="232" y1="436" x2="728" y2="117"/>
+    <line x1="232" y1="436" x2="728" y2="181"/>
+    <line x1="232" y1="436" x2="728" y2="245"/>
+    <line x1="232" y1="436" x2="728" y2="309"/>
+    <line x1="232" y1="436" x2="728" y2="373"/>
+    <line x1="232" y1="436" x2="728" y2="437"/>
+  </g>
+
+  <g>
+    <rect class="client" x="56" y="96" width="176" height="44" rx="6"/>
+    <text class="onfill" x="144" y="123" text-anchor="middle">Desktop assistant</text>
+    <rect class="client" x="56" y="202" width="176" height="44" rx="6"/>
+    <text class="onfill" x="144" y="229" text-anchor="middle">Editor agent</text>
+    <rect class="client" x="56" y="308" width="176" height="44" rx="6"/>
+    <text class="onfill" x="144" y="335" text-anchor="middle">Terminal agent</text>
+    <rect class="client" x="56" y="414" width="176" height="44" rx="6"/>
+    <text class="onfill" x="144" y="441" text-anchor="middle">Support bot</text>
+  </g>
+
+  <g>
+    <rect class="server" x="728" y="99" width="176" height="36" rx="6"/>
+    <text class="onfill" x="816" y="122" text-anchor="middle">PostgreSQL</text>
+    <rect class="server" x="728" y="163" width="176" height="36" rx="6"/>
+    <text class="onfill" x="816" y="186" text-anchor="middle">Slack</text>
+    <rect class="server" x="728" y="227" width="176" height="36" rx="6"/>
+    <text class="onfill" x="816" y="250" text-anchor="middle">GitHub</text>
+    <rect class="server" x="728" y="291" width="176" height="36" rx="6"/>
+    <text class="onfill" x="816" y="314" text-anchor="middle">Jira</text>
+    <rect class="server" x="728" y="355" width="176" height="36" rx="6"/>
+    <text class="onfill" x="816" y="378" text-anchor="middle">Filesystem</text>
+    <rect class="server" x="728" y="419" width="176" height="36" rx="6"/>
+    <text class="onfill" x="816" y="442" text-anchor="middle">Metrics API</text>
+  </g>
+
+  <rect class="chip" x="248" y="478" width="464" height="30" rx="15"/>
+  <text class="count" x="480" y="497" text-anchor="middle">4 applications × 6 data sources = 24 separate integrations</text>
+</svg>

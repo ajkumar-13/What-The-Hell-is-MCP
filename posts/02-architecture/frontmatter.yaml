@@ -1,0 +1,7 @@
+slug: 02-architecture
+title: "02 · The architecture: hosts, clients, and servers"
+date: 2026-07-22
+tags: [model-context-protocol, mcp, foundations, architecture, primitives]
+hero: diagrams/01-host-clients-servers.svg
+reading_time: 14
+part: "Part I — Foundations"
