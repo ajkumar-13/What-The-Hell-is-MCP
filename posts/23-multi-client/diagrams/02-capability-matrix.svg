@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Tools are load-bearing; resources and prompts are additive</title>
+  <desc id="d">Three stacked layers describe the server. The bottom layer, tools, is marked universal and load-bearing: every client has it. The middle layer, resources, is marked common and additive. The top layer, prompts, is marked patchy and additive. Arrows run down from each upper layer to the tool call that covers the same content, showing that nothing above the bottom layer holds unique capability. A panel on the right names the two tests that assert the mapping and states what a client loses at each level, which is presentation and never capability.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .monofill{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:500;font-size:13px;fill:var(--mcp-on-fill);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-on-fill);}
+    .onfill-s{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-on-fill);}
+    .card{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .addit{fill:var(--mcp-surface);stroke:var(--mcp-ink-muted);stroke-width:1;stroke-dasharray:6 4;}
+    .floor{fill:var(--mcp-accent);}
+    .panel{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .ok{fill:var(--mcp-success);}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="32" y="38">Put the capability in a tool. Let richer clients present it more nicely.</text>
+
+  <!-- top layer: prompts -->
+  <rect class="addit" x="32" y="66" width="520" height="96" rx="8"/>
+  <text class="label" x="52" y="92">prompts.py</text>
+  <text class="small" x="150" y="92">patchy support, additive</text>
+  <text class="mono" x="52" y="118">onboard_engineer  incident_playbook  explain_topic</text>
+  <text class="small" x="52" y="146">A client without prompts loses three shortcuts. Nothing else.</text>
+
+  <!-- middle layer: resources -->
+  <rect class="addit" x="32" y="186" width="520" height="118" rx="8"/>
+  <text class="label" x="52" y="212">resources.py</text>
+  <text class="small" x="160" y="212">common support, additive</text>
+  <text class="mono" x="52" y="238">knowledge://index</text>
+  <text class="mono" x="52" y="260">knowledge://doc/{slug}</text>
+  <text class="mono" x="52" y="282">knowledge://section/{slug}/{anchor}</text>
+
+  <!-- mapping arrows, resources down to tools -->
+  <path class="flow-thin" d="M330,238 L470,238 L470,352" marker-end="url(#arm)"/>
+  <path class="flow-thin" d="M330,260 L430,260 L430,352" marker-end="url(#arm)"/>
+  <path class="flow-thin" d="M330,282 L390,282 L390,352" marker-end="url(#arm)"/>
+
+  <!-- prompts down to tools -->
+  <path class="flow-thin" d="M300,132 L620,132 L620,352" marker-end="url(#arm)"/>
+  <text class="small" x="632" y="136">a prompt is a sequence of tool calls</text>
+
+  <!-- bottom layer: tools -->
+  <rect class="floor" x="32" y="356" width="520" height="112" rx="8"/>
+  <text class="onfill" x="52" y="384">tools.py</text>
+  <text class="onfill-s" x="140" y="384">universal, load-bearing</text>
+  <text class="monofill" x="52" y="412">search_docs(query, limit)</text>
+  <text class="monofill" x="52" y="434">get_doc(slug, section)</text>
+  <text class="monofill" x="52" y="456">list_topics()</text>
+
+  <text class="small" x="32" y="494">Remove this layer and nothing works. Remove either layer above it and a host renders the same corpus less conveniently.</text>
+  <text class="small" x="32" y="516">Build it the other way round, and your server silently does less on some hosts than on others, with no error anywhere.</text>
+
+  <!-- right panel: the tests -->
+  <rect class="panel" x="586" y="186" width="342" height="282" rx="8"/>
+  <text class="label" x="606" y="214">The mapping is asserted, not documented</text>
+
+  <text class="mono" x="606" y="244">test_every_resource_is_</text>
+  <text class="mono" x="606" y="264">  reachable_through_a_tool</text>
+  <text class="small" x="606" y="288">Walks resources/list. For every URI, asserts</text>
+  <text class="small" x="606" y="306">that some tool call returns byte-identical</text>
+  <text class="small" x="606" y="324">text. Add a resource with no tool path to it</text>
+  <text class="small" x="606" y="342">and the suite fails, naming the URI.</text>
+
+  <text class="mono" x="606" y="376">test_a_tools_only_client_can_</text>
+  <text class="mono" x="606" y="396">  still_answer_a_real_question</text>
+  <text class="small" x="606" y="420">Answers a genuine handbook question using</text>
+  <text class="small" x="606" y="438">nothing but tools/list and tools/call: what</text>
+  <text class="small" x="606" y="456">the least capable host in the table sees.</text>
+</svg>

@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Where each class of MCP attack crosses the trust boundary</title>
+  <desc id="d">A map of one MCP deployment with four numbered attack zones. On the left sits the user and the host, which contains the model with its single shared context window and a permission gate. To the right of the host are two clients, one per connected server. A dashed vertical trust boundary separates the client side from the server side. Beyond it are a vetted server holding private data and an unvetted server that fetches public web content, each reaching a backend system. Marker one sits on the model's context, marker two on the permission gate, marker three on the trust boundary itself, and marker four on the server processes. Four panels below list the attack classes belonging to each marker and tag each panel with whether the specification addresses it. Zones one and two, which cover tool poisoning, line jumping, cross-server shadowing, hidden instructions, approval fatigue and the lethal trifecta, are tagged as absent from the specification. Zones three and four, covering the confused deputy, token passthrough, request forgery through poisoned metadata, authorization URL validation, scope minimization, local server compromise, proxy sandboxing and path traversal, are tagged as covered by the Security Best Practices page.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .sub{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:10px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .client{fill:var(--mcp-primary);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .hdr{fill:var(--mcp-primary);stroke:none;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .onfill-s{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:10px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .bound{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;stroke-dasharray:6 5;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+    .mark{fill:var(--mcp-ink);stroke:var(--mcp-bg);stroke-width:1.5;}
+    .marknum{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .dot{fill:var(--mcp-ink-muted);}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="32" y="32">Where each class of attack crosses the trust boundary</text>
+  <text class="sub" x="32" y="52">Protocol revision 2026-07-28. The numbered markers repeat in the panels below.</text>
+
+  <!-- user -->
+  <rect class="chip" x="32" y="128" width="62" height="38" rx="6"/>
+  <text class="label" x="63" y="152" text-anchor="middle">user</text>
+  <line class="flow" x1="94" y1="147" x2="110" y2="147" marker-end="url(#ar)"/>
+
+  <!-- host -->
+  <rect class="box" x="118" y="76" width="222" height="146" rx="8"/>
+  <path class="hdr" d="M118,84 a8,8 0 0 1 8,-8 h206 a8,8 0 0 1 8,8 v18 h-222 z"/>
+  <text class="onfill" x="130" y="95">host</text>
+
+  <rect class="chip" x="132" y="112" width="194" height="42" rx="5"/>
+  <text class="label" x="144" y="130">the model</text>
+  <text class="small" x="144" y="146">one shared context window</text>
+
+  <rect class="chip" x="132" y="164" width="194" height="42" rx="5"/>
+  <text class="label" x="144" y="182">permission gate</text>
+  <text class="small" x="144" y="198">the only place a human is asked</text>
+
+  <!-- clients -->
+  <text class="tiny" x="356" y="106">one per server</text>
+  <rect class="client" x="356" y="112" width="78" height="38" rx="5"/>
+  <text class="onfill" x="395" y="136" text-anchor="middle">client A</text>
+  <rect class="client" x="356" y="168" width="78" height="38" rx="5"/>
+  <text class="onfill" x="395" y="192" text-anchor="middle">client B</text>
+
+  <line class="flow" x1="340" y1="131" x2="356" y2="131" marker-end="url(#ar)"/>
+  <line class="flow" x1="340" y1="187" x2="356" y2="187" marker-end="url(#ar)"/>
+
+  <!-- trust boundary -->
+  <line class="bound" x1="470" y1="70" x2="470" y2="240"/>
+  <text class="small" x="470" y="62" text-anchor="middle">trust boundary</text>
+
+  <!-- servers -->
+  <rect class="zone" x="498" y="88" width="150" height="132" rx="6"/>
+  <rect class="server" x="510" y="104" width="126" height="44" rx="5"/>
+  <text class="onfill" x="522" y="122">server A</text>
+  <text class="onfill-s" x="522" y="138">vetted, private data</text>
+  <rect class="server" x="510" y="160" width="126" height="44" rx="5"/>
+  <text class="onfill" x="522" y="178">server B</text>
+  <text class="onfill-s" x="522" y="194">unvetted, web content</text>
+
+  <line class="flow" x1="434" y1="131" x2="510" y2="126" marker-end="url(#ar)"/>
+  <line class="flow" x1="434" y1="187" x2="510" y2="182" marker-end="url(#ar)"/>
+
+  <!-- backends -->
+  <text class="tiny" x="666" y="98">backend systems</text>
+  <rect class="chip" x="666" y="104" width="132" height="44" rx="5"/>
+  <text class="label" x="678" y="122">customer database</text>
+  <text class="small" x="678" y="138">a role, not a parser</text>
+  <rect class="chip" x="666" y="160" width="132" height="44" rx="5"/>
+  <text class="label" x="678" y="178">the public web</text>
+  <text class="small" x="678" y="194">attacker-writable text</text>
+
+  <line class="flow-thin" x1="636" y1="126" x2="666" y2="126" marker-end="url(#arm)"/>
+  <line class="flow-thin" x1="636" y1="182" x2="666" y2="182" marker-end="url(#arm)"/>
+
+  <!-- markers on the topology -->
+  <circle class="mark" cx="326" cy="112" r="11"/>
+  <text class="marknum" x="326" y="116" text-anchor="middle">1</text>
+  <circle class="mark" cx="326" cy="164" r="11"/>
+  <text class="marknum" x="326" y="168" text-anchor="middle">2</text>
+  <circle class="mark" cx="470" cy="155" r="11"/>
+  <text class="marknum" x="470" y="159" text-anchor="middle">3</text>
+  <circle class="mark" cx="498" cy="88" r="11"/>
+  <text class="marknum" x="498" y="92" text-anchor="middle">4</text>
+
+  <line class="rule" x1="32" y1="252" x2="928" y2="252"/>
+
+  <!-- panel 1 -->
+  <rect class="zone" x="32" y="270" width="213" height="200" rx="6"/>
+  <circle class="mark" cx="50" cy="292" r="11"/>
+  <text class="marknum" x="50" y="296" text-anchor="middle">1</text>
+  <text class="label" x="68" y="297">Into the model context</text>
+  <rect class="chip" x="44" y="308" width="150" height="18" rx="9"/>
+  <text class="tiny" x="119" y="321" text-anchor="middle">not in the specification</text>
+  <circle class="dot" cx="50" cy="345" r="1.8"/><text class="small" x="60" y="349">tool poisoning</text>
+  <circle class="dot" cx="50" cy="367" r="1.8"/><text class="small" x="60" y="371">line jumping at tools/list</text>
+  <circle class="dot" cx="50" cy="389" r="1.8"/><text class="small" x="60" y="393">cross-server shadowing</text>
+  <circle class="dot" cx="50" cy="411" r="1.8"/><text class="small" x="60" y="415">history theft via a trigger</text>
+  <circle class="dot" cx="50" cy="433" r="1.8"/><text class="small" x="60" y="437">ANSI-hidden instructions</text>
+
+  <!-- panel 2 -->
+  <rect class="zone" x="259" y="270" width="213" height="200" rx="6"/>
+  <circle class="mark" cx="277" cy="292" r="11"/>
+  <text class="marknum" x="277" y="296" text-anchor="middle">2</text>
+  <text class="label" x="295" y="297">The approval surface</text>
+  <rect class="chip" x="271" y="308" width="150" height="18" rx="9"/>
+  <text class="tiny" x="346" y="321" text-anchor="middle">not in the specification</text>
+  <circle class="dot" cx="277" cy="345" r="1.8"/><text class="small" x="287" y="349">approval fires after injection</text>
+  <circle class="dot" cx="277" cy="367" r="1.8"/><text class="small" x="287" y="371">93 percent of prompts approved</text>
+  <circle class="dot" cx="277" cy="389" r="1.8"/><text class="small" x="287" y="393">annotations read as policy</text>
+  <circle class="dot" cx="277" cy="411" r="1.8"/><text class="small" x="287" y="415">arguments truncated in dialog</text>
+  <circle class="dot" cx="277" cy="433" r="1.8"/><text class="small" x="287" y="437">composition: lethal trifecta</text>
+
+  <!-- panel 3 -->
+  <rect class="zone" x="486" y="270" width="213" height="200" rx="6"/>
+  <circle class="mark" cx="504" cy="292" r="11"/>
+  <text class="marknum" x="504" y="296" text-anchor="middle">3</text>
+  <text class="label" x="522" y="297">Credentials, discovery</text>
+  <rect class="chip" x="498" y="308" width="164" height="18" rx="9"/>
+  <text class="tiny" x="580" y="321" text-anchor="middle">in Security Best Practices</text>
+  <circle class="dot" cx="504" cy="345" r="1.8"/><text class="small" x="514" y="349">confused deputy</text>
+  <circle class="dot" cx="504" cy="367" r="1.8"/><text class="small" x="514" y="371">token passthrough</text>
+  <circle class="dot" cx="504" cy="389" r="1.8"/><text class="small" x="514" y="393">forgery via poisoned metadata</text>
+  <circle class="dot" cx="504" cy="411" r="1.8"/><text class="small" x="514" y="415">authorization URL validation</text>
+  <circle class="dot" cx="504" cy="433" r="1.8"/><text class="small" x="514" y="437">scope minimization</text>
+
+  <!-- panel 4 -->
+  <rect class="zone" x="713" y="270" width="213" height="200" rx="6"/>
+  <circle class="mark" cx="731" cy="292" r="11"/>
+  <text class="marknum" x="731" y="296" text-anchor="middle">4</text>
+  <text class="label" x="749" y="297">The server process</text>
+  <rect class="chip" x="725" y="308" width="164" height="18" rx="9"/>
+  <text class="tiny" x="807" y="321" text-anchor="middle">in Security Best Practices</text>
+  <circle class="dot" cx="731" cy="345" r="1.8"/><text class="small" x="741" y="349">local server compromise</text>
+  <circle class="dot" cx="731" cy="367" r="1.8"/><text class="small" x="741" y="371">stdio proxy sandboxing</text>
+  <circle class="dot" cx="731" cy="389" r="1.8"/><text class="small" x="741" y="393">path traversal, two CVEs</text>
+  <circle class="dot" cx="731" cy="411" r="1.8"/><text class="small" x="741" y="415">over-privileged backend role</text>
+  <circle class="dot" cx="731" cy="433" r="1.8"/><text class="small" x="741" y="437">supply chain of the binary</text>
+
+  <text class="sub" x="32" y="498">Zones 1 and 2 have no normative mitigation anywhere in the protocol. Every working defense for them is third-party.</text>
+</svg>

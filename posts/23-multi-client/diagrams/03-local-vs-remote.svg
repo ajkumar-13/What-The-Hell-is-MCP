@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">The same server over stdio and over Streamable HTTP</title>
+  <desc id="d">Two columns compare the same server run two ways. On the left, stdio: each host spawns its own copy of the server as a subprocess, so six hosts means six processes and six copies of the index, configured by absolute file path with no network involved. On the right, Streamable HTTP: one process serves every host, configured by URL, with the endpoint path shown as slash mcp and a warning that slash mcp with a trailing slash answers with a 307 redirect rather than a 404. A shared band across the bottom holds the identical server code, unchanged between the two columns.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .monofill{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:500;font-size:13px;fill:var(--mcp-on-fill);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-on-fill);}
+    .card{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .clientbox{fill:var(--mcp-primary);}
+    .server{fill:var(--mcp-accent);}
+    .panel{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .divider{stroke:var(--mcp-border);stroke-width:1;}
+    .warn{fill:var(--mcp-warn);}
+    .alert{fill:var(--mcp-alert);}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="32" y="38">Same code. The only question is who owns the process.</text>
+
+  <line class="divider" x1="480" y1="60" x2="480" y2="416"/>
+
+  <!-- ================= left: stdio ================= -->
+  <text class="label" x="32" y="84">stdio</text>
+  <text class="small" x="90" y="84">the host spawns your process</text>
+
+  <rect class="clientbox" x="32" y="100" width="126" height="38" rx="6"/>
+  <text class="monofill" x="46" y="124">Claude Desktop</text>
+  <rect class="clientbox" x="170" y="100" width="96" height="38" rx="6"/>
+  <text class="monofill" x="184" y="124">Cursor</text>
+  <rect class="clientbox" x="278" y="100" width="96" height="38" rx="6"/>
+  <text class="monofill" x="292" y="124">Zed</text>
+
+  <path class="flow" d="M95,142 L95,180" marker-end="url(#ar)"/>
+  <path class="flow" d="M218,142 L218,180" marker-end="url(#ar)"/>
+  <path class="flow" d="M326,142 L326,180" marker-end="url(#ar)"/>
+
+  <rect class="server" x="32" y="184" width="126" height="52" rx="6"/>
+  <text class="monofill" x="46" y="206">process 1</text>
+  <text class="monofill" x="46" y="226">own index</text>
+  <rect class="server" x="170" y="184" width="96" height="52" rx="6"/>
+  <text class="monofill" x="184" y="206">process 2</text>
+  <text class="monofill" x="184" y="226">own index</text>
+  <rect class="server" x="278" y="184" width="96" height="52" rx="6"/>
+  <text class="monofill" x="292" y="206">process 3</text>
+  <text class="monofill" x="292" y="226">own index</text>
+
+  <rect class="panel" x="32" y="256" width="416" height="146" rx="8"/>
+  <text class="mono" x="52" y="282">uv --directory /abs/path run python -m knowledge_base</text>
+  <text class="small" x="52" y="308">One process per host, each with its own copy of the corpus.</text>
+  <text class="small" x="52" y="330">Configured by absolute path. No network, no port, no certificate.</text>
+  <text class="small" x="52" y="352">stdout is the protocol channel; one stray print() ends the connection.</text>
+  <text class="small" x="52" y="374">The host owns the process lifetime and collects stderr for you.</text>
+  <text class="small" x="52" y="396">This is the right default for a desktop host and for a first run.</text>
+
+  <!-- ================= right: streamable http ================= -->
+  <text class="label" x="512" y="84">Streamable HTTP</text>
+  <text class="small" x="628" y="84">the server is already running</text>
+
+  <rect class="clientbox" x="512" y="100" width="126" height="38" rx="6"/>
+  <text class="monofill" x="526" y="124">Claude Code</text>
+  <rect class="clientbox" x="650" y="100" width="126" height="38" rx="6"/>
+  <text class="monofill" x="664" y="124">VS Code</text>
+  <rect class="clientbox" x="788" y="100" width="140" height="38" rx="6"/>
+  <text class="monofill" x="802" y="124">Gemini CLI</text>
+
+  <path class="flow" d="M575,142 L700,180" marker-end="url(#ar)"/>
+  <path class="flow" d="M713,142 L716,180" marker-end="url(#ar)"/>
+  <path class="flow" d="M858,142 L732,180" marker-end="url(#ar)"/>
+
+  <rect class="server" x="574" y="184" width="284" height="52" rx="6"/>
+  <text class="onfill" x="594" y="206">one process, one index</text>
+  <text class="monofill" x="594" y="228">POST http://127.0.0.1:8000/mcp</text>
+
+  <rect class="panel" x="512" y="256" width="416" height="146" rx="8"/>
+  <text class="mono" x="532" y="282">python -m knowledge_base --http</text>
+  <text class="small" x="532" y="308">One process for every host. One place to update the corpus.</text>
+  <text class="small" x="532" y="330">Configured by URL. Gemini CLI wants it under "httpUrl", not "url".</text>
+  <text class="mono" x="532" y="356">POST /mcp   -&gt; 200</text>
+  <text class="mono" x="532" y="378">POST /mcp/  -&gt; 307</text>
+  <rect class="warn" x="640" y="364" width="6" height="22"/>
+  <text class="small" x="656" y="378">a redirect, not a 404; a round trip at best</text>
+  <text class="small" x="532" y="396">Off loopback you must pass transport_security, or every call is a 421.</text>
+
+  <!-- ================= shared band ================= -->
+  <rect class="card" x="32" y="424" width="896" height="84" rx="8"/>
+  <text class="label" x="52" y="452">Identical in both columns</text>
+  <text class="mono" x="52" y="478">src/knowledge_base/  index.py  tools.py  resources.py  prompts.py  app.py</text>
+  <text class="small" x="52" y="500">Same tools, same schemas, same annotations, same instructions. The transport is chosen by one command-line flag.</text>
+</svg>

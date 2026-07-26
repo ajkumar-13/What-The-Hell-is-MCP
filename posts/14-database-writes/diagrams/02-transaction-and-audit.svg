@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">The recorded call sequence of a successful write and a failed one</title>
+  <desc id="d">Two recorded traces side by side. On the left, the success path has five steps: acquire a connection from the write pool, BEGIN, execute the statement, insert the audit row on the same connection, and COMMIT. A bracket marks all four inner steps as one transaction, so the change and its audit row land together. On the right, the failure path has six steps: acquire, BEGIN, execute, ROLLBACK, then a second acquire from the write pool and a second audit insert recording success as false. The bracket on the right closes at the rollback, and the last two steps sit outside it, because the transaction that would have carried the audit row no longer exists. Each panel ends with the structured result the tool returned.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .sub{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .phead{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-ink);}
+    .psub{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11.5px;fill:var(--mcp-ink-muted);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .brk{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:10.5px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11.5px;fill:var(--mcp-ink);}
+    .monos{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:10px;fill:var(--mcp-ink-muted);}
+    .num{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:10px;fill:var(--mcp-ink-muted);}
+    .panel{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .stepdot{fill:var(--mcp-bg);stroke:var(--mcp-ink-muted);stroke-width:1;}
+    .resbox{fill:var(--mcp-bg);stroke:var(--mcp-border);stroke-width:1;}
+    .barok{fill:var(--mcp-success);}
+    .barbad{fill:var(--mcp-alert);}
+    .bracket{stroke:var(--mcp-success);stroke-width:1.5;fill:none;}
+    .bracketbad{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+    .split{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;stroke-dasharray:4 4;}
+  ]]></style>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="34" y="34">One write, two traces</text>
+  <text class="sub" x="34" y="56">Recorded from the write tool with a stub standing in for the asyncpg pool. The tool code is unmodified.</text>
+
+  <rect class="panel" x="34" y="80" width="436" height="420" rx="6"/>
+  <rect class="panel" x="490" y="80" width="436" height="420" rx="6"/>
+
+  <!-- ============ LEFT: SUCCESS ============ -->
+  <text class="phead" x="50" y="106">Success · one transaction</text>
+  <text class="psub" x="50" y="124">The change and the record of it commit together.</text>
+
+  <path class="bracket" d="M74,176 L64,176 L64,314 L74,314"/>
+  <text class="brk" x="55" y="245" transform="rotate(-90 55 245)" text-anchor="middle">one transaction</text>
+
+  <circle class="stepdot" cx="96" cy="148" r="9"/>
+  <text class="num" x="96" y="151.5" text-anchor="middle">1</text>
+  <text class="mono" x="116" y="152">acquire: write pool</text>
+
+  <circle class="stepdot" cx="96" cy="186" r="9"/>
+  <text class="num" x="96" y="189.5" text-anchor="middle">2</text>
+  <text class="mono" x="116" y="190">BEGIN</text>
+
+  <circle class="stepdot" cx="96" cy="224" r="9"/>
+  <text class="num" x="96" y="227.5" text-anchor="middle">3</text>
+  <text class="mono" x="116" y="228">execute(plan.sql)</text>
+
+  <circle class="stepdot" cx="96" cy="262" r="9"/>
+  <text class="num" x="96" y="265.5" text-anchor="middle">4</text>
+  <text class="mono" x="116" y="266">fetchval(audit, success=True)</text>
+  <text class="monos" x="116" y="281">conn=conn, the same connection</text>
+
+  <circle class="stepdot" cx="96" cy="306" r="9"/>
+  <text class="num" x="96" y="309.5" text-anchor="middle">5</text>
+  <text class="mono" x="116" y="310">COMMIT</text>
+
+  <rect class="resbox" x="50" y="336" width="404" height="76" rx="4"/>
+  <rect class="barok" x="50" y="336" width="5" height="76"/>
+  <text class="monos" x="68" y="356">"status": "committed",</text>
+  <text class="monos" x="68" y="371">"affected_rows": 2,</text>
+  <text class="monos" x="68" y="386">"audit_id": 17,</text>
+  <text class="monos" x="68" y="401">"detail": "Committed. 2 row(s) changed, ..."</text>
+
+  <text class="small" x="50" y="436">Had the audit insert raised, the DELETE above</text>
+  <text class="small" x="50" y="452">it would have rolled back with it. There is no</text>
+  <text class="small" x="50" y="468">state in which the change happened and the</text>
+  <text class="small" x="50" y="484">log does not say so.</text>
+
+  <!-- ============ RIGHT: FAILURE ============ -->
+  <text class="phead" x="506" y="106">Failure · a transaction that is gone</text>
+  <text class="psub" x="506" y="124">so the audit row has to be a second, separate write.</text>
+
+  <path class="bracketbad" d="M530,176 L520,176 L520,276 L530,276"/>
+  <text class="brk" x="511" y="226" transform="rotate(-90 511 226)" text-anchor="middle">rolled back</text>
+
+  <circle class="stepdot" cx="552" cy="148" r="9"/>
+  <text class="num" x="552" y="151.5" text-anchor="middle">1</text>
+  <text class="mono" x="572" y="152">acquire: write pool</text>
+
+  <circle class="stepdot" cx="552" cy="186" r="9"/>
+  <text class="num" x="552" y="189.5" text-anchor="middle">2</text>
+  <text class="mono" x="572" y="190">BEGIN</text>
+
+  <circle class="stepdot" cx="552" cy="224" r="9"/>
+  <text class="num" x="552" y="227.5" text-anchor="middle">3</text>
+  <text class="mono" x="572" y="228">execute(plan.sql)</text>
+
+  <circle class="stepdot" cx="552" cy="262" r="9"/>
+  <text class="num" x="552" y="265.5" text-anchor="middle">4</text>
+  <text class="mono" x="572" y="266">ROLLBACK</text>
+
+  <line class="split" x1="506" y1="286" x2="910" y2="286"/>
+  <text class="small" x="910" y="299" text-anchor="end">after the rollback, on a new connection</text>
+
+  <circle class="stepdot" cx="552" cy="316" r="9"/>
+  <text class="num" x="552" y="319.5" text-anchor="middle">5</text>
+  <text class="mono" x="572" y="320">acquire: write pool</text>
+
+  <circle class="stepdot" cx="552" cy="354" r="9"/>
+  <text class="num" x="552" y="357.5" text-anchor="middle">6</text>
+  <text class="mono" x="572" y="358">fetchval(audit, success=False)</text>
+
+  <rect class="resbox" x="506" y="378" width="404" height="62" rx="4"/>
+  <rect class="barbad" x="506" y="378" width="5" height="62"/>
+  <text class="monos" x="524" y="398">"status": "failed", "affected_rows": 0,</text>
+  <text class="monos" x="524" y="413">"audit_id": 17, "detail": "Rolled back.</text>
+  <text class="monos" x="524" y="428">PostgreSQL said: permission denied ..."</text>
+
+  <text class="small" x="506" y="462">Step 5 must come from the write pool. Pointing it at</text>
+  <text class="small" x="506" y="478">the read pool is why the first edition of this project</text>
+  <text class="small" x="506" y="494">recorded every success and not one failure.</text>
+
+  <line class="rule" x1="34" y1="512" x2="926" y2="512"/>
+  <text class="sub" x="34" y="532">The entries you most want in an audit log are the failures, and they are the ones a shared connection accessor quietly loses.</text>
+</svg>

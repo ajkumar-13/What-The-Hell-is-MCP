@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="t d">
+  <title id="t">What a deployment rollback restores, and what it leaves exactly where it is</title>
+  <desc id="d">Under a header naming the deployment and the single JSON Patch operation that rolls it back, two columns divide the change. The left column, headed restored, covers everything inside the pod template: container images for every container and init container, command and arguments and environment variables including valueFrom references, resource requests and limits, liveness and readiness and startup probes, volumes and volume mounts and security context and service account name, the template's own labels and annotations, and every other field under spec dot template. The right column, headed not restored, covers what a rollback deliberately leaves alone: the replica count, which lives outside the pod template and is left where it is even if something scaled the deployment during the incident, deployment-level fields such as the rollout strategy and minimum ready seconds, labels and annotations on the deployment object itself, every object the template merely references including config maps, secrets, persistent volume claims, services and any horizontal pod autoscaler, and anything at all changed outside this deployment. A band across the bottom notes that both lists are returned in every rollback result, so the scope travels with the answer rather than living only in documentation.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .monos{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+    .tick{stroke:var(--mcp-success);stroke-width:1.5;fill:none;stroke-linecap:round;}
+    .cross{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;stroke-linecap:round;}
+  ]]></style>
+
+  <rect class="bg" width="800" height="600"/>
+  <text class="title" x="30" y="34">A rollback restores a pod template, and only a pod template</text>
+  <text class="small" x="30" y="56">Most of what a bad deploy touches is not inside spec.template, which is why the second column has to be said out loud.</text>
+
+  <!-- header -->
+  <rect class="box" x="30" y="76" width="740" height="46" rx="10"/>
+  <rect class="server" x="46" y="90" width="88" height="20" rx="5"/>
+  <text class="onfill" x="90" y="105" text-anchor="middle">Deployment</text>
+  <text class="mono" x="146" y="105">[{"op": "replace", "path": "/spec/template", "value": {...}}]</text>
+  <text class="tiny" x="626" y="105">application/json-patch+json</text>
+
+  <!-- ============ RESTORED ============ -->
+  <rect class="zone" x="30" y="136" width="364" height="352" rx="10"/>
+  <path class="tick" d="M47,158 l5,5.5 l10,-12"/>
+  <text class="head" x="74" y="164">Restored</text>
+  <text class="small" x="74" y="182">everything under spec.template</text>
+  <line class="rule" x1="46" y1="194" x2="378" y2="194"/>
+
+  <path class="tick" d="M47,212 l4,4.5 l8,-10"/>
+  <text class="small" x="70" y="218">container images, every container</text>
+  <text class="small" x="70" y="234">and every init container</text>
+
+  <path class="tick" d="M47,254 l4,4.5 l8,-10"/>
+  <text class="small" x="70" y="260">command, args, and environment</text>
+  <text class="small" x="70" y="276">variables, including valueFrom</text>
+
+  <path class="tick" d="M47,296 l4,4.5 l8,-10"/>
+  <text class="small" x="70" y="302">resource requests and limits</text>
+
+  <path class="tick" d="M47,326 l4,4.5 l8,-10"/>
+  <text class="small" x="70" y="332">liveness, readiness, and startup</text>
+  <text class="small" x="70" y="348">probes</text>
+
+  <path class="tick" d="M47,368 l4,4.5 l8,-10"/>
+  <text class="small" x="70" y="374">volumes, volume mounts,</text>
+  <text class="small" x="70" y="390">securityContext, serviceAccountName</text>
+
+  <path class="tick" d="M47,410 l4,4.5 l8,-10"/>
+  <text class="small" x="70" y="416">the template's own labels and</text>
+  <text class="small" x="70" y="432">annotations</text>
+
+  <path class="tick" d="M47,452 l4,4.5 l8,-10"/>
+  <text class="small" x="70" y="458">every other field under</text>
+  <text class="small" x="70" y="474">spec.template</text>
+
+  <!-- ============ NOT RESTORED ============ -->
+  <rect class="zone" x="406" y="136" width="364" height="352" rx="10"/>
+  <path class="cross" d="M423,152 l11,11 M434,152 l-11,11"/>
+  <text class="head" x="450" y="164">Not restored</text>
+  <text class="small" x="450" y="182">left exactly where it is</text>
+  <line class="rule" x1="422" y1="194" x2="754" y2="194"/>
+
+  <path class="cross" d="M423,209 l9,9 M432,209 l-9,9"/>
+  <text class="mono" x="446" y="218">spec.replicas</text>
+  <text class="small" x="446" y="234">outside the template, and left alone</text>
+  <text class="small" x="446" y="250">even if something scaled it mid-incident</text>
+
+  <path class="cross" d="M423,269 l9,9 M432,269 l-9,9"/>
+  <text class="small" x="446" y="278">deployment-level fields:</text>
+  <text class="monos" x="446" y="294">spec.strategy, minReadySeconds,</text>
+  <text class="monos" x="446" y="310">progressDeadlineSeconds</text>
+
+  <path class="cross" d="M423,329 l9,9 M432,329 l-9,9"/>
+  <text class="small" x="446" y="338">labels and annotations on the</text>
+  <text class="small" x="446" y="354">Deployment object itself</text>
+
+  <path class="cross" d="M423,373 l9,9 M432,373 l-9,9"/>
+  <text class="small" x="446" y="382">objects the template only references:</text>
+  <text class="small" x="446" y="398">ConfigMaps, Secrets, PVCs, Services,</text>
+  <text class="small" x="446" y="414">any HorizontalPodAutoscaler</text>
+
+  <path class="cross" d="M423,433 l9,9 M432,433 l-9,9"/>
+  <text class="small" x="446" y="442">anything changed outside this</text>
+  <text class="small" x="446" y="458">Deployment, which is most of what</text>
+  <text class="small" x="446" y="474">a bad deploy actually touches</text>
+
+  <!-- ============ FOOTER ============ -->
+  <rect class="box" x="30" y="502" width="740" height="70" rx="10"/>
+  <text class="label" x="48" y="524">The scope travels with the result</text>
+  <text class="monos" x="48" y="542">restored[]   not_restored[]   warnings: ["spec.replicas was left at 3. ..."]</text>
+  <text class="tiny" x="48" y="562">Both lists are returned on every rollback, applied or refused, so a caller cannot close the incident on a partial fix.</text>
+</svg>

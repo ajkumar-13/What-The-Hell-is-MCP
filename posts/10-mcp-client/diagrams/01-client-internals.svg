@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">What one MCP client owns, between a host and a single server</title>
+  <desc id="d">A host on the left, drawn as a filled blue box, holds one client per connected server. The client is drawn as a large bordered container in the middle, and inside it five numbered parts are stacked: the transport, which may be standard input and output, Streamable HTTP, or an in-process pair; request identifier correlation, which matches each JSON-RPC response to the caller waiting on it; the capability cache, which holds the list results and honors their time to live; the multi round-trip driver, which answers an input_required result and retries with the echoed request state; and the result reader, which sits on the return path and splits into two branches. The result reader branch is the argument of the diagram: a raised exception and a result carrying isError true are different on the wire but must converge on one failed outcome, because a tool that ran and failed arrives as a successful response. A terracotta server box sits on the right. A band across the bottom states the lifetime rule: the client wraps a task group, so it must be entered and exited by the same task, which is why the project uses an async exit stack rather than hand-rolled enter and exit calls.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .monom{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .monon{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:600;font-size:11px;fill:var(--mcp-ink);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .num{fill:var(--mcp-neutral-2);stroke:var(--mcp-ink);stroke-width:1;}
+    .client{fill:var(--mcp-primary);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .ok{fill:var(--mcp-success);stroke:var(--mcp-ink);stroke-width:1;}
+    .bad{fill:var(--mcp-alert);stroke:var(--mcp-ink);stroke-width:1;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-on-fill);}
+    .onfills{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-on-fill);}
+    .glyph{stroke:var(--mcp-on-fill);stroke-width:1.5;fill:none;stroke-linecap:round;}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="34">Inside one client</text>
+  <text class="small" x="40" y="56">A host holds exactly one client per connected server. Five parts going out and coming back, and one lifetime rule under all of them.</text>
+
+  <!-- ================= host ================= -->
+  <rect class="client" x="36" y="94" width="140" height="86" rx="8"/>
+  <text class="onfill" x="106" y="128" text-anchor="middle">host</text>
+  <text class="onfills" x="106" y="148" text-anchor="middle">owns the model,</text>
+  <text class="onfills" x="106" y="163" text-anchor="middle">and the decisions</text>
+  <text class="tiny" x="36" y="202">One host, many</text>
+  <text class="tiny" x="36" y="217">clients. They do</text>
+  <text class="tiny" x="36" y="232">not know about</text>
+  <text class="tiny" x="36" y="247">each other.</text>
+
+  <!-- ================= server ================= -->
+  <rect class="server" x="784" y="94" width="140" height="86" rx="8"/>
+  <text class="onfill" x="854" y="128" text-anchor="middle">server</text>
+  <text class="onfills" x="854" y="148" text-anchor="middle">tools, resources,</text>
+  <text class="onfills" x="854" y="163" text-anchor="middle">prompts</text>
+  <text class="tiny" x="784" y="202">A subprocess, a</text>
+  <text class="tiny" x="784" y="217">web service, or an</text>
+  <text class="tiny" x="784" y="232">object in this same</text>
+  <text class="tiny" x="784" y="247">process.</text>
+
+  <!-- ================= the client container ================= -->
+  <rect class="zone" x="204" y="76" width="552" height="374" rx="10"/>
+  <text class="head" x="220" y="100">client</text>
+  <text class="small" x="270" y="100">the protocol-speaking object. Not the host, not the user interface.</text>
+  <line class="rule" x1="220" y1="110" x2="740" y2="110"/>
+
+  <!-- transport -->
+  <rect class="chip" x="220" y="120" width="520" height="46" rx="6"/>
+  <circle class="num" cx="240" cy="143" r="10"/>
+  <text class="monon" x="240" y="147" text-anchor="middle">1</text>
+  <text class="label" x="260" y="139">transport</text>
+  <text class="monom" x="260" y="156">stdio_client(...)  ·  streamable_http_client(url)  ·  Client(server_object)</text>
+
+  <!-- correlation -->
+  <rect class="chip" x="220" y="174" width="520" height="46" rx="6"/>
+  <circle class="num" cx="240" cy="197" r="10"/>
+  <text class="monon" x="240" y="201" text-anchor="middle">2</text>
+  <text class="label" x="260" y="193">request-id correlation</text>
+  <text class="small" x="260" y="210">Matches each response to the caller waiting on it, so gather needs no lock.</text>
+
+  <!-- capability cache -->
+  <rect class="chip" x="220" y="228" width="520" height="46" rx="6"/>
+  <circle class="num" cx="240" cy="251" r="10"/>
+  <text class="monon" x="240" y="255" text-anchor="middle">3</text>
+  <text class="label" x="260" y="247">capability cache</text>
+  <text class="small" x="260" y="264">The list results, held for the ttlMs the server put on them.</text>
+
+  <!-- MRTR driver -->
+  <rect class="chip" x="220" y="282" width="520" height="46" rx="6"/>
+  <circle class="num" cx="240" cy="305" r="10"/>
+  <text class="monon" x="240" y="309" text-anchor="middle">4</text>
+  <text class="label" x="260" y="301">multi round-trip driver</text>
+  <text class="small" x="260" y="318">Answers input_required, then retries with the echoed requestState.</text>
+
+  <!-- result reader -->
+  <rect class="chip" x="220" y="336" width="520" height="100" rx="6"/>
+  <circle class="num" cx="240" cy="359" r="10"/>
+  <text class="monon" x="240" y="363" text-anchor="middle">5</text>
+  <text class="label" x="260" y="355">result reader</text>
+  <text class="small" x="260" y="372">The return path, and the one branch everybody forgets.</text>
+
+  <rect class="bad" x="236" y="384" width="234" height="42" rx="5"/>
+  <path class="glyph" d="M250,398 l8,8 M258,398 l-8,8"/>
+  <text class="onfills" x="272" y="401">raised  ·  or isError: true</text>
+  <text class="onfills" x="272" y="417">both become ok = False</text>
+
+  <rect class="ok" x="486" y="384" width="234" height="42" rx="5"/>
+  <path class="glyph" d="M500,402 l4,4.5 l8,-10"/>
+  <text class="onfills" x="522" y="401">content blocks, all five kinds</text>
+  <text class="onfills" x="522" y="417">plus structuredContent</text>
+
+  <!-- ================= arrows ================= -->
+  <path class="flow" d="M180,124 L198,124" marker-end="url(#ar)"/>
+  <path class="flow" d="M762,124 L780,124" marker-end="url(#ar)"/>
+  <text class="mono" x="480" y="70" text-anchor="middle">tools/call, tools/list, resources/read, prompts/get</text>
+  <path class="flow" d="M780,158 L762,158" marker-end="url(#ar)"/>
+  <path class="flow" d="M198,158 L180,158" marker-end="url(#ar)"/>
+
+  <!-- ================= the lifetime rule ================= -->
+  <rect class="zone" x="36" y="466" width="888" height="52" rx="8"/>
+  <text class="label" x="52" y="488">The lifetime rule</text>
+  <text class="small" x="160" y="488">The client wraps a task group, and a task group must be exited by the task that entered it.</text>
+  <text class="small" x="52" y="507">Drive it with async with, or with an AsyncExitStack entered and exited in one task. A hand-rolled close() gets a cancel-scope error, and leaks the subprocess whenever the session exit raises first.</text>
+</svg>

@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="t d">
+  <title id="t">Where one crash loop shows up in three different parts of the Kubernetes API</title>
+  <desc id="d">Three stacked panels describe the same failing pod from three separate parts of the Kubernetes API, with what each source alone would let you conclude on the right of each panel. The first panel is the pod status, which reports phase Running; alone it is true and useless, because a crash-looping pod is in phase Running. The second panel is the container statuses, where the current state is waiting with reason CrashLoopBackOff and a restart count of seven, and where the previous state is terminated with exit code one; the current state names the loop but not its cause, and only the previous state carries the exit code that does. The third panel is the events, a BackOff warning seen forty-two times, which supplies the sequence and the frequency but expires after an hour, so an empty list means nothing happened recently rather than nothing ever happened. An arrow joins all three into a verdict band at the bottom, which reports a crash loop at high confidence and names the next call to make, reading the previous instance's log rather than the current one.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .monos{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+    .split{stroke:var(--mcp-border);stroke-width:1;fill:none;stroke-dasharray:4 4;}
+    .tick{stroke:var(--mcp-success);stroke-width:1.5;fill:none;stroke-linecap:round;}
+    .cross{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;stroke-linecap:round;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="800" height="600"/>
+  <text class="title" x="30" y="34">One crash loop, three places to look</text>
+  <text class="small" x="30" y="56">Pod checkout-3c-aaa. The left column is what the API says. The right column is what that source alone would let you conclude.</text>
+
+  <!-- ============ SOURCE 1: POD STATUS ============ -->
+  <rect class="zone" x="30" y="76" width="740" height="112" rx="10"/>
+  <rect class="server" x="46" y="90" width="22" height="20" rx="5"/>
+  <text class="onfill" x="57" y="105" text-anchor="middle">1</text>
+  <text class="head" x="78" y="105">Pod status</text>
+  <line class="rule" x1="46" y1="120" x2="754" y2="120"/>
+  <line class="split" x1="420" y1="128" x2="420" y2="178"/>
+
+  <text class="monos" x="46" y="142">status:</text>
+  <text class="mono" x="60" y="160">phase: "Running"</text>
+  <text class="tiny" x="46" y="178">what list_pods sorts on</text>
+
+  <path class="cross" d="M440,136 l9,9 M449,136 l-9,9"/>
+  <text class="label" x="464" y="146">Alone: true, and useless.</text>
+  <text class="small" x="464" y="164">The pod exists, it is scheduled, and something keeps starting.</text>
+  <text class="small" x="464" y="180">A pod in a crash loop is in phase Running.</text>
+
+  <!-- ============ SOURCE 2: CONTAINER STATUSES ============ -->
+  <rect class="zone" x="30" y="200" width="740" height="154" rx="10"/>
+  <rect class="server" x="46" y="214" width="22" height="20" rx="5"/>
+  <text class="onfill" x="57" y="229" text-anchor="middle">2</text>
+  <text class="head" x="78" y="229">Container statuses</text>
+  <line class="rule" x1="46" y1="244" x2="754" y2="244"/>
+  <line class="split" x1="420" y1="252" x2="420" y2="344"/>
+
+  <text class="monos" x="46" y="266">status.containerStatuses[app]:</text>
+  <text class="mono" x="60" y="284">state.waiting.reason:</text>
+  <text class="mono" x="76" y="300">"CrashLoopBackOff"</text>
+  <text class="mono" x="60" y="318">restartCount: 7</text>
+  <text class="mono" x="60" y="336">lastState.terminated.exitCode: 1</text>
+
+  <path class="cross" d="M440,262 l9,9 M449,262 l-9,9"/>
+  <text class="label" x="464" y="272">The waiting reason alone is the symptom.</text>
+  <text class="small" x="464" y="290">CrashLoopBackOff means the kubelet is waiting before</text>
+  <text class="small" x="464" y="306">trying again, which you already knew.</text>
+
+  <path class="tick" d="M441,320 l4,4.5 l8,-10"/>
+  <text class="label" x="464" y="328">lastState is where the cause lives.</text>
+  <text class="small" x="464" y="346">It describes an instance of the container that is gone.</text>
+
+  <!-- ============ SOURCE 3: EVENTS ============ -->
+  <rect class="zone" x="30" y="366" width="740" height="112" rx="10"/>
+  <rect class="server" x="46" y="380" width="22" height="20" rx="5"/>
+  <text class="onfill" x="57" y="395" text-anchor="middle">3</text>
+  <text class="head" x="78" y="395">Events</text>
+  <line class="rule" x1="46" y1="410" x2="754" y2="410"/>
+  <line class="split" x1="420" y1="418" x2="420" y2="468"/>
+
+  <text class="monos" x="46" y="432">involvedObject: Pod/checkout-3c-aaa</text>
+  <text class="mono" x="60" y="450">reason: "BackOff"</text>
+  <text class="mono" x="60" y="468">count: 42</text>
+
+  <path class="cross" d="M440,426 l9,9 M449,426 l-9,9"/>
+  <text class="label" x="464" y="436">Alone: the sequence, not the cause.</text>
+  <text class="small" x="464" y="454">Events are the cluster narrating itself. They expire after</text>
+  <text class="small" x="464" y="470">an hour, so an empty list means recently, not ever.</text>
+
+  <path class="flow" d="M400,480 L400,500" marker-end="url(#ar)"/>
+
+  <!-- ============ VERDICT ============ -->
+  <rect class="box" x="30" y="502" width="740" height="70" rx="10"/>
+  <path class="tick" d="M48,528 l5,5.5 l10,-12"/>
+  <text class="label" x="76" y="526">All three together</text>
+  <text class="mono" x="76" y="546">verdict: crash_loop   confidence: high   restart_count: 7</text>
+  <text class="small" x="76" y="564">Next call: get_logs(pod_name="checkout-3c-aaa", container="app", previous=True). The current instance has logged nothing yet.</text>
+</svg>

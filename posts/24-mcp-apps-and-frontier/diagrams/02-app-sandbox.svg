@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">The double iframe, and the postMessage channel through it</title>
+  <desc id="d">Three nested regions on the left. The outermost is the host page. Nested inside it, on a deliberately different origin, is the sandbox proxy iframe carrying allow-scripts and allow-same-origin. Nested inside that is the view iframe holding the server's HTML under a Content Security Policy built from the resource metadata. On the right, a numbered sequence shows the startup order: the sandbox announces itself with sandbox-proxy-ready, the host answers with sandbox-resource-ready carrying the HTML, the view sends ui/initialize and receives the host's capabilities and context, the view sends initialized, and only then may the host push tool-input and tool-result. A footer lists what the sandbox denies: the parent document object model, host cookies and storage, parent navigation, and script execution in the parent context.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .monosm{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11.5px;fill:var(--mcp-ink);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-on-fill);}
+    .hostbox{fill:var(--mcp-surface);stroke:var(--mcp-primary);stroke-width:1.5;}
+    .proxy{fill:var(--mcp-neutral-1);stroke:var(--mcp-ink);stroke-width:1.5;stroke-dasharray:7 4;}
+    .viewbox{fill:var(--mcp-surface);stroke:var(--mcp-accent);stroke-width:1.5;}
+    .panel{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .num{fill:var(--mcp-ink);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="32" y="38">Two frames, because one would not be a sandbox.</text>
+
+  <!-- ================= nested frames ================= -->
+  <rect class="hostbox" x="32" y="64" width="468" height="392" rx="10"/>
+  <text class="label" x="52" y="90">Host page</text>
+  <text class="small" x="52" y="110">origin A. Owns the model, the conversation, and the consent decision.</text>
+
+  <rect class="proxy" x="56" y="126" width="420" height="306" rx="8"/>
+  <text class="label" x="76" y="152">Sandbox proxy iframe</text>
+  <text class="small" x="76" y="172">origin B, which MUST differ from the host's</text>
+  <text class="monosm" x="76" y="194">sandbox="allow-scripts allow-same-origin"</text>
+  <text class="small" x="76" y="216">Forwards every message that is not a reserved</text>
+  <text class="small" x="76" y="234">ui/notifications/sandbox- message, both ways.</text>
+
+  <rect class="viewbox" x="80" y="252" width="372" height="158" rx="8"/>
+  <text class="label" x="100" y="278">View iframe</text>
+  <text class="small" x="100" y="298">the server's HTML, from the ui:// resource</text>
+  <text class="monosm" x="100" y="322">Content-Security-Policy: default-src 'none';</text>
+  <text class="monosm" x="100" y="342">  script-src 'self' 'unsafe-inline'; ...</text>
+  <text class="small" x="100" y="366">Built from _meta.ui.csp. Omitted means the host</text>
+  <text class="small" x="100" y="384">applies its own deny-by-default policy instead.</text>
+  <text class="small" x="100" y="402">_meta.ui.permissions becomes the allow attribute.</text>
+
+  <!-- ================= sequence ================= -->
+  <text class="label" x="536" y="90">Startup order, and it is strict</text>
+
+  <circle class="num" cx="546" cy="116" r="9"/>
+  <text class="onfill" x="542" y="121">1</text>
+  <text class="monosm" x="566" y="121">ui/notifications/sandbox-proxy-ready</text>
+  <text class="small" x="566" y="139">sandbox to host, once the frame is live</text>
+
+  <circle class="num" cx="546" cy="170" r="9"/>
+  <text class="onfill" x="542" y="175">2</text>
+  <text class="monosm" x="566" y="175">ui/notifications/sandbox-resource-ready</text>
+  <text class="small" x="566" y="193">host to sandbox, carrying the raw HTML</text>
+
+  <circle class="num" cx="546" cy="224" r="9"/>
+  <text class="onfill" x="542" y="229">3</text>
+  <text class="monosm" x="566" y="229">ui/initialize</text>
+  <text class="small" x="566" y="247">view to host: appCapabilities, clientInfo</text>
+  <text class="small" x="566" y="265">host replies with hostCapabilities, hostContext,</text>
+  <text class="small" x="566" y="283">and its own protocolVersion, "2026-01-26"</text>
+
+  <circle class="num" cx="546" cy="314" r="9"/>
+  <text class="onfill" x="542" y="319">4</text>
+  <text class="monosm" x="566" y="319">ui/notifications/initialized</text>
+  <text class="small" x="566" y="337">view to host. Until this arrives the host MUST</text>
+  <text class="small" x="566" y="355">NOT send the view any request or notification.</text>
+
+  <circle class="num" cx="546" cy="386" r="9"/>
+  <text class="onfill" x="542" y="391">5</text>
+  <text class="monosm" x="566" y="391">ui/notifications/tool-input, then tool-result</text>
+  <text class="small" x="566" y="409">and later, from the view, an ordinary tools/call</text>
+  <text class="small" x="566" y="427">that the host proxies, blocks, or asks about</text>
+
+  <path class="flow-thin" d="M546,128 L546,158"/>
+  <path class="flow-thin" d="M546,182 L546,212"/>
+  <path class="flow-thin" d="M546,236 L546,302"/>
+  <path class="flow-thin" d="M546,326 L546,374"/>
+
+  <!-- ================= footer ================= -->
+  <line x1="32" y1="474" x2="928" y2="474" stroke="var(--mcp-border)" stroke-width="1"/>
+  <text class="small" x="32" y="498">What the nesting denies the view: the parent document tree, the host's cookies and storage, navigation of the parent, and any script in the parent context.</text>
+  <text class="small" x="32" y="518">ui/initialize is not MCP's initialize. That one was removed in 2026-07-28. This one lives on the postMessage channel and is unaffected by it.</text>
+</svg>

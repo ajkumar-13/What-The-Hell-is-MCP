@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">The three-party OAuth flow, with the MCP server's share of it marked</title>
+  <desc id="d">Three vertical lifelines run down the diagram: an MCP client on the left, an MCP server acting as an OAuth 2.1 resource server in the middle, and an authorization server on the right. Seven numbered exchanges run between them. One, the client posts to the MCP endpoint with no token. Two, the server refuses with 401 and a WWW-Authenticate header carrying a resource_metadata URL. Three, the client fetches that protected resource metadata document and reads the authorization_servers field. Four, five and six all run between the client and the authorization server: metadata discovery, the browser authorization step carrying PKCE and a resource parameter and returning a code and an issuer, and the token exchange. Seven, the client repeats the original request with a bearer token and is answered with 200. A panel at the foot states that the MCP server appears only in exchanges one, two, three and seven, and that it validates tokens but never issues them.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .monomute{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .client{fill:var(--mcp-primary);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .neutral{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .lifeline{stroke:var(--mcp-ink-muted);stroke-width:1;stroke-dasharray:4 4;fill:none;}
+    .mine{stroke:var(--mcp-accent);stroke-width:1.5;fill:none;stroke-dasharray:6 4;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="34">One token, three parties, and the small part that is yours</text>
+  <text class="small" x="40" y="55">Exchanges 1, 2, 3 and 7 touch your server. It validates a token it did not issue, and issues nothing.</text>
+
+  <!-- the "you" band -->
+  <rect class="mine" x="318" y="70" width="308" height="392" rx="10"/>
+  <rect class="chip" x="482" y="62" width="98" height="18" rx="5"/>
+  <text class="tiny" x="531" y="75" text-anchor="middle">your code</text>
+
+  <!-- actors -->
+  <rect class="client" x="56" y="84" width="188" height="34" rx="7"/>
+  <text class="onfill" x="150" y="106" text-anchor="middle">MCP client (in the host)</text>
+  <rect class="server" x="336" y="84" width="272" height="34" rx="7"/>
+  <text class="onfill" x="472" y="106" text-anchor="middle">MCP server = resource server</text>
+  <rect class="neutral" x="712" y="84" width="196" height="34" rx="7"/>
+  <text class="label" x="810" y="106" text-anchor="middle">Authorization server</text>
+
+  <line class="lifeline" x1="150" y1="122" x2="150" y2="462"/>
+  <line class="lifeline" x1="472" y1="122" x2="472" y2="462"/>
+  <line class="lifeline" x1="810" y1="122" x2="810" y2="462"/>
+
+  <!-- 1 -->
+  <circle class="chip" cx="30" cy="150" r="11"/>
+  <text class="label" x="30" y="154" text-anchor="middle">1</text>
+  <path class="flow" d="M152,150 L468,150" marker-end="url(#ar)"/>
+  <text class="mono" x="310" y="144" text-anchor="middle">POST /mcp   (no Authorization header)</text>
+
+  <!-- 2 -->
+  <circle class="chip" cx="30" cy="182" r="11"/>
+  <text class="label" x="30" y="186" text-anchor="middle">2</text>
+  <path class="flow" d="M470,182 L154,182" marker-end="url(#ar)"/>
+  <text class="mono" x="310" y="176" text-anchor="middle">401  WWW-Authenticate: Bearer resource_metadata="..."</text>
+
+  <!-- 3 -->
+  <circle class="chip" cx="30" cy="222" r="11"/>
+  <text class="label" x="30" y="226" text-anchor="middle">3</text>
+  <path class="flow" d="M152,216 L468,216" marker-end="url(#ar)"/>
+  <text class="mono" x="310" y="210" text-anchor="middle">GET /.well-known/oauth-protected-resource/mcp</text>
+  <path class="flow" d="M470,240 L154,240" marker-end="url(#ar)"/>
+  <text class="mono" x="310" y="234" text-anchor="middle">200  { resource, authorization_servers, scopes_supported }</text>
+
+  <line class="flow-thin" x1="40" y1="262" x2="920" y2="262"/>
+  <text class="tiny" x="924" y="266" text-anchor="end">below this line your server is not involved</text>
+
+  <!-- 4 -->
+  <circle class="chip" cx="30" cy="298" r="11"/>
+  <text class="label" x="30" y="302" text-anchor="middle">4</text>
+  <path class="flow-thin" d="M152,292 L806,292" marker-end="url(#arm)"/>
+  <text class="monomute" x="479" y="286" text-anchor="middle">GET /.well-known/oauth-authorization-server</text>
+  <path class="flow-thin" d="M808,314 L154,314" marker-end="url(#arm)"/>
+  <text class="monomute" x="481" y="308" text-anchor="middle">200  { issuer, authorization_endpoint, token_endpoint, ... }</text>
+
+  <!-- 5 -->
+  <circle class="chip" cx="30" cy="354" r="11"/>
+  <text class="label" x="30" y="358" text-anchor="middle">5</text>
+  <path class="flow-thin" d="M152,348 L806,348" marker-end="url(#arm)"/>
+  <text class="monomute" x="479" y="342" text-anchor="middle">/authorize  + code_challenge (PKCE)  + resource=&lt;canonical URI&gt;</text>
+  <path class="flow-thin" d="M808,370 L154,370" marker-end="url(#arm)"/>
+  <text class="monomute" x="481" y="364" text-anchor="middle">redirect  ?code=...&amp;iss=...   client compares iss byte for byte</text>
+
+  <!-- 6 -->
+  <circle class="chip" cx="30" cy="410" r="11"/>
+  <text class="label" x="30" y="414" text-anchor="middle">6</text>
+  <path class="flow-thin" d="M152,404 L806,404" marker-end="url(#arm)"/>
+  <text class="monomute" x="479" y="398" text-anchor="middle">/token  + code_verifier  + resource=&lt;canonical URI&gt;</text>
+  <path class="flow-thin" d="M808,426 L154,426" marker-end="url(#arm)"/>
+  <text class="monomute" x="481" y="420" text-anchor="middle">access token, audienced at the MCP server</text>
+
+  <!-- 7 -->
+  <circle class="chip" cx="30" cy="454" r="11"/>
+  <text class="label" x="30" y="458" text-anchor="middle">7</text>
+  <path class="flow" d="M152,452 L468,452" marker-end="url(#ar)"/>
+  <text class="mono" x="310" y="446" text-anchor="middle">POST /mcp   Authorization: Bearer &lt;token&gt;</text>
+
+  <!-- footer panel -->
+  <rect class="zone" x="40" y="478" width="880" height="44" rx="8"/>
+  <text class="label" x="56" y="497">The resource server's entire job</text>
+  <text class="small" x="56" y="514">Publish the metadata document, answer 401 with a challenge that points at it, and validate every inbound token: signature, expiry, audience, scope. Never issue one, never forward one.</text>
+</svg>

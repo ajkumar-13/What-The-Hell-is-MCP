@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="t d">
+  <title id="t">The same client-rendered URL, fetched with a plain HTTP GET and with a real browser</title>
+  <desc id="d">Two columns for one URL. On the left, a plain HTTP GET returns the shell the server sent: an empty root element and a block of inline JSON that the page's own script would have turned into an article. It is 48,522 bytes of document, and the extractor finds six words in it, all of them from the title element. On the right, a headless browser navigates to the same URL, waits half a second, and reads the document back after the script has run. It is 50,063 bytes, only three percent heavier, but the extractor now finds 1,558 bytes and 265 words of article. The extractor is identical in both columns; the only difference is whether the page's JavaScript ran.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:19px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .monobig{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:13px;fill:var(--mcp-ink);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .doc{fill:var(--mcp-neutral-1);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+    .cross{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;stroke-linecap:round;}
+    .tick{stroke:var(--mcp-success);stroke-width:1.5;fill:none;stroke-linecap:round;}
+    .glyph{fill:var(--mcp-ink-subtle);}
+    .glyphtext{fill:var(--mcp-ink);}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="800" height="600"/>
+  <text class="title" x="32" y="34">One URL, two ways to ask for it</text>
+  <text class="small" x="32" y="54">spa-shell.html, a client-rendered page. Same extractor on both sides; only the rendering differs.</text>
+  <text class="mono" x="32" y="74">https://example.com/app/rendering-budgets</text>
+
+  <!-- ================= LEFT: plain GET ================= -->
+  <rect class="zone" x="32" y="92" width="360" height="464" rx="10"/>
+  <text class="head" x="52" y="118">A plain HTTP GET</text>
+  <text class="small" x="52" y="136">requests.get(url).text, no browser</text>
+  <line class="rule" x1="52" y1="148" x2="372" y2="148"/>
+
+  <!-- document card, left -->
+  <rect class="doc" x="52" y="164" width="320" height="150" rx="6"/>
+  <text class="mono" x="68" y="186">&lt;title&gt;Rendering budgets&lt;/title&gt;</text>
+  <text class="mono" x="68" y="206">&lt;div id="root"&gt;&lt;/div&gt;</text>
+  <text class="small" x="68" y="224">empty, waiting for the script to fill it</text>
+  <text class="mono" x="68" y="248">&lt;script type="application/json"&gt;</text>
+  <text class="mono" x="68" y="264">  {"paragraphs": [ ... ]}</text>
+  <text class="mono" x="68" y="280">&lt;/script&gt;</text>
+  <text class="small" x="68" y="300">the article is here, as data, unread</text>
+
+  <path class="flow" d="M212,314 L212,346" marker-end="url(#ar)"/>
+  <text class="mono" x="222" y="336">extract()</text>
+
+  <rect class="box" x="52" y="348" width="320" height="86" rx="6"/>
+  <text class="monobig" x="68" y="374">48,522 B fetched</text>
+  <text class="monobig" x="68" y="398">46 B kept, 6 words</text>
+  <text class="small" x="68" y="420">method: markdownify, and the six words are the title</text>
+
+  <!-- outcome, left -->
+  <path class="cross" d="M64,462 l14,14 M78,462 l-14,14"/>
+  <text class="label" x="92" y="476">Nothing a reader would call content</text>
+  <text class="small" x="92" y="498">The extractor is not at fault. There was no article</text>
+  <text class="small" x="92" y="514">in the document it was handed. A page that renders</text>
+  <text class="small" x="92" y="530">nothing must be reported as empty, not dressed up.</text>
+
+  <!-- ================= RIGHT: real browser ================= -->
+  <rect class="zone" x="408" y="92" width="360" height="464" rx="10"/>
+  <text class="head" x="428" y="118">A headless browser</text>
+  <text class="small" x="428" y="136">page.goto(), 0.5 s settle, page.content()</text>
+  <line class="rule" x1="428" y1="148" x2="748" y2="148"/>
+
+  <rect class="doc" x="428" y="164" width="320" height="150" rx="6"/>
+  <text class="mono" x="444" y="186">&lt;title&gt;Rendering budgets&lt;/title&gt;</text>
+  <text class="mono" x="444" y="206">&lt;div id="root"&gt;</text>
+  <text class="mono" x="444" y="222">  &lt;article&gt;</text>
+  <text class="mono" x="444" y="238">    &lt;h1&gt;Rendering budgets&lt;/h1&gt;</text>
+  <text class="mono" x="444" y="254">    &lt;p&gt;Every page in this ...&lt;/p&gt;</text>
+  <text class="mono" x="444" y="270">  &lt;/article&gt;</text>
+  <text class="mono" x="444" y="286">&lt;/div&gt;</text>
+  <text class="small" x="444" y="304">built by the page's own script, in the browser</text>
+
+  <path class="flow" d="M588,314 L588,346" marker-end="url(#ar)"/>
+  <text class="mono" x="598" y="336">extract()</text>
+
+  <rect class="box" x="428" y="348" width="320" height="86" rx="6"/>
+  <text class="monobig" x="444" y="374">50,063 B fetched</text>
+  <text class="monobig" x="444" y="398">1,558 B kept, 265 words</text>
+  <text class="small" x="444" y="420">method: trafilatura, and the words are the article</text>
+
+  <path class="tick" d="M440,470 l5,6 l11,-14"/>
+  <text class="label" x="468" y="476">The article, for 3 percent more bytes</text>
+  <text class="small" x="468" y="498">The document grew by 1,541 bytes when the script</text>
+  <text class="small" x="468" y="514">ran. That is the entire cost of the difference</text>
+  <text class="small" x="468" y="530">between six words and two hundred and sixty-five.</text>
+</svg>

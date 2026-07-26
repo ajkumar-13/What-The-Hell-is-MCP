@@ -1,919 +1,573 @@
-# Blog 13: Multi-Client MCP
-## One Server, Every Client
+# 23 · Project 4 · One server, every client
 
-*Reading Time: 22 minutes*
+> **TL;DR.** The Model Context Protocol (MCP) promise is that one server works everywhere, and
+> the wire format keeps that promise, but the six hosts in this post disagree about the
+> top-level key of their configuration file, about whether a `type` field exists, and about how
+> to write a variable. This project builds a team knowledge base once and connects it to all six
+> without changing a line of server code. What breaks is configuration and capability gaps, and
+> both are fixable if you know where they are.
+>
+> **After reading this you will be able to:**
+> - Write a correct configuration for Claude Desktop, Claude Code, Cursor, VS Code, Gemini CLI, and Zed.
+> - Design a server that loses presentation, never capability, on a host that supports only tools.
+> - Serve the same server locally over stdio and remotely over Streamable HTTP from one process.
+> - Diagnose the five failures that account for most "it will not connect" reports.
 
----
-
-> *"We've been building servers for Claude Desktop. But MCP's real power is interoperability—one server that works with Claude, Cursor, VS Code, and programmatic agents. Let's prove it."*
-
----
-
-## Introduction
-
-Throughout this series, we've built MCP servers and connected them to **Claude Desktop**. That's one client. But the entire promise of MCP—the "USB-C for AI" analogy—is that **one server works with every client**.
-
-Think about USB-C: you don't build a different charger for each phone. You build one cable that works everywhere. MCP does the same for AI tools:
-
-- **Build once** — a single server with your tools, resources, and prompts
-- **Connect anywhere** — Claude Desktop, Cursor, VS Code, command-line agents, web apps
-- **Same protocol** — JSON-RPC over stdio or Streamable HTTP
-
-In this final blog, we'll build a **Team Knowledge Base Server** and connect it to four different clients, proving that interoperability isn't just theory—it works today.
+![One server box in the center. Six host boxes around it, each labelled with its configuration file name and the top-level JSON key it expects: mcpServers for Claude Desktop, Claude Code, Cursor and Gemini CLI, servers for VS Code, and context_servers for Zed. A seventh box, a Python client, has no configuration file at all.](diagrams/01-one-server-five-hosts.svg)
+*The wire protocol is identical down every one of these arrows. The file at the top of each box is not.*
 
 ---
 
-## 1. The Knowledge Base Server
+## 1. The brief
 
-Our server exposes three tools that make team knowledge searchable from any AI client:
+A team's engineering handbook is five Markdown documents in a repository: onboarding, runbooks,
+architecture notes, frequently asked questions, and code snippets. Everybody knows the answers
+are in there. Nobody can find them, because finding them means remembering which file and then
+scrolling.
 
-| Tool | Purpose | Annotation |
-|------|---------|------------|
-| `search_docs` | Full-text search across Markdown documentation | `readOnlyHint: True` |
-| `get_snippet` | Retrieve named code snippets | `readOnlyHint: True` |
-| `ask_faq` | Query frequently asked questions | `readOnlyHint: True` |
+That is a good fourth project for one reason above all others: **it is the kind of server every
+member of a team wants in a different application.** The person on call wants it in a terminal
+next to `kubectl`. The person writing code wants it in their editor. The person writing the
+incident review wants it in a chat window. The person who automated the weekly report wants it
+in a script with no user interface at all.
 
-All read-only—safe to run from any client without side effects.
+If MCP works, that is one server and six configuration files. This post is the test.
 
-### Project Structure
+The complete project is [code/23-knowledge-base/](../../code/23-knowledge-base/). It has 51
+tests, and two of them are the actual subject of this post. We will come to those in section 6.
 
-```
-team-knowledge/
-├── src/
-│   └── server.py
-├── knowledge/
-│   ├── docs/
-│   │   ├── getting-started.md
-│   │   ├── authentication.md
-│   │   └── deployment.md
-│   ├── snippets.json
-│   └── faq.json
-└── pyproject.toml
-```
+### What the server does
 
-### The Server
+Three tools, and their design comes straight from [Post 06](../06-tools-in-depth/index.md).
+
+| Tool | What it does |
+|---|---|
+| `search_docs(query, limit)` | Ranks handbook **sections** against a query, with excerpts. |
+| `get_doc(slug, section)` | Returns one document, or one section of one. |
+| `list_topics()` | Names every document with a one-line summary. |
+
+All three are annotated `read_only_hint=True`, `destructive_hint=False`,
+`idempotent_hint=True`, `open_world_hint=False`. Annotations are hints for the host and not
+enforcement, as [Post 06](../06-tools-in-depth/index.md) established, but they are the
+difference between a knowledge base that gets used and one that asks permission four times per
+question.
+
+On top of the tools sit five concrete resources, two resource templates, and three prompts.
+Those are additive, and section 6 is about why that word is doing real work.
+
+## 2. Building it once
+
+The retrieval layer, [`src/knowledge_base/index.py`](../../code/23-knowledge-base/src/knowledge_base/index.py),
+imports nothing from MCP and nothing from outside the standard library. Both are deliberate. No
+MCP means a bad search result can be bisected without opening a client. No dependencies means
+the only thing a reader installs before this server starts is the software development kit
+(SDK) itself.
+
+The ranking is Okapi BM25 in about sixty lines. The retrieval unit is a **section**, split on
+`##` headings, not a document. A whole-document match tells a model that `runbooks.md` is
+relevant, which it already suspected. A section match tells it that "Database failover" is the
+part to read, and hands back an excerpt that proves it.
+
+### The heading boost, and why it exists
+
+This is the most useful thing in the retrieval layer and it was not in the first draft.
+
+Raw BM25 ranked the wrong thing. Searching `database failover` put a two-sentence aside in
+`architecture.md`, which mentions managed failover in passing, **above** the runbook section
+literally titled "Database failover". Not a bug in the implementation. BM25's `b` parameter
+normalizes for length so that a long document cannot out-score a short one merely by containing
+more words, and the consequence is that a very short passage containing your terms scores
+extremely well. The aside was short. The runbook section was thorough.
+
+The fix is field boosting. A section's heading is the most deliberate summary that section has,
+so it is counted into the section's term frequencies more than once:
 
 ```python
-# src/server.py
-"""Team Knowledge Base — works with ANY MCP client."""
+_HEADING_WEIGHT = 3
+...
+tokens = tokenize(section.heading) * _HEADING_WEIGHT + tokenize(section.text)
+```
 
-import json
-import logging
-import sys
-from pathlib import Path
+Three, not thirty. Raise it much further and a section starts matching its own title regardless
+of whether the body is relevant, which is a different wrong answer.
 
-from mcp.server.fastmcp import FastMCP
+There is a regression test named after the problem, in
+[`tests/test_index.py`](../../code/23-knowledge-base/tests/test_index.py):
 
-# ── Logging (never print to stdout) ─────────────────────────────
-logging.basicConfig(
-    level=logging.INFO,
-    stream=sys.stderr,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-)
-logger = logging.getLogger("team-knowledge")
+```python
+def test_the_heading_boost_beats_a_short_passing_mention(index):
+    hits = index.search("database failover", limit=5)
+    assert hits[0].heading == "Database failover"
+    assert hits[0].slug == "runbooks"
+```
 
-# ── Knowledge paths ─────────────────────────────────────────────
-KNOWLEDGE_DIR = Path(__file__).parent.parent / "knowledge"
-DOCS_DIR = KNOWLEDGE_DIR / "docs"
-SNIPPETS_FILE = KNOWLEDGE_DIR / "snippets.json"
-FAQ_FILE = KNOWLEDGE_DIR / "faq.json"
+The reason this belongs in a post about interoperability is that **it is invisible from the
+protocol layer.** Every host in section 3 would have shown the wrong answer, identically and
+without complaint, and every one of them would have looked like it was working.
 
-# ── Server ───────────────────────────────────────────────────────
-mcp = FastMCP(
-    "team-knowledge",
+### The server object
+
+[`app.py`](../../code/23-knowledge-base/src/knowledge_base/app.py) holds the one server
+instance, the logger, and the one loaded copy of the corpus. The corpus is read and indexed at
+import time, because it is a few tens of kilobytes and re-reading it per request would only make
+results depend on when a file was last saved.
+
+```python
+mcp = MCPServer(
+    "knowledge-base",
+    title="Team Knowledge Base",
     instructions=(
-        "Team Knowledge Base server. Use search_docs to find documentation, "
-        "get_snippet for code examples, and ask_faq for common questions."
+        "A searchable copy of one team's engineering handbook ...\n"
+        "Three tools, and they are meant to be used in this order:\n"
+        "1. search_docs(query) ranks handbook sections against a query ...\n"
+        "2. get_doc(slug, section) returns the full text ...\n"
+        "3. list_topics() names every document ...\n"
     ),
 )
-
-
-# ── Tools ────────────────────────────────────────────────────────
-@mcp.tool(
-    annotations={
-        "title": "Search Documentation",
-        "readOnlyHint": True,
-        "openWorldHint": True,
-    }
-)
-def search_docs(query: str, max_results: int = 5) -> str:
-    """Search team documentation by keyword.
-
-    Args:
-        query: Search term (case-insensitive)
-        max_results: Maximum number of results to return
-    """
-    if not DOCS_DIR.exists():
-        return json.dumps({"error": "No docs directory found"})
-
-    query_lower = query.lower()
-    results = []
-
-    for doc in sorted(DOCS_DIR.glob("*.md")):
-        content = doc.read_text(encoding="utf-8")
-        if query_lower in content.lower():
-            # Extract a context snippet around the first match
-            idx = content.lower().index(query_lower)
-            start = max(0, idx - 100)
-            end = min(len(content), idx + 200)
-            snippet = content[start:end].strip()
-            results.append({
-                "file": doc.name,
-                "preview": f"...{snippet}...",
-            })
-            if len(results) >= max_results:
-                break
-
-    return json.dumps({
-        "query": query,
-        "total_results": len(results),
-        "results": results,
-    }, indent=2)
-
-
-@mcp.tool(
-    annotations={
-        "title": "Get Code Snippet",
-        "readOnlyHint": True,
-        "openWorldHint": False,
-    }
-)
-def get_snippet(name: str) -> str:
-    """Retrieve a named code snippet from the team snippet library.
-
-    Args:
-        name: Exact name of the snippet (e.g., 'auth-middleware', 'db-connect')
-    """
-    if not SNIPPETS_FILE.exists():
-        return json.dumps({"error": "Snippets file not found"})
-
-    snippets = json.loads(SNIPPETS_FILE.read_text(encoding="utf-8"))
-
-    if name in snippets:
-        entry = snippets[name]
-        return json.dumps({
-            "name": name,
-            "language": entry.get("language", "python"),
-            "description": entry.get("description", ""),
-            "code": entry["code"],
-        }, indent=2)
-
-    # Fuzzy match: suggest similar names
-    available = list(snippets.keys())
-    suggestions = [s for s in available if name.lower() in s.lower()]
-
-    return json.dumps({
-        "error": f"Snippet '{name}' not found",
-        "available_snippets": available,
-        "suggestions": suggestions,
-    }, indent=2)
-
-
-@mcp.tool(
-    annotations={
-        "title": "Ask FAQ",
-        "readOnlyHint": True,
-        "openWorldHint": True,
-    }
-)
-def ask_faq(question: str) -> str:
-    """Query the team's frequently asked questions.
-
-    Args:
-        question: Natural language question (matched against FAQ entries)
-    """
-    if not FAQ_FILE.exists():
-        return json.dumps({"error": "FAQ file not found"})
-
-    faq_entries = json.loads(FAQ_FILE.read_text(encoding="utf-8"))
-    question_lower = question.lower()
-
-    # Score each FAQ by keyword overlap
-    scored = []
-    for entry in faq_entries:
-        q = entry["question"].lower()
-        keywords = set(question_lower.split())
-        matches = sum(1 for kw in keywords if kw in q)
-        if matches > 0:
-            scored.append((matches, entry))
-
-    scored.sort(key=lambda x: x[0], reverse=True)
-
-    if scored:
-        best = scored[0][1]
-        return json.dumps({
-            "matched_question": best["question"],
-            "answer": best["answer"],
-            "confidence": "high" if scored[0][0] >= 3 else "medium",
-            "related": [
-                s[1]["question"] for s in scored[1:4]
-            ],
-        }, indent=2)
-
-    return json.dumps({
-        "error": "No matching FAQ found",
-        "suggestion": "Try different keywords or browse docs with search_docs",
-    }, indent=2)
-
-
-# ── Resources ────────────────────────────────────────────────────
-@mcp.resource("knowledge://overview")
-def knowledge_overview() -> str:
-    """Overview of available knowledge base content."""
-    doc_count = len(list(DOCS_DIR.glob("*.md"))) if DOCS_DIR.exists() else 0
-
-    snippet_count = 0
-    if SNIPPETS_FILE.exists():
-        snippets = json.loads(SNIPPETS_FILE.read_text(encoding="utf-8"))
-        snippet_count = len(snippets)
-
-    faq_count = 0
-    if FAQ_FILE.exists():
-        faq = json.loads(FAQ_FILE.read_text(encoding="utf-8"))
-        faq_count = len(faq)
-
-    return json.dumps({
-        "documentation_files": doc_count,
-        "code_snippets": snippet_count,
-        "faq_entries": faq_count,
-        "tools": ["search_docs", "get_snippet", "ask_faq"],
-    }, indent=2)
-
-
-# ── Prompts ──────────────────────────────────────────────────────
-@mcp.prompt()
-def onboard_new_dev(team: str = "backend") -> str:
-    """Generate an onboarding checklist for a new developer."""
-    return f"""You are onboarding a new developer joining the {team} team.
-
-Use the available tools to:
-1. Search docs for "getting started" to find setup instructions
-2. Get code snippets for common patterns (try 'db-connect', 'auth-middleware')
-3. Check the FAQ for common new-developer questions
-
-Compile a concise onboarding guide with:
-- Environment setup steps
-- Key code patterns to know
-- Answers to frequently asked questions
-"""
-
-
-# ── Entry point ──────────────────────────────────────────────────
-if __name__ == "__main__":
-    mcp.run(transport="stdio")
 ```
 
-### Sample Knowledge Data
+`instructions` is the closest thing MCP has to a README aimed at the model, and it is the only
+piece of documentation some hosts ever surface. Note what it does not mention: resources and
+prompts. A client that supports neither must still read these instructions and use this server
+correctly, and that constraint is the whole degradation strategy compressed into one paragraph.
 
-Here's what populates the knowledge base:
+Logging goes to stderr, set up once in `app.py`. Under stdio, stdout **is** the protocol channel,
+and a stray `print()` anywhere in the package is parsed as a JSON-RPC frame. [Post
+04](../04-transports/index.md) covered why; the practical version is that the resulting error
+message names neither your `print` nor your file.
 
-**`knowledge/snippets.json`**
-```json
-{
-  "db-connect": {
-    "language": "python",
-    "description": "Standard database connection pattern",
-    "code": "import asyncpg\n\nasync def get_pool():\n    return await asyncpg.create_pool(\n        dsn=os.environ['DATABASE_URL'],\n        min_size=2,\n        max_size=10,\n    )"
-  },
-  "auth-middleware": {
-    "language": "python",
-    "description": "FastAPI authentication middleware",
-    "code": "from fastapi import Header, HTTPException\n\nasync def verify_token(authorization: str = Header(...)):\n    if not authorization.startswith('Bearer '):\n        raise HTTPException(401, 'Invalid token format')\n    token = authorization[7:]\n    return await validate_jwt(token)"
-  },
-  "retry-decorator": {
-    "language": "python",
-    "description": "Exponential backoff retry decorator",
-    "code": "import asyncio\nimport functools\n\ndef retry(max_attempts=3, base_delay=1.0):\n    def decorator(func):\n        @functools.wraps(func)\n        async def wrapper(*args, **kwargs):\n            for attempt in range(max_attempts):\n                try:\n                    return await func(*args, **kwargs)\n                except Exception as e:\n                    if attempt == max_attempts - 1:\n                        raise\n                    delay = base_delay * (2 ** attempt)\n                    await asyncio.sleep(delay)\n        return wrapper\n    return decorator"
-  }
-}
+## 3. Six hosts, six files
+
+Here is the whole disagreement in one table. Everything a reader gets wrong is in it.
+
+| | Top-level key | `type` field | stdio | Streamable HTTP | Interpolation |
+|---|---|---|---|---|---|
+| **Claude Desktop** | `mcpServers` | none | `command` + `args` | not in this file | none |
+| **Claude Code** | `mcpServers` | optional for stdio, **required** for remote | `command` + `args` | `"type": "http"` + `url` | `${VAR}`, `${VAR:-default}` |
+| **Cursor** | `mcpServers` | optional | `command` + `args` | `url` | `${env:VAR}`, `${workspaceFolder}`, `${userHome}` |
+| **VS Code** | `servers` | **required on every entry** | `"type": "stdio"` | `"type": "http"` + `url` | `${workspaceFolder}`, `${userHome}`, `${input:id}` |
+| **Gemini CLI** | `mcpServers` | **no such field** | `command` | `httpUrl` | `$VAR`, `${VAR}`, `%VAR%` on Windows |
+| **Zed** | `context_servers` | none | `command` + `args` | `url` | none documented |
+
+Six rows, four disagreements. Take them one at a time.
+
+### The top-level key
+
+`mcpServers` for Claude Desktop, Claude Code, Cursor, and Gemini CLI. **`servers` for VS Code.
+`context_servers` for Zed.**
+
+There is no protocol reason for this. The keys were chosen independently, before anyone needed
+them to agree, and none of them can change now without breaking every installation that already
+exists. It is the purest example in the ecosystem of a thing the specification does not cover and
+therefore did not standardize.
+
+The failure mode is quiet. Paste a `mcpServers` block into `.vscode/mcp.json` and VS Code does
+not error; it reads a file with no `servers` key and concludes you have configured no servers.
+You get an empty list and no explanation.
+
+### The `type` field: three different rules
+
+**VS Code requires it on every entry**, stdio included. `"type": "stdio"` or `"type": "http"`.
+
+**Claude Code makes it optional for stdio and mandatory for remote.** An entry with a `url` and
+no `type` is a configuration error, because a typeless entry is read as stdio and then found to
+have no `command`. The message is specific, which is welcome:
+
+```
+MCP server "knowledge-base-remote" has a "url" but no "type"; add "type": "http"
 ```
 
-**`knowledge/faq.json`**
-```json
-[
-  {
-    "question": "How do I set up my local development environment?",
-    "answer": "1. Install Python 3.11+  2. Clone the repo  3. Run 'uv sync' to install dependencies  4. Copy .env.example to .env  5. Run 'uv run python -m pytest' to verify"
-  },
-  {
-    "question": "How do I connect to the staging database?",
-    "answer": "Use the DATABASE_URL from 1Password vault 'Engineering'. Never hardcode credentials. Use 'uv run python scripts/test_db.py' to verify connectivity."
-  },
-  {
-    "question": "What is the deployment process?",
-    "answer": "1. Create a PR with your changes  2. CI runs tests and linting  3. Get one approval  4. Merge to main  5. Auto-deploys to staging  6. Manual promotion to production via the release workflow"
-  },
-  {
-    "question": "How do I add a new API endpoint?",
-    "answer": "1. Add the route in src/routes/  2. Add the schema in src/schemas/  3. Write tests in tests/  4. Update the OpenAPI docs  5. Add to CHANGELOG.md"
-  }
-]
-```
+Claude Code also accepts `"streamable-http"` as an alias for `"http"`, so a snippet copied out of
+a server's own documentation usually works unmodified.
 
-This server is simple, stateless, read-only—and it works with **every MCP client**.
+**Gemini CLI has no `type` field at all.** It infers the transport from *which key you used*:
 
----
+| Key | Transport |
+|---|---|
+| `command` | stdio |
+| `url` | Server-Sent Events (SSE), the superseded transport |
+| `httpUrl` | Streamable HTTP |
 
-## 2. Client Configurations
+This is the single most expensive trap in the table. Put a Streamable HTTP endpoint under `url`
+and Gemini CLI will faithfully try to speak SSE to it. Nothing in the file looks wrong. The key
+you did not think about is the one carrying the meaning. Use `httpUrl`.
 
-Here's the key insight: **every MCP client speaks the same protocol**. They differ only in:
-- Where the configuration file lives
-- The JSON format of that configuration
-- Which MCP features they support
+### Remote servers in Claude Desktop are not in the file at all
 
-The server code doesn't change. Not one line.
+**You cannot add a remote MCP server by putting a `url` in `claude_desktop_config.json`.** This
+is worth stating flatly because a great deal of published material shows exactly that, and it
+does not work.
 
-### Transport Modes
+That file configures local servers that Claude Desktop launches as subprocesses. It is not a
+general server list. Remote servers are Custom Connectors, added through the interface:
 
-Before diving into configs, remember the two transports from Blog 12:
+1. **Settings > Connectors**.
+2. **Add** at the top right, then **Add custom connector**.
+3. Paste the server URL, ending `/mcp`, and complete whatever authentication the server asks for.
 
-| Transport | When to Use | Config Key |
-|-----------|-------------|------------|
-| **stdio** | Server runs locally, launched by the client | `"command"` + `"args"` |
-| **Streamable HTTP** | Server already running remotely | `"url"` |
+So [`clients/claude_desktop_config.json`](../../code/23-knowledge-base/clients/claude_desktop_config.json)
+in this project has one stdio entry and nothing else, which is the honest shape of that file.
 
-Every client below supports both.
+### Interpolation: five syntaxes for one idea
 
----
+| Client | Syntax | Notes |
+|---|---|---|
+| Claude Desktop | none | Absolute paths only. `${APPDATA}` in a path is a known failure. |
+| Claude Code | `${VAR}`, `${VAR:-default}` | Expands in `command`, `args`, `env`, `url`, and `headers`. |
+| Cursor | `${env:VAR}` | Plus `${workspaceFolder}`, `${userHome}`, `${pathSeparator}`. |
+| VS Code | `${input:id}` | Plus `${workspaceFolder}`, `${userHome}`. Use `inputs` for secrets. |
+| Gemini CLI | `$VAR` or `${VAR}` | `%VAR%` also works on Windows. Undefined resolves to empty. |
+| Zed | none documented | Write the value out. |
 
-### 2.1 Claude Desktop
+Read the shape of that disagreement carefully, because it is not just spelling. Claude Code's
+`${VAR}` reads a **process** environment variable. VS Code's `${input:id}` prompts the **user**
+and caches the answer. Cursor's `${env:VAR}` reads the environment behind an `env:` namespace.
+A string copied between two of these files can parse cleanly in both and mean something
+different in each.
 
-**What it is:** Anthropic's desktop application—the original MCP client.
+Gemini CLI's rule deserves its own line: **an undefined variable resolves to the empty string.**
+Not an error, not the literal text. A missing token silently becomes `Authorization: Bearer `.
 
-**Config file location:**
-```
-Windows:  %APPDATA%\Claude\claude_desktop_config.json
-macOS:    ~/Library/Application Support/Claude/claude_desktop_config.json
-```
+### Where the files go
 
-**Local (stdio):**
-```json
-{
-  "mcpServers": {
-    "team-knowledge": {
-      "command": "uv",
-      "args": [
-        "run", "--directory", "C:\\projects\\team-knowledge",
-        "python", "src/server.py"
-      ]
-    }
-  }
-}
-```
-
-**Remote (Streamable HTTP):**
-```json
-{
-  "mcpServers": {
-    "team-knowledge": {
-      "url": "https://knowledge.fly.dev/mcp/"
-    }
-  }
-}
-```
-
-**Supported MCP features:** Resources, Prompts, Tools, Sampling
-
-Claude Desktop is what we've used throughout this series. It launches the server as a subprocess (stdio) or connects to a URL (Streamable HTTP). Tools appear directly in the chat interface.
-
----
-
-### 2.2 Cursor IDE
-
-**What it is:** An AI-powered code editor built on VS Code, with deep MCP integration in its Composer agent.
-
-**Config file location:**
-```
-Project-scoped:  .cursor/mcp.json     (in your project root)
-Global:          ~/.cursor/mcp.json
-```
-
-**Local (stdio):**
-```json
-{
-  "mcpServers": {
-    "team-knowledge": {
-      "command": "uv",
-      "args": [
-        "run", "--directory", "/path/to/team-knowledge",
-        "python", "src/server.py"
-      ]
-    }
-  }
-}
-```
-
-**Remote (Streamable HTTP):**
-```json
-{
-  "mcpServers": {
-    "team-knowledge": {
-      "url": "https://knowledge.fly.dev/mcp/"
-    }
-  }
-}
-```
-
-**Supported MCP features:** Prompts, Tools, Roots, Elicitation
-
-Notice the format is almost identical to Claude Desktop. The only difference is:
-- Claude Desktop: one global config file
-- Cursor: project-scoped (`.cursor/mcp.json`) or global (`~/.cursor/mcp.json`)
-
-Project-scoped configs are powerful for teams—commit `.cursor/mcp.json` to your repo and everyone automatically gets the same tools.
-
----
-
-### 2.3 VS Code (GitHub Copilot)
-
-**What it is:** Visual Studio Code with GitHub Copilot's agent mode—VS Code now has **native MCP support** without any additional extensions.
-
-**Config file location:**
-```
-Workspace:  .vscode/mcp.json     (in your project root — commit to source control)
-User profile:  mcp.json in your VS Code user profile (open via MCP: Open User Configuration)
-```
-
-**Local (stdio) — `.vscode/mcp.json`:**
-```json
-{
-  "servers": {
-    "team-knowledge": {
-      "type": "stdio",
-      "command": "uv",
-      "args": [
-        "run", "--directory", "${workspaceFolder}/team-knowledge",
-        "python", "src/server.py"
-      ]
-    }
-  }
-}
-```
-
-**Remote (Streamable HTTP) — `.vscode/mcp.json`:**
-```json
-{
-  "servers": {
-    "team-knowledge": {
-      "type": "http",
-      "url": "https://knowledge.fly.dev/mcp/"
-    }
-  }
-}
-```
-
-> **Compatibility note:** Current VS Code builds use `"type": "http"` for remote MCP servers. VS Code first tries Streamable HTTP and can fall back to legacy SSE for older servers, but new deployments should target Streamable HTTP endpoints.
-
-**With input variables (for API keys):**
-```json
-{
-  "inputs": [
-    {
-      "type": "promptString",
-      "id": "kb-api-key",
-      "description": "Knowledge Base API Key",
-      "password": true
-    }
-  ],
-  "servers": {
-    "team-knowledge": {
-      "type": "http",
-      "url": "https://knowledge.fly.dev/mcp/",
-      "headers": {
-        "Authorization": "Bearer ${input:kb-api-key}"
-      }
-    }
-  }
-}
-```
-
-**Documented MCP capabilities:** Tools plus resources, prompts, and MCP Apps. Other negotiated capabilities, such as sampling, depend on the connected server and your current VS Code version/settings.
-
-VS Code's native MCP support is broad and actively evolving. Key differences from Cursor:
-- Config uses `"servers"` (not `"mcpServers"`)
-- Each server needs an explicit `"type"` field (`"stdio"` or `"http"`)
-- Supports `"inputs"` for secure credential prompts
-- Supports `${workspaceFolder}` and other VS Code variables
-- MCP tools appear in Copilot's agent mode chat
-
-> **Note:** You may see older references to the **Continue extension** for MCP in VS Code. While Continue still works, VS Code's native MCP support (via GitHub Copilot) is now the recommended approach. No extra extension needed.
-
----
-
-### 2.4 Programmatic Clients (Python SDK)
-
-**What it is:** Direct MCP client connections from Python code—for scripts, automation, CI/CD pipelines, and custom applications.
-
-```python
-# programmatic_client.py
-"""Connect to any MCP server programmatically."""
-
-import asyncio
-import json
-
-from mcp import ClientSession, StdioServerParameters
-from mcp.client.stdio import stdio_client
-
-
-async def main():
-    # ── Connect via stdio ──────────────────────────────────────
-    server_params = StdioServerParameters(
-        command="uv",
-        args=[
-            "run", "--directory", "/path/to/team-knowledge",
-            "python", "src/server.py",
-        ],
-    )
-
-    async with stdio_client(server_params) as (read, write):
-        async with ClientSession(read, write) as session:
-            # Initialize the connection
-            await session.initialize()
-
-            # Discover available tools
-            tools_result = await session.list_tools()
-            print(f"Available tools: {[t.name for t in tools_result.tools]}")
-
-            # Call a tool
-            result = await session.call_tool(
-                "search_docs",
-                arguments={"query": "authentication"},
-            )
-            print(f"Search results:\n{result.content[0].text}")
-
-            # Use a prompt
-            prompt_result = await session.get_prompt(
-                "onboard_new_dev",
-                arguments={"team": "backend"},
-            )
-            print(f"Onboarding prompt:\n{prompt_result.messages[0].content.text}")
-
-
-if __name__ == "__main__":
-    asyncio.run(main())
-```
-
-**For remote servers (Streamable HTTP):**
-
-```python
-import httpx
-from mcp.client.streamable_http import streamable_http_client
-
-async def connect_remote():
-    async with httpx.AsyncClient() as http_client:
-        async with streamable_http_client(
-            "https://knowledge.fly.dev/mcp/",
-            http_client=http_client,
-        ) as (read, write):
-            async with ClientSession(read, write) as session:
-                await session.initialize()
-                tools = await session.list_tools()
-                print(f"Remote tools: {[t.name for t in tools.tools]}")
-```
-
-> **SDK note:** Current Python SDK releases use `streamable_http_client()`; the older `streamablehttp_client()` helper was removed.
-
-Programmatic clients are ideal for:
-- **CI/CD pipelines** — automated documentation checking
-- **Chatbots** — Slack/Discord bots with MCP tools
-- **Batch jobs** — process documents against your knowledge base
-- **Testing** — automated integration tests for your MCP server
-
----
-
-## 3. Remote Access with Streamable HTTP
-
-For all clients to share **one deployed server**, add Streamable HTTP transport. As covered in Blog 12:
-
-```python
-# src/server_remote.py
-"""Team Knowledge Base — remote access via Streamable HTTP."""
-
-import json
-import logging
-import os
-import sys
-from pathlib import Path
-
-from mcp.server.fastmcp import FastMCP
-
-logging.basicConfig(
-    level=logging.INFO,
-    stream=sys.stderr,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-)
-logger = logging.getLogger("team-knowledge")
-
-KNOWLEDGE_DIR = Path(__file__).parent.parent / "knowledge"
-DOCS_DIR = KNOWLEDGE_DIR / "docs"
-SNIPPETS_FILE = KNOWLEDGE_DIR / "snippets.json"
-FAQ_FILE = KNOWLEDGE_DIR / "faq.json"
-
-mcp = FastMCP(
-    "team-knowledge",
-    instructions=(
-        "Team Knowledge Base server. Use search_docs to find documentation, "
-        "get_snippet for code examples, and ask_faq for common questions."
-    ),
-)
-
-# ... same tools as above (search_docs, get_snippet, ask_faq) ...
-# ... same resources and prompts ...
-
-# ── Entry point ──────────────────────────────────────────────────
-if __name__ == "__main__":
-    transport = os.environ.get("MCP_TRANSPORT", "stdio")
-
-    if transport == "streamable-http":
-        mcp.run(transport="streamable-http", host="0.0.0.0", port=8000)
-    else:
-        mcp.run(transport="stdio")
-```
-
-Now one server binary handles both:
-- `python src/server_remote.py` → stdio (for local clients)
-- `MCP_TRANSPORT=streamable-http python src/server_remote.py` → HTTP on port 8000
-
-### Deploy to the Cloud
-
-**Dockerfile:**
-```dockerfile
-FROM python:3.11-slim
-
-WORKDIR /app
-COPY . .
-RUN pip install --no-cache-dir mcp[cli]
-
-ENV MCP_TRANSPORT=streamable-http
-EXPOSE 8000
-
-CMD ["python", "src/server_remote.py"]
-```
-
-**Deploy (fly.io example):**
-```bash
-fly launch --name team-knowledge --internal-port 8000
-fly deploy
-```
-
-Once deployed, every client connects with the same URL:
-```
-https://team-knowledge.fly.dev/mcp/
-```
-
-No bridge tools. No adapters. Just a URL.
-
----
-
-## 4. Comparison: Same Server, Different Experiences
-
-| | Claude Desktop | Cursor | VS Code | Programmatic |
+| Client | Scope | macOS | Windows | Linux |
 |---|---|---|---|---|
-| **Best for** | Research, Q&A | In-editor coding | Agent-mode dev | Automation, CI/CD |
-| **Config file** | `claude_desktop_config.json` | `.cursor/mcp.json` | `.vscode/mcp.json` | Python code |
-| **Server key** | `"mcpServers"` | `"mcpServers"` | `"servers"` | `StdioServerParameters` |
-| **Type field** | Implicit | Implicit | Required (`"stdio"` / `"http"`) | Code-level |
-| **Remote** | `"url"` | `"url"` | `"url"` + `"type": "http"` | `streamable_http_client()` |
-| **Credentials** | Environment vars | Environment vars | `"inputs"` with secure prompt | Code / env vars |
-| **Team sharing** | Manual copy | Commit `.cursor/mcp.json` | Commit `.vscode/mcp.json` | Commit script |
+| **Claude Desktop** | global | `~/Library/Application Support/Claude/claude_desktop_config.json` | `%APPDATA%\Claude\claude_desktop_config.json` | no official build |
+| **Claude Code** | project | `.mcp.json` in the project root | same | same |
+| **Claude Code** | user | `~/.claude.json` | `%USERPROFILE%\.claude.json` | `~/.claude.json` |
+| **Cursor** | project | `.cursor/mcp.json` | same | same |
+| **Cursor** | global | `~/.cursor/mcp.json` | `%USERPROFILE%\.cursor\mcp.json` | `~/.cursor/mcp.json` |
+| **VS Code** | workspace | `.vscode/mcp.json` | same | same |
+| **VS Code** | user profile | `~/Library/Application Support/Code/User/mcp.json` | `%APPDATA%\Code\User\mcp.json` | `~/.config/Code/User/mcp.json` |
+| **Gemini CLI** | project | `.gemini/settings.json` | same | same |
+| **Gemini CLI** | user | `~/.gemini/settings.json` | `%USERPROFILE%\.gemini\settings.json` | `~/.gemini/settings.json` |
+| **Zed** | global | `~/.config/zed/settings.json` | `%APPDATA%\Zed\settings.json` | `~/.config/zed/settings.json` |
 
-Key observation: **Claude Desktop and Cursor use nearly identical formats.** VS Code differs slightly (explicit types, input variables). Programmatic clients replace config with code.
+Three rows need a note.
 
----
+- **Claude Desktop has no official Linux build.** There are unofficial packages, and this post
+  is not going to guess at a path for one. Open the file from inside the application instead:
+  **Settings > Developer > Edit Config**.
+- **VS Code's user-profile path is not documented**, because a profile other than the default
+  lives somewhere else entirely. The reliable route is the command palette: **MCP: Open User
+  Configuration**. The paths above are the default profile.
+- **Zed's own instruction** is likewise the command palette: **zed: open settings file**.
 
-## 5. Config Quick Reference
+Project-scoped files are the useful ones for a team. Commit `.mcp.json`, `.cursor/mcp.json`, or
+`.vscode/mcp.json` and everybody who clones the repository gets the server. That single fact is
+most of the practical value of MCP inside an organization.
 
-### Config File Locations
+### The one command they all run
 
-| Client | Path |
-|--------|------|
-| Claude Desktop (Windows) | `%APPDATA%\Claude\claude_desktop_config.json` |
-| Claude Desktop (macOS) | `~/Library/Application Support/Claude/claude_desktop_config.json` |
-| Cursor (project) | `.cursor/mcp.json` |
-| Cursor (global) | `~/.cursor/mcp.json` |
-| VS Code (workspace) | `.vscode/mcp.json` |
-| VS Code (user) | User profile `mcp.json` via `MCP: Open User Configuration` |
-
-### Minimal Config Templates
-
-**Claude Desktop / Cursor (local):**
 ```json
 {
-  "mcpServers": {
-    "SERVER_NAME": {
-      "command": "uv",
-      "args": ["run", "--directory", "PATH", "python", "src/server.py"]
-    }
-  }
+  "command": "uv",
+  "args": ["--directory", "/absolute/path/to/23-knowledge-base", "run", "python", "-m", "knowledge_base"]
 }
 ```
 
-**Claude Desktop / Cursor (remote):**
-```json
-{
-  "mcpServers": {
-    "SERVER_NAME": {
-      "url": "https://YOUR_SERVER/mcp/"
-    }
-  }
-}
+`uv --directory <path> run` is what makes this survive a host that launches you from an arbitrary
+working directory: it resolves the project and its virtual environment from the path you gave,
+not from the current directory. Every stdio entry in
+[`clients/`](../../code/23-knowledge-base/clients/) is that command with a different wrapper
+around it.
+
+Every path in those files is a placeholder like `/absolute/path/to/23-knowledge-base`. Replace it
+with a real absolute path. Relative paths are the most common reason a server fails to start,
+because the working directory a host launches you from is rarely the one you assumed.
+
+### One deliberate omission
+
+None of the six committed files contains a `//` comment, even though VS Code's `mcp.json` and
+Zed's `settings.json` both tolerate them. That way every file parses with a plain `json.load`
+and can be pasted into any of the others without a surprise. The paths live in the project
+README instead of at the top of each file.
+
+## 4. Local against remote, from one process
+
+The same code serves both transports. [Post 04](../04-transports/index.md) explained the choice;
+here is what it costs, which is one command-line flag:
+
+```bash
+uv run python -m knowledge_base           # stdio, what a desktop host spawns
+uv run python -m knowledge_base --http    # Streamable HTTP on 127.0.0.1:8000/mcp
 ```
 
-**VS Code (local):**
-```json
-{
-  "servers": {
-    "SERVER_NAME": {
-      "type": "stdio",
-      "command": "uv",
-      "args": ["run", "--directory", "${workspaceFolder}", "python", "src/server.py"]
-    }
-  }
-}
+![Two columns. On the left, stdio: the host owns the process lifetime, one process per host, configuration by file path, and no network. On the right, Streamable HTTP: one process for every host, configuration by URL, and the endpoint path with no trailing slash called out. A shared box at the bottom holds the server code, identical in both columns.](diagrams/03-local-vs-remote.svg)
+*The same code, the same tools, the same schemas. Only who owns the process changes.*
+
+Under stdio each host spawns its own copy. Six hosts means six processes, six copies of the
+index, and six chances to point one of them at the wrong directory. Over Streamable HTTP one
+process serves them all, which is both tidier and the only shape that makes sense once the
+corpus is large or lives behind credentials.
+
+### The trailing slash, measured
+
+**The path is `/mcp`, with no trailing slash.** That is `streamable_http_path`'s default in the
+SDK, and it is the only path served. Measured against this server, with bodies elided:
+
+```
+POST /mcp   -> 200
+POST /mcp/  -> 307, Location: http://127.0.0.1:8000/mcp
 ```
 
-**VS Code (remote):**
-```json
-{
-  "servers": {
-    "SERVER_NAME": {
-      "type": "http",
-      "url": "https://YOUR_SERVER/mcp/"
-    }
-  }
-}
-```
+Not a 404, which is what most people expect and what most people write in their notes. Starlette
+answers the trailing-slash form with a redirect, and whether that rescues you depends entirely
+on the client at the other end. The SDK's own Hypertext Transfer Protocol (HTTP) client follows
+redirects and works. A client configured not to follow them fails. Anything that drops the
+request body across the redirect fails in a more confusing way.
 
----
+And even the surviving case is not free: you have bought a wasted round trip on **every single
+call**, and any proxy or authenticating gateway in front of the server is one more place for that
+redirect to go wrong. Write `/mcp`.
 
-## 6. Tips for Multi-Client Servers
+### Two more things before you leave loopback
 
-### Tool Design
+`--host 0.0.0.0` makes the server reachable from your whole network. This one is read-only, but
+"read-only" and "safe to publish" are different claims, and [Post 19](../19-security/index.md)
+is about the gap between them.
 
-Tools that work well across clients share these traits:
+The SDK arms Domain Name System (DNS) rebinding protection automatically for `127.0.0.1`,
+`localhost`, and `::1`. Behind a real hostname you must pass
+`transport_security=TransportSecuritySettings(...)` or every request comes back `421 Misdirected
+Request`, which is not an error message anyone guesses correctly the first time.
 
-1. **Return JSON strings** — every client can parse structured data
-2. **Use descriptive names** — clients use tool names and descriptions to decide when to invoke them
-3. **Include annotations** — `readOnlyHint`, `destructiveHint` etc. help clients apply appropriate guardrails
-4. **Validate inputs** — don't assume the client validated for you
+## 5. The seventh client, which has no configuration file
 
-### Server Instructions
+[`clients/programmatic_client.py`](../../code/23-knowledge-base/clients/programmatic_client.py)
+is the version you reach for in continuous integration, in a chat bot, or in a batch job. It is
+also the fastest way to find out whether a server works at all, before you spend twenty minutes
+wondering why a desktop application is showing a red dot and no error text.
 
-The `instructions` parameter in `FastMCP()` is sent to the client on initialization. Write them like a README:
+Three things in it correct the widely copied older version.
+
+**One `Client`, not a `ClientSession` plus a manual `initialize()`.** In SDK 2.x, `mcp.Client` is
+the whole client: transport, request correlation, and the multi round-trip retry loop. There is
+no `initialize` to call, because revision 2026-07-28 removed it ([Post
+03](../03-wire-protocol/index.md)).
+
+**`streamable_http_client(url)` yields a 2-tuple, not 3.** The version 1 helper was
+`streamablehttp_client()`, it yielded three values, and it was routinely unpacked as two. The
+replacement yields a `TransportStreams` 2-tuple, and the right thing to do with it is not to
+unpack it at all:
 
 ```python
-mcp = FastMCP(
-    "team-knowledge",
-    instructions=(
-        "Team Knowledge Base server.\n"
-        "- search_docs: Full-text search across team Markdown docs\n"
-        "- get_snippet: Retrieve named code snippets (exact name match)\n"
-        "- ask_faq: Keyword-matched FAQ lookup\n"
-        "Start with search_docs for broad queries, get_snippet for specific code."
-    ),
-)
+def http_transport(url: str) -> object:
+    return streamable_http_client(url)
+
+...
+async with Client(transport) as client:
+    await probe(client)
 ```
 
-### Environment Variable Patterns
+Hand the context manager straight to `Client(...)` and let the client drive it. Every unpacking
+bug in this area disappears if you never unpack.
 
-Make servers configurable without code changes:
+**The endpoint is `/mcp`.** Same rule as section 4, from the other side of the wire.
+
+The body of the script is capability probing, which is exactly what a real host does:
 
 ```python
-import os
+tools = (await client.list_tools()).tools          # the floor. Always present.
 
-KNOWLEDGE_DIR = Path(os.environ.get(
-    "KNOWLEDGE_DIR",
-    str(Path(__file__).parent.parent / "knowledge"),
-))
-MCP_TRANSPORT = os.environ.get("MCP_TRANSPORT", "stdio")
+try:
+    resources = (await client.list_resources()).resources
+except MCPError as error:
+    print(f"resources: unavailable ({error.message})")
+else:
+    ...
 ```
 
-This lets different clients point the same server at different data:
+Ask for tools. **Try** resources and prompts, and carry on without them. That is the client half
+of the idea the next section is about.
 
-```json
-{
-  "mcpServers": {
-    "team-knowledge": {
-      "command": "uv",
-      "args": ["run", "python", "src/server.py"],
-      "env": {
-        "KNOWLEDGE_DIR": "/path/to/my-team/knowledge"
-      }
-    }
-  }
-}
+## 6. Graceful degradation, asserted rather than claimed
+
+"Works with every client" is a marketing sentence. The engineering sentence underneath it is
+narrower and testable:
+
+> A client that supports only tools must lose presentation, not capability.
+
+Not every host in section 3 reads resources. Not every host offers prompts. So the server is
+built in three layers, most-supported first.
+
+![Three stacked layers. The bottom layer, tools, is labelled universal and marked as load-bearing. The middle layer, resources, is labelled common and marked additive. The top layer, prompts, is labelled patchy and marked additive. Arrows from each of the upper layers point down to the tool that covers it. A side panel names the two tests that assert the mapping.](diagrams/02-capability-matrix.svg)
+*Capability goes in the bottom layer. The upper two make it nicer to reach, and nothing else.*
+
+| Layer | Assumed support | What a client without it loses |
+|---|---|---|
+| `tools.py` | universal | nothing works |
+| `resources.py` | common | a menu of attachable documents |
+| `prompts.py` | patchy | three slash-command shortcuts |
+
+Every resource maps to a tool that returns the same text:
+
+| Resource | Tool that covers it |
+|---|---|
+| `knowledge://index` | `list_topics()` |
+| `knowledge://doc/{slug}` | `get_doc(slug)` |
+| `knowledge://section/{slug}/{anchor}` | `get_doc(slug, section)` |
+
+And every prompt is a shortcut for a sequence of tool calls the model could have made itself,
+which is why each prompt body ends by naming the tools it expects to be used next.
+
+### The two tests that make this a claim instead of a hope
+
+A table in a docstring rots. A test does not. From
+[`tests/test_server.py`](../../code/23-knowledge-base/tests/test_server.py):
+
+```python
+async def test_every_resource_is_reachable_through_a_tool():
+    async with Client(mcp) as c:
+        for resource in (await c.list_resources()).resources:
+            uri = str(resource.uri)
+            via_resource = (await c.read_resource(uri)).contents[0].text
+            ...
+            slug = uri.rsplit("/", 1)[-1]
+            via_tool = (
+                await c.call_tool("get_doc", {"slug": slug})
+            ).structured_content["text"]
+            assert via_tool == via_resource, f"{uri} is not reachable through get_doc"
 ```
 
----
+It walks `resources/list`, and for every URI it asserts that some tool call returns **byte
+identical** text. Not equivalent text, not text containing the same facts. Identical. Add a
+resource without adding a tool path to it and the suite fails, with the URI in the message.
 
-## 7. The Interoperability Promise
+The second test answers a real handbook question using nothing but `tools/list` and
+`tools/call`, which is what the server looks like to the least capable host in the table.
 
-Here's what we just proved:
+Note the shape of every test in that file: the client is opened with `async with` **inside the
+test body**, never handed over by a yield fixture. The client owns an anyio task group, a task
+group has to be exited by the task that entered it, and a yield fixture tears down in a
+different task. Do it the other way and every test fails with "Attempted to exit cancel scope in
+a different task", which reads like a bug in your server and is not.
 
-```
-┌──────────────────────────────────────────────────────────┐
-│                                                          │
-│    ┌─────────────┐                                       │
-│    │   Claude     │──┐                                   │
-│    │   Desktop    │  │                                   │
-│    └─────────────┘  │                                   │
-│                      │     ┌──────────────────────┐      │
-│    ┌─────────────┐  ├────▶│                      │      │
-│    │   Cursor     │──┤     │   Team Knowledge     │      │
-│    │   IDE        │  │     │   Base Server        │      │
-│    └─────────────┘  │     │                      │      │
-│                      │     │   search_docs()      │      │
-│    ┌─────────────┐  │     │   get_snippet()       │      │
-│    │   VS Code    │──┤     │   ask_faq()           │      │
-│    │   + Copilot  │  │     │                      │      │
-│    └─────────────┘  │     └──────────────────────┘      │
-│                      │          ▲                         │
-│    ┌─────────────┐  │          │                         │
-│    │   Python     │──┘          │                         │
-│    │   Script     │     (stdio or Streamable HTTP)       │
-│    └─────────────┘                                       │
-│                                                          │
-│           The MCP Interoperability Model                 │
-└──────────────────────────────────────────────────────────┘
-```
+### The rule, stated once
 
-**One server. Four clients. Zero changes.**
+**Put the capability in a tool, then let richer clients present it more nicely.**
 
-The server doesn't know or care which client is connected. It speaks MCP. Every client speaks MCP. That's the entire point.
+Doing it the other way round produces a server that quietly does less on Zed than it does on
+Claude Desktop, and nobody, including you, can tell you why. The failure is silent because
+neither side is broken: the host correctly does not implement a primitive it never claimed, and
+the server correctly published one.
 
----
+## 7. Verifying on each client
 
-## Key Takeaways
+The order below is deliberate. Each step rules out a whole class of problem before the next step
+can be confused by it.
 
-1. **Build once, connect anywhere** — one MCP server works with Claude Desktop, Cursor, VS Code, and programmatic clients without changing a single line of server code
-2. **Config differences are cosmetic** — Claude Desktop and Cursor use `"mcpServers"`, VS Code uses `"servers"` with explicit type fields, but the underlying protocol is identical
-3. **Two transports cover every scenario** — stdio for local dev (client launches server), Streamable HTTP for remote/shared deployment (server already running)
-4. **Team sharing is a config file** — commit `.cursor/mcp.json` or `.vscode/mcp.json` to your repo and every teammate gets the same tools automatically
-5. **Tools should return JSON strings** — structured output works across all clients; use annotations (`readOnlyHint`, `destructiveHint`) so clients apply appropriate guardrails
-6. **Server instructions matter** — the `instructions` parameter acts as a README for the LLM, helping every client use your tools effectively
+**1. Run the tests.** `uv run pytest`. If the 51 tests pass, the server is fine and everything
+after this is configuration.
 
----
+**2. Run the programmatic client over stdio.** `python clients/programmatic_client.py`. This
+spawns the server exactly as a desktop host would and prints what it found. If this works and a
+host does not, the difference is the host's environment, not your code.
 
-## Series Wrap-Up
+**3. Run it over HTTP.** Start `python -m knowledge_base --http` in one terminal and
+`python clients/programmatic_client.py --http` in another. This separates transport problems from
+configuration problems.
 
-### What You've Learned
+**4. Then, and only then, edit a host's configuration file.** One host at a time. Restart the
+host completely; several of them re-read the file only at startup, and a few cache a failed
+server until they are restarted twice.
 
-**Foundation (Blogs 1–4)**
-- What MCP is, and why it matters for AI tool integration
-- Architecture: Host → Client → Server
-- The three server primitives: Tools, Resources, Prompts, plus where sampling fits as a client capability
-- Transports: stdio and Streamable HTTP
-- Building both servers (Blog 3) and host applications (Blog 4)
+**5. Ask a question you know the answer to.** "What do I do when the reconciler falls behind?"
+should reach `runbooks`. A host that connects but returns nothing useful has usually pointed
+`KNOWLEDGE_DIR` at a directory with no Markdown in it, and the server said so in a log line
+nobody read.
 
-**Real-World Projects (Blogs 5–11)**
-- **Database Analyst (5–6):** SQL validation, security layers, human-in-the-loop writes, audit logging
-- **DevOps First Responder (7–8):** Kubernetes diagnostics, safe remediation with tool annotations, RBAC
-- **Deep Research Browser (9–11):** Headless browsing, server-side summarization via Sampling, multi-page research sessions
+## 8. When this shape is the wrong one
 
-**Production & Interoperability (Blogs 12–13)**
-- Docker containerization and cloud deployment
-- Streamable HTTP for remote access
-- Authentication and security
-- Multi-client configuration: Claude Desktop, Cursor, VS Code, programmatic
+**When only one host will ever use it.** The abstraction cost here is small but not zero, and a
+server written for one host can use that host's specific features without apology.
 
-### The Bigger Picture
+**When the capability genuinely requires a primitive some hosts lack.** A server whose entire
+point is an interactive interface cannot degrade to tools, and should not pretend to.
+[Post 24](../24-mcp-apps-and-frontier/index.md) is about that case, and about the extension that
+addresses it.
 
-MCP is still young. The specification evolves (the 2025-11-25 revision is the latest as of this writing), new clients appear every week, and the ecosystem is growing fast. But the core idea is stable:
+**When the corpus is large.** An in-memory BM25 index over five documents is honest engineering.
+Over fifty thousand documents it is not, and the interesting problems move to the retrieval layer
+where MCP has no opinion at all.
 
-> **Servers expose capabilities. Clients consume them. The protocol handles everything in between.**
-
-That's it. Whether you're building a knowledge base for your team, a DevOps agent for your infrastructure, or a research tool for your domain—the pattern is the same:
-
-1. **Define tools** with clear descriptions and annotations
-2. **Return structured data** (JSON strings)
-3. **Log to stderr**, never stdout
-4. **Test locally** with stdio, then **deploy remotely** with Streamable HTTP
-5. **Let any client connect** — your server doesn't need to change
-
-### What's Next
-
-- **Explore community servers:** [github.com/modelcontextprotocol/servers](https://github.com/modelcontextprotocol/servers)
-- **Take the HuggingFace MCP course:** [huggingface.co/learn/mcp-course](https://huggingface.co/learn/mcp-course)
-- **Read the specification:** [modelcontextprotocol.io/specification/2025-11-25](https://modelcontextprotocol.io/specification/2025-11-25)
-- **Build your own:** Apply these patterns to your domain
-- **Contribute:** Open-source your servers for the community
+**When the data is per-user.** This server serves the same corpus to everyone, which is why it
+needs no authorization. The moment the answer depends on who is asking, read
+[Post 20](../20-authorization/index.md) first.
 
 ---
 
-## Resources
+## Troubleshooting appendix
 
-- [MCP Specification (2025-11-25)](https://modelcontextprotocol.io/specification/2025-11-25)
-- [Python SDK](https://github.com/modelcontextprotocol/python-sdk)
-- [Community Servers](https://github.com/modelcontextprotocol/servers)
-- [MCP Clients Directory](https://modelcontextprotocol.io/clients)
-- [Claude Desktop](https://claude.ai/download)
-- [Cursor IDE](https://cursor.sh)
-- [VS Code MCP Docs](https://code.visualstudio.com/docs/copilot/chat/mcp-servers)
-- [Continue Extension](https://continue.dev)
-- [Gradio MCP](https://www.gradio.app/docs/mcp)
-- [HuggingFace MCP Course](https://huggingface.co/learn/mcp-course)
+The failures readers actually hit, in rough order of frequency.
+
+| Symptom | Cause and fix |
+|---|---|
+| Server shows as failed, with no error text | Read the host's log, not its interface. Claude Desktop writes `~/Library/Logs/Claude/mcp-server-knowledge-base.log` on macOS and `%APPDATA%\Claude\logs\` on Windows. VS Code has an **MCP** output channel. Claude Code has `/mcp`. |
+| Works in a terminal, fails from the host | A relative path, or `uv` not on the host's `PATH`. Hosts do not inherit your shell's environment, including anything a `.zshrc` or `.bashrc` sets. Use absolute paths for both the interpreter and the project. |
+| The host lists no servers at all, silently | Wrong top-level key. `servers` for VS Code, `context_servers` for Zed, `mcpServers` for the rest. A file with an unrecognized top-level key is not an error, it is an empty configuration. |
+| VS Code refuses the entry | Missing `type`. It is required on every entry, stdio included. |
+| Claude Code reports a missing `command` for a remote server | The entry has a `url` and no `type`. Add `"type": "http"`. |
+| Gemini CLI cannot connect to a working HTTP server | The URL is under `url`, which means SSE. Move it to `httpUrl`. |
+| Remote endpoint returns an unexpected redirect | A trailing slash. `POST /mcp/` answers `307`, not `404`. The path is `/mcp`. |
+| `421 Misdirected Request` | DNS-rebinding protection, because the bind host is not loopback. Pass `transport_security=TransportSecuritySettings(...)`. |
+| `Authorization: Bearer ` with nothing after it | An undefined variable. Gemini CLI resolves undefined variables to the empty string rather than erroring. |
+| Every search returns nothing | The corpus was not found. The server logs `no documents found` at startup. Set `KNOWLEDGE_DIR` to the absolute path of `knowledge/`. |
+| The connection dies immediately with a parse error | Something wrote to stdout. Under stdio that is the protocol channel. Find the `print()`. |
+| Everything works except resources or prompts | Expected. That host does not support them, and by design you lose nothing. |
+| Configuration edits appear to do nothing | Restart the host fully. Some hosts read the file only at launch, and some keep a failed server marked failed until a second restart. |
 
 ---
 
-| [← Blog 12: Production Deployment](../blog-12/blog.md) | [Back to Series Overview →](../README.md) |
-|:---|---:|
+## Common pitfalls
+
+- **Assuming the configuration key is the same everywhere.** It is `mcpServers` for four of the
+  six hosts here, `servers` for VS Code, and `context_servers` for Zed. The wrong key produces an
+  empty server list, not an error, which is the worst possible failure mode.
+- **Putting a Streamable HTTP URL under Gemini CLI's `url` key.** There is no `type` field to
+  correct you. `url` means SSE, `httpUrl` means Streamable HTTP, and the file looks correct
+  either way.
+- **Adding a remote server to `claude_desktop_config.json` as `{"url": ...}`.** That file is for
+  local subprocesses. Remote servers go through Settings, Connectors, Add custom connector.
+- **Inventing a Claude Desktop path for Linux.** There is no official build. Use the in-app
+  editor, or a different host.
+- **Writing the endpoint with a trailing slash.** `POST /mcp/` returns `307`, not `404`. Clients
+  that follow redirects survive and pay a round trip per call; clients that do not, fail.
+- **Unpacking `streamable_http_client`.** It yields a 2-tuple, not the 3-tuple the version 1
+  helper yielded. Pass the context manager to `Client(...)` and never unpack it.
+- **Making a resource or a prompt load-bearing.** If the only way to reach some content is a
+  primitive half your hosts ignore, your server silently does less on those hosts. Put the
+  capability in a tool and assert the mapping with a test.
+- **Trusting search quality because the protocol layer is green.** The heading-boost bug returned
+  a confidently wrong answer through every client, identically. No amount of protocol testing
+  would have found it.
+
+---
+
+## Further reading
+
+- Specification, *"Transports"*, revision 2026-07-28. The Streamable HTTP endpoint rules behind
+  section 4. <https://modelcontextprotocol.io/specification/draft/basic/transports>
+- Each host's own configuration documentation: Claude Desktop and Claude Code (Anthropic), Cursor,
+  the VS Code MCP servers page, the Gemini CLI settings reference, and the Zed context-servers
+  page. Every row of the table in section 3 comes from one of these, and they are the pages to
+  re-check when a host changes, because none of this is specified anywhere central.
+- MCP extensions client support matrix (2026). The only cross-host capability table that is
+  maintained centrally, and it tracks extensions rather than core primitives.
+  <https://modelcontextprotocol.io/extensions/client-matrix>
+- Robertson and Zaragoza, *"The Probabilistic Relevance Framework: BM25 and Beyond"* (2009). The
+  `k1` and `b` parameters in section 2, and why length normalization does what it does.
+
+Full citations in [REFERENCES.md](../../REFERENCES.md).
+
+---
+
+## What to read next
+
+- **[Post 22 — Publishing: the registry, `server.json`, and MCPB bundles](../22-publishing/index.md)**:
+  the step before this one, if you skipped it. Six configuration files that a reader has to write
+  by hand become one install command once the server is published.
+- **[Post 24 — MCP Apps, extensions, and where the protocol goes next](../24-mcp-apps-and-frontier/index.md)**:
+  the closing post. Everything new in MCP now arrives as an extension, and the first official one
+  lets a server ship its own interface, which is the one case where degrading to tools is not
+  enough.

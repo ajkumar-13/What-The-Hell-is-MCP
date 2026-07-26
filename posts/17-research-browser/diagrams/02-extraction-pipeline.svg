@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="t d">
+  <title id="t">The extraction pipeline inside one tools/call, with the cache short-circuit</title>
+  <desc id="d">A client call to browse_url crosses the tool boundary and hits the page cache first. On a hit the pipeline stops there: a short-circuit path runs down the right-hand side straight to the result, and neither the browser nor the extractor runs. On a miss the call continues down the spine, where a headless Chromium navigates and settles, the rendered document is read back as HTML, the extractor tries trafilatura and then markdownify and reports empty if both fail, and the result is stored in the cache before it is returned. Both paths rejoin at one result box carrying the page text and the byte counts, which travels back up the left-hand rail to the client.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:19px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .client{fill:var(--mcp-primary);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .hit{fill:var(--mcp-neutral-1);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .bound{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;stroke-dasharray:5 4;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="800" height="600"/>
+  <text class="title" x="32" y="34">Fetch, render, extract, cache</text>
+  <text class="small" x="32" y="54">Everything below the dashed line happens inside one tools/call. The cache decides how much of it runs.</text>
+
+  <!-- client -->
+  <rect class="client" x="290" y="72" width="220" height="40" rx="6"/>
+  <text class="onfill" x="400" y="97" text-anchor="middle">client calls browse_url</text>
+
+  <!-- boundary -->
+  <line class="bound" x1="32" y1="132" x2="768" y2="132"/>
+  <text class="tiny" x="768" y="127" text-anchor="end">tool boundary</text>
+
+  <path class="flow" d="M400,112 L400,150" marker-end="url(#ar)"/>
+
+  <!-- 1 cache lookup -->
+  <rect class="box" x="270" y="152" width="260" height="46" rx="6"/>
+  <text class="mono" x="400" y="173" text-anchor="middle">cache.get(url)</text>
+  <text class="small" x="400" y="190" text-anchor="middle">10 minute TTL, 100 entries, oldest out</text>
+
+  <!-- hit branch -->
+  <path class="flow" d="M530,175 L594,175" marker-end="url(#ar)"/>
+  <text class="small" x="562" y="167" text-anchor="middle">hit</text>
+  <rect class="hit" x="596" y="152" width="172" height="46" rx="6"/>
+  <text class="label" x="682" y="172" text-anchor="middle">short-circuit</text>
+  <text class="mono" x="682" y="190" text-anchor="middle">from_cache</text>
+
+  <!-- hit rail down the right -->
+  <path class="flow" d="M682,198 L682,524 L540,524" marker-end="url(#ar)"/>
+
+  <!-- miss -->
+  <path class="flow" d="M400,198 L400,224" marker-end="url(#ar)"/>
+  <text class="small" x="412" y="216">miss</text>
+
+  <!-- 2 fetch -->
+  <rect class="server" x="270" y="226" width="260" height="46" rx="6"/>
+  <text class="onfill" x="400" y="246" text-anchor="middle">Chromium: page.goto()</text>
+  <text class="onfill" x="400" y="264" text-anchor="middle">then a 0.5 s settle</text>
+  <text class="small" x="544" y="242">one browser per</text>
+  <text class="small" x="544" y="258">process, one page</text>
+  <text class="small" x="544" y="274">per call, closed in</text>
+  <text class="small" x="544" y="290">a finally block</text>
+
+  <path class="flow" d="M400,272 L400,298" marker-end="url(#ar)"/>
+
+  <!-- 3 content -->
+  <rect class="box" x="270" y="300" width="260" height="46" rx="6"/>
+  <text class="mono" x="400" y="320" text-anchor="middle">page.content()</text>
+  <text class="small" x="400" y="337" text-anchor="middle">the rendered document, not the body</text>
+  <text class="mono" x="155" y="325" text-anchor="end">76,201 B in</text>
+  <path class="thin" d="M163,321 L262,321" marker-end="url(#arm)"/>
+
+  <path class="flow" d="M400,346 L400,372" marker-end="url(#ar)"/>
+
+  <!-- 4 extract -->
+  <rect class="box" x="240" y="374" width="320" height="96" rx="6"/>
+  <text class="label" x="256" y="394">extract()</text>
+  <line class="thin" x1="256" y1="402" x2="544" y2="402"/>
+  <text class="mono" x="256" y="422">1  trafilatura</text>
+  <text class="small" x="400" y="422">articles, precision first</text>
+  <text class="mono" x="256" y="442">2  markdownify</text>
+  <text class="small" x="400" y="442">removed, not stripped</text>
+  <text class="mono" x="256" y="462">3  empty</text>
+  <text class="small" x="400" y="462">nothing rendered; say so</text>
+  <text class="mono" x="155" y="427" text-anchor="end">4,126 B out</text>
+  <path class="thin" d="M163,423 L232,423" marker-end="url(#arm)"/>
+
+  <path class="flow" d="M400,470 L400,494" marker-end="url(#ar)"/>
+  <text class="mono" x="412" y="488">cache.put(url, extraction)</text>
+
+  <!-- result -->
+  <rect class="box" x="276" y="500" width="264" height="48" rx="6"/>
+  <text class="label" x="408" y="520" text-anchor="middle">PageContent and the receipt</text>
+  <text class="mono" x="408" y="538" text-anchor="middle">raw_bytes, clean_bytes, method</text>
+
+  <!-- return rail -->
+  <path class="flow" d="M276,524 L64,524 L64,92 L284,92" marker-end="url(#ar)"/>
+  <text class="small" x="74" y="316">result</text>
+</svg>

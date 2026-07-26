@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">The tool-execution loop, with the permission gate on the critical path</title>
+  <desc id="d">User text enters a model call at the top. The reply is checked for tool calls: if there are none the loop leaves immediately with a final answer. If there are tool calls, every one of them passes through a permission gate drawn as a wide box directly on the path, handled one call at a time so that two prompts never race for the same terminal. The gate has three exits and only one of them reaches a server. Allowed calls drop into a parallel execution stage that gathers several servers at once. Denied calls and calls naming a tool that does not exist skip execution entirely, but still produce a result. All results, whatever their origin, are collected in the order the model asked for them and fed back in a single turn, and the loop repeats up to a round cap. The argument of the diagram is that there is no drawn path from a model tool call to a server that bypasses the gate.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .monom{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .gate{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .client{fill:var(--mcp-primary);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .ok{fill:var(--mcp-success);stroke:var(--mcp-ink);stroke-width:1;}
+    .bad{fill:var(--mcp-alert);stroke:var(--mcp-ink);stroke-width:1;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-on-fill);}
+    .onfills{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-on-fill);}
+    .glyph{stroke:var(--mcp-on-fill);stroke-width:1.5;fill:none;stroke-linecap:round;}
+    .glyphi{stroke:var(--mcp-ink);stroke-width:1;fill:none;stroke-linecap:round;}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="30">The tool loop, and the gate that sits in it</text>
+  <text class="small" x="40" y="52">Gating is sequential. Execution is parallel. Every requested call comes back with a result whether or not it ran.</text>
+
+  <!-- ============ user text ============ -->
+  <rect class="chip" x="40" y="78" width="160" height="46" rx="6"/>
+  <text class="label" x="120" y="98" text-anchor="middle">user text</text>
+  <text class="tiny" x="120" y="114" text-anchor="middle">one message</text>
+  <path class="flow" d="M204,101 L224,101" marker-end="url(#ar)"/>
+
+  <!-- ============ the model call ============ -->
+  <rect class="client" x="230" y="78" width="470" height="46" rx="8"/>
+  <text class="onfill" x="465" y="98" text-anchor="middle">send the conversation and the tool list to the model</text>
+  <text class="onfills" x="465" y="115" text-anchor="middle">provider.send(messages, tools, system)</text>
+
+  <!-- ============ branch ============ -->
+  <path class="flow" d="M465,126 L465,140" marker-end="url(#ar)"/>
+  <rect class="zone" x="230" y="144" width="470" height="44" rx="8"/>
+  <text class="label" x="465" y="163" text-anchor="middle">Did the reply contain tool calls?</text>
+  <text class="tiny" x="465" y="179" text-anchor="middle">branch on this, never on a provider's stop-reason string</text>
+
+  <path class="flow" d="M226,166 L188,166" marker-end="url(#ar)"/>
+  <text class="tiny" x="207" y="158" text-anchor="middle">no</text>
+  <rect class="ok" x="40" y="144" width="144" height="44" rx="6"/>
+  <path class="glyph" d="M54,164 l5,5.5 l10,-12"/>
+  <text class="onfills" x="80" y="162">final answer</text>
+  <text class="onfills" x="80" y="178">the turn is done</text>
+
+  <path class="flow" d="M465,190 L465,200" marker-end="url(#ar)"/>
+  <text class="tiny" x="480" y="199">yes</text>
+
+  <!-- ============ the gate ============ -->
+  <rect class="gate" x="150" y="204" width="660" height="132" rx="10"/>
+  <text class="head" x="166" y="228">permission gate</text>
+  <text class="small" x="292" y="228">one call at a time. There is no drawn path from here to a server that goes around it.</text>
+  <line class="rule" x1="166" y1="238" x2="794" y2="238"/>
+  <text class="small" x="166" y="258">denylist, then allowlist, then destructive, then a remembered answer, then the read-only shortcut, then ask. Annotations feed this decision; they are never the decision.</text>
+
+  <rect class="ok" x="166" y="272" width="204" height="48" rx="6"/>
+  <path class="glyph" d="M180,293 l5,5.5 l10,-12"/>
+  <text class="onfills" x="206" y="291">allowed</text>
+  <text class="onfills" x="206" y="307">the only exit that reaches a server</text>
+
+  <rect class="bad" x="386" y="272" width="204" height="48" rx="6"/>
+  <path class="glyph" d="M400,286 l9,9 M409,286 l-9,9"/>
+  <text class="onfills" x="426" y="291">denied</text>
+  <text class="onfills" x="426" y="307">the server is never called</text>
+
+  <rect class="chip" x="606" y="272" width="188" height="48" rx="6"/>
+  <path class="glyphi" d="M620,300 l7,-13 l7,13 z"/>
+  <text class="label" x="644" y="291">unknown tool</text>
+  <text class="tiny" x="644" y="307">nothing to gate. Tell the model.</text>
+
+  <!-- ============ execution ============ -->
+  <path class="flow" d="M268,324 L268,360" marker-end="url(#ar)"/>
+  <rect class="zone" x="166" y="364" width="300" height="52" rx="8"/>
+  <text class="label" x="182" y="385">run the approved calls together</text>
+  <text class="monom" x="182" y="403">asyncio.gather(pool.call(c) for c in approved)</text>
+
+  <path class="flow-thin" d="M488,324 L488,436" marker-end="url(#arm)"/>
+  <path class="flow-thin" d="M700,324 L700,436" marker-end="url(#arm)"/>
+  <text class="tiny" x="502" y="382">skipped, but</text>
+  <text class="tiny" x="502" y="397">still answered</text>
+
+  <!-- ============ feed back ============ -->
+  <path class="flow" d="M316,418 L316,436" marker-end="url(#ar)"/>
+  <rect class="zone" x="150" y="440" width="660" height="48" rx="8"/>
+  <text class="label" x="166" y="461">every requested call gets a result, in the order the model asked, in one turn</text>
+  <text class="small" x="166" y="478">A dropped result leaves a dangling tool-use id. Results split across turns teach the model to stop asking for parallel calls.</text>
+
+  <!-- ============ the return arc ============ -->
+  <path class="flow" d="M814,464 L852,464 L852,101 L706,101" marker-end="url(#ar)"/>
+  <text class="tiny" x="862" y="272">loop, up to</text>
+  <text class="tiny" x="862" y="287">max_rounds</text>
+
+  <text class="small" x="40" y="514">The gate has three exits and only one of them reaches a server. That is the difference between a permission system and a permission-shaped log line.</text>
+</svg>

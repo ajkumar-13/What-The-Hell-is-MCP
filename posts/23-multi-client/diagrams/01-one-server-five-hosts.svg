@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">One server, six configuration files, three different top-level keys</title>
+  <desc id="d">A single knowledge-base server sits in the center. Six host applications surround it, three on each side, and each host card names its configuration file and the top-level JSON key that file must use. Claude Desktop, Claude Code, Cursor and Gemini CLI all use mcpServers. VS Code uses servers and Zed uses context_servers; both of those are marked with a triangle to show they differ from the majority. A seventh client, a Python script, sits below the server and needs no configuration file at all. Arrows run from every client to the server, and a footnote states that the wire protocol on every arrow is identical.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .monofill{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:500;font-size:13px;fill:var(--mcp-on-fill);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-on-fill);}
+    .onfill-s{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-on-fill);}
+    .card{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .clientbar{fill:var(--mcp-primary);}
+    .server{fill:var(--mcp-accent);}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .chip-odd{fill:var(--mcp-neutral-1);stroke:var(--mcp-warn);stroke-width:1.5;}
+    .mark{fill:var(--mcp-warn);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="32" y="38">One server. Six configuration files. Three top-level keys.</text>
+
+  <!-- ============ left column: hosts ============ -->
+  <g>
+    <rect class="card" x="32" y="62" width="252" height="112" rx="8"/>
+    <rect class="clientbar" x="32" y="62" width="6" height="112"/>
+    <text class="label" x="52" y="88">Claude Desktop</text>
+    <text class="small" x="52" y="108">claude_desktop_config.json</text>
+    <rect class="chip" x="52" y="120" width="106" height="26" rx="5"/>
+    <text class="mono" x="60" y="138">"mcpServers"</text>
+    <text class="small" x="52" y="164">stdio only; remote is a connector</text>
+  </g>
+
+  <g>
+    <rect class="card" x="32" y="186" width="252" height="112" rx="8"/>
+    <rect class="clientbar" x="32" y="186" width="6" height="112"/>
+    <text class="label" x="52" y="212">Claude Code</text>
+    <text class="small" x="52" y="232">.mcp.json</text>
+    <rect class="chip" x="52" y="244" width="106" height="26" rx="5"/>
+    <text class="mono" x="60" y="262">"mcpServers"</text>
+    <text class="small" x="52" y="288">"type" required for remote</text>
+  </g>
+
+  <g>
+    <rect class="card" x="32" y="310" width="252" height="112" rx="8"/>
+    <rect class="clientbar" x="32" y="310" width="6" height="112"/>
+    <text class="label" x="52" y="336">Cursor</text>
+    <text class="small" x="52" y="356">.cursor/mcp.json</text>
+    <rect class="chip" x="52" y="368" width="106" height="26" rx="5"/>
+    <text class="mono" x="60" y="386">"mcpServers"</text>
+    <text class="small" x="52" y="412">${env:VAR} interpolation</text>
+  </g>
+
+  <!-- ============ right column: hosts ============ -->
+  <g>
+    <rect class="card" x="676" y="62" width="252" height="112" rx="8"/>
+    <rect class="clientbar" x="676" y="62" width="6" height="112"/>
+    <text class="label" x="696" y="88">VS Code</text>
+    <text class="small" x="696" y="108">.vscode/mcp.json</text>
+    <rect class="chip-odd" x="696" y="120" width="88" height="26" rx="5"/>
+    <text class="mono" x="704" y="138">"servers"</text>
+    <path class="mark" d="M798,142 L810,120 L822,142 z"/>
+    <text class="small" x="696" y="164">"type" required on every entry</text>
+  </g>
+
+  <g>
+    <rect class="card" x="676" y="186" width="252" height="112" rx="8"/>
+    <rect class="clientbar" x="676" y="186" width="6" height="112"/>
+    <text class="label" x="696" y="212">Gemini CLI</text>
+    <text class="small" x="696" y="232">.gemini/settings.json</text>
+    <rect class="chip" x="696" y="244" width="106" height="26" rx="5"/>
+    <text class="mono" x="704" y="262">"mcpServers"</text>
+    <text class="small" x="696" y="288">no "type"; key implies transport</text>
+  </g>
+
+  <g>
+    <rect class="card" x="676" y="310" width="252" height="112" rx="8"/>
+    <rect class="clientbar" x="676" y="310" width="6" height="112"/>
+    <text class="label" x="696" y="336">Zed</text>
+    <text class="small" x="696" y="356">settings.json</text>
+    <rect class="chip-odd" x="696" y="368" width="146" height="26" rx="5"/>
+    <text class="mono" x="704" y="386">"context_servers"</text>
+    <path class="mark" d="M856,390 L868,368 L880,390 z"/>
+    <text class="small" x="696" y="412">no interpolation documented</text>
+  </g>
+
+  <!-- ============ center: the server ============ -->
+  <rect class="server" x="356" y="146" width="248" height="132" rx="10"/>
+  <text class="onfill" x="376" y="180">knowledge-base</text>
+  <text class="monofill" x="376" y="208">search_docs()</text>
+  <text class="monofill" x="376" y="230">get_doc()</text>
+  <text class="monofill" x="376" y="252">list_topics()</text>
+
+  <rect class="card" x="356" y="296" width="248" height="66" rx="8"/>
+  <rect class="clientbar" x="356" y="296" width="6" height="66"/>
+  <text class="label" x="376" y="322">Python script</text>
+  <text class="small" x="376" y="344">no configuration file at all</text>
+
+  <!-- ============ arrows ============ -->
+  <path class="flow" d="M292,118 L348,168" marker-end="url(#ar)"/>
+  <path class="flow" d="M292,242 L348,212" marker-end="url(#ar)"/>
+  <path class="flow" d="M292,366 L348,252" marker-end="url(#ar)"/>
+  <path class="flow" d="M668,118 L612,168" marker-end="url(#ar)"/>
+  <path class="flow" d="M668,242 L612,212" marker-end="url(#ar)"/>
+  <path class="flow" d="M668,366 L612,252" marker-end="url(#ar)"/>
+  <path class="flow" d="M480,292 L480,282" marker-end="url(#ar)"/>
+
+  <!-- ============ footer ============ -->
+  <line x1="32" y1="446" x2="928" y2="446" stroke="var(--mcp-border)" stroke-width="1"/>
+  <path class="mark" d="M36,478 L46,458 L56,478 z"/>
+  <text class="small" x="66" y="476">A triangle marks a top-level key that differs from the majority. Both differences are silent: an unrecognized key reads as an empty server list, not as an error.</text>
+  <text class="small" x="32" y="504">Every arrow above carries the same JSON-RPC 2.0 over the same two transports. Not one line of server code changes between them.</text>
+</svg>

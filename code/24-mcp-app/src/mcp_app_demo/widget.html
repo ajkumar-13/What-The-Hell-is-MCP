@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>World clock</title>
+    <style>
+      /* Every custom property the host may set is used with a fallback. The
+         Apps specification says the View SHOULD do this for every variable it
+         reads, because a host is not obliged to send any of them. */
+      :root {
+        color-scheme: light dark;
+        --bg: var(--color-background-primary, light-dark(#fafaf7, #16181c));
+        --fg: var(--color-text-primary, light-dark(#1a1a1a, #f2f2ee));
+        --muted: var(--color-text-secondary, light-dark(#5c5c5c, #b4b4ae));
+        --line: var(--color-border-primary, light-dark(#d9d9d4, #2a2d33));
+        --font: var(--font-sans, system-ui, sans-serif);
+        --mono: var(--font-mono, ui-monospace, monospace);
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: var(--font);
+        font-size: 14px;
+      }
+      table { border-collapse: collapse; width: 100%; }
+      th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+      th { font-weight: 600; font-size: 12px; color: var(--muted); }
+      td.time { font-family: var(--mono); }
+      button {
+        margin-top: 12px;
+        padding: 6px 12px;
+        font: inherit;
+        color: var(--fg);
+        background: transparent;
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        cursor: pointer;
+      }
+      #status { margin-top: 8px; font-size: 12px; color: var(--muted); }
+    </style>
+  </head>
+  <body>
+    <table>
+      <thead>
+        <tr><th>Zone</th><th>Local time</th><th>Offset</th></tr>
+      </thead>
+      <tbody id="rows">
+        <tr><td colspan="3">Waiting for the host.</td></tr>
+      </tbody>
+    </table>
+    <button id="refresh" type="button">Refresh</button>
+    <p id="status"></p>
+
+    <script>
+      // ----------------------------------------------------------------
+      // The postMessage JSON-RPC dialect, written out by hand.
+      //
+      // There is a convenience wrapper for this in the JavaScript package
+      // @modelcontextprotocol/ext-apps (the `App` class). It is not a
+      // requirement, and the whole client side fits in the forty lines below,
+      // which is worth seeing once before you hide it behind a library.
+      // ----------------------------------------------------------------
+      let nextId = 1;
+      const pending = new Map();
+      const handlers = new Map();
+
+      function post(message) {
+        window.parent.postMessage({ jsonrpc: "2.0", ...message }, "*");
+      }
+
+      function request(method, params) {
+        const id = nextId++;
+        return new Promise((resolve, reject) => {
+          pending.set(id, { resolve, reject });
+          post({ id, method, params });
+        });
+      }
+
+      function notify(method, params) {
+        post({ method, params });
+      }
+
+      window.addEventListener("message", (event) => {
+        const message = event.data;
+        if (!message || message.jsonrpc !== "2.0") return;
+
+        if (message.id !== undefined && !message.method) {
+          const waiter = pending.get(message.id);
+          if (!waiter) return;
+          pending.delete(message.id);
+          if (message.error) waiter.reject(new Error(message.error.message));
+          else waiter.resolve(message.result);
+          return;
+        }
+
+        const handler = handlers.get(message.method);
+        if (handler) handler(message.params ?? {});
+      });
+
+      // ----------------------------------------------------------------
+      // Rendering
+      // ----------------------------------------------------------------
+      const rows = document.getElementById("rows");
+      const status = document.getElementById("status");
+
+      function render(result) {
+        // structuredContent is the field to read. `content` carries the same
+        // facts as prose for the model and for text-only hosts; parsing that
+        // back out would be working against the design.
+        const data = result && result.structuredContent;
+        if (!data || !data.readings) {
+          status.textContent = "No structured content in that result.";
+          return;
+        }
+        rows.replaceChildren(
+          ...data.readings.map((reading) => {
+            const tr = document.createElement("tr");
+            const zone = document.createElement("td");
+            const time = document.createElement("td");
+            const offset = document.createElement("td");
+            zone.textContent = reading.zone;
+            time.textContent = reading.local_time;
+            time.className = "time";
+            offset.textContent = reading.utc_offset;
+            tr.append(zone, time, offset);
+            return tr;
+          })
+        );
+        status.textContent = "As of " + data.captured_at + " UTC.";
+        reportSize();
+      }
+
+      function reportSize() {
+        notify("ui/notifications/size-changed", {
+          width: document.documentElement.scrollWidth,
+          height: document.documentElement.scrollHeight,
+        });
+      }
+
+      // ----------------------------------------------------------------
+      // Lifecycle
+      // ----------------------------------------------------------------
+      handlers.set("ui/notifications/tool-result", render);
+      handlers.set("ui/notifications/tool-cancelled", (params) => {
+        status.textContent = "Cancelled: " + (params.reason || "no reason given");
+      });
+      handlers.set("ui/notifications/host-context-changed", () => reportSize());
+
+      // ui/initialize is the View-to-Host handshake. It is not MCP's
+      // initialize, which revision 2026-07-28 removed; this one lives on the
+      // postMessage channel and is unaffected.
+      request("ui/initialize", {
+        appCapabilities: { availableDisplayModes: ["inline"] },
+        clientInfo: { name: "World Clock App", version: "0.1.0" },
+      }).then(() => {
+        notify("ui/notifications/initialized", {});
+        reportSize();
+      });
+
+      document.getElementById("refresh").addEventListener("click", async () => {
+        status.textContent = "Refreshing...";
+        try {
+          // A plain tools/call, proxied by the host to the server. The host
+          // may block it or ask the user first; that is its decision, not the
+          // View's.
+          const result = await request("tools/call", {
+            name: "world_clock",
+            arguments: {},
+          });
+          render(result);
+        } catch (error) {
+          status.textContent = "Refresh failed: " + error.message;
+        }
+      });
+    </script>
+  </body>
+</html>

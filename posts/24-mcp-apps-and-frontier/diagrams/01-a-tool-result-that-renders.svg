@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">One tool result, two audiences: the model and a rendered view</title>
+  <desc id="d">The left column holds three things the server produces. A tools/list entry carrying a _meta.ui.resourceUri field. A resources/read result returning an HTML document under the ui:// scheme with MIME type text/html;profile=mcp-app. And a tools/call result carrying both a content array and a structuredContent object. Arrows run right to two host-side destinations. The resourceUri and the HTML both feed a sandboxed view that the host renders. The structuredContent also feeds that view, while the content array feeds the model's context instead. A note states that _meta reaches neither, and that a host which has never heard of the extension still works because the result shape is an ordinary complete result.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .monofill{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:500;font-size:13px;fill:var(--mcp-on-fill);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-on-fill);}
+    .onfill-s{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-on-fill);}
+    .card{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .serverbar{fill:var(--mcp-accent);}
+    .view{fill:var(--mcp-primary);}
+    .panel{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .inner{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1;}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;stroke-dasharray:5 4;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arm" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="32" y="36">One result, two audiences.</text>
+  <text class="small" x="32" y="58">server side</text>
+  <text class="small" x="556" y="58">host side</text>
+
+  <!-- ================= left: what the server produces ================= -->
+  <rect class="card" x="32" y="70" width="392" height="94" rx="8"/>
+  <rect class="serverbar" x="32" y="70" width="6" height="94"/>
+  <text class="label" x="52" y="94">tools/list entry</text>
+  <text class="mono" x="52" y="118">"name": "world_clock",</text>
+  <text class="mono" x="52" y="140">"_meta": { "ui": { "resourceUri": "ui://..." } }</text>
+
+  <rect class="card" x="32" y="184" width="392" height="90" rx="8"/>
+  <rect class="serverbar" x="32" y="184" width="6" height="90"/>
+  <text class="label" x="52" y="208">resources/read result</text>
+  <text class="mono" x="52" y="232">"mimeType": "text/html;profile=mcp-app"</text>
+  <text class="mono" x="52" y="254">"text": "&lt;!DOCTYPE html&gt;..."</text>
+
+  <rect class="card" x="32" y="294" width="392" height="154" rx="8"/>
+  <rect class="serverbar" x="32" y="294" width="6" height="154"/>
+  <text class="label" x="52" y="318">tools/call result</text>
+  <text class="mono" x="52" y="342">"resultType": "complete",</text>
+  <text class="mono" x="52" y="366">"structuredContent": { "readings": [ ... ] },</text>
+  <text class="mono" x="52" y="404">"content": [ { "type": "text", ... } ],</text>
+  <text class="mono" x="52" y="432">"_meta": { ... }</text>
+  <text class="small" x="196" y="432">goes to neither audience</text>
+
+  <!-- ================= right: where each part goes ================= -->
+  <rect class="view" x="556" y="70" width="372" height="204" rx="8"/>
+  <text class="onfill" x="576" y="96">host, sandboxed view</text>
+  <rect class="inner" x="576" y="110" width="332" height="146" rx="6"/>
+  <text class="label" x="594" y="134">World clock</text>
+  <text class="mono" x="594" y="160">UTC          2026-07-27 01:10  +0000</text>
+  <text class="mono" x="594" y="182">Asia/Tokyo   2026-07-27 10:10  +0900</text>
+  <rect class="panel" x="594" y="198" width="86" height="26" rx="5"/>
+  <text class="small" x="608" y="216">Refresh</text>
+  <text class="small" x="594" y="244">the view calls tools/call through the host</text>
+
+  <rect class="view" x="556" y="294" width="372" height="154" rx="8"/>
+  <text class="onfill" x="576" y="320">host, model context</text>
+  <text class="onfill-s" x="576" y="348">The text content block, verbatim.</text>
+  <text class="onfill-s" x="576" y="370">This is the whole answer on a host that</text>
+  <text class="onfill-s" x="576" y="392">cannot render anything, so it has to be</text>
+  <text class="onfill-s" x="576" y="414">meaningful on its own.</text>
+  <text class="onfill-s" x="576" y="436">structuredContent never arrives here.</text>
+
+  <!-- ================= arrows ================= -->
+  <path class="flow" d="M432,132 L548,116" marker-end="url(#ar)"/>
+  <text class="small" x="440" y="106">what to render</text>
+
+  <path class="flow" d="M432,236 L548,178" marker-end="url(#ar)"/>
+  <text class="small" x="446" y="212">the HTML</text>
+
+  <path class="flow" d="M432,366 L548,232" marker-end="url(#ar)"/>
+  <text class="small" x="442" y="300">the data</text>
+
+  <path class="flow" d="M432,404 L548,384" marker-end="url(#ar)"/>
+  <text class="small" x="444" y="404">the prose</text>
+
+  <!-- ================= footer ================= -->
+  <line x1="32" y1="466" x2="928" y2="466" stroke="var(--mcp-border)" stroke-width="1"/>
+  <text class="small" x="32" y="490">resultType is "complete". The extension adds no new result shape, which is why a host that has never heard of it still works.</text>
+  <text class="small" x="32" y="512">A tool whose content block says "see the widget" is broken on every text-only host, and useless to the model that called it.</text>
+</svg>

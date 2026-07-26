@@ -1,0 +1,56 @@
+# Bring the containerized system-information server up on this machine.
+#
+#   cd code/21-deploy && docker compose up --build
+#
+# The build context is ../05-first-server, so this file and the Dockerfile next
+# to it are the only two artifacts post 21 adds to that project.
+
+name: mcp-21-deploy
+
+services:
+  system-info:
+    build:
+      context: ../05-first-server
+      dockerfile: ../21-deploy/Dockerfile
+    image: mcp-system-info:0.2.0
+
+    # Published on loopback only. The server inside the container binds
+    # 0.0.0.0 because it has to, but nothing outside this machine can reach it
+    # until you put a reverse proxy in front that terminates TLS and validates
+    # the Origin header.
+    #
+    # A range rather than a single port, so `docker compose up --scale
+    # system-info=3` works unchanged. That it works is the point of the post:
+    # there is no session to pin, so any replica can answer any request.
+    ports:
+      - "127.0.0.1:8000-8002:8000"
+
+    # This particular server needs no configuration. A real one reads it here,
+    # and reads secrets from a mounted file rather than from an environment
+    # variable, because `docker inspect` prints the environment and anything
+    # that inherits it can read it too:
+    #
+    # environment:
+    #   DATABASE_URL_FILE: /run/secrets/database_url
+    # secrets:
+    #   - database_url
+
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+    # A server that reports on the machine it runs on will happily report on
+    # the whole host if you let it. These are the container's limits, not the
+    # server's.
+    mem_limit: 256m
+    pids_limit: 128
+
+    restart: unless-stopped
+
+# secrets:
+#   database_url:
+#     file: ./secrets/database_url

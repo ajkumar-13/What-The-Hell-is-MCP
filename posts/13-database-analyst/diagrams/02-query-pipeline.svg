@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">The read path for one query_database call, including both failure branches</title>
+  <desc id="d">A seven stage pipeline drawn as a snake, left to right along the top and right to left along the bottom. A tools/call arrives from the client, is validated by six checks listed in a strip above the pipeline, is regenerated from the parse tree with comments dropped, and only then is a connection acquired from the read-only pool. The rows are fetched, coerced into JSON-safe values, and returned as a structured result. Two failure branches drop out of the main line. The first leaves the validation stage before any pool is touched and returns a result carrying ok false and an empty executed_sql, not a protocol error. The second leaves the execute stage when PostgreSQL itself refuses, which is the read-only role and the statement timeout doing the work the validator only approximates.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .sub{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .stage{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:10px;fill:var(--mcp-ink);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .monos{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:10px;fill:var(--mcp-ink-muted);}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .fail{fill:var(--mcp-surface);stroke:var(--mcp-alert);stroke-width:1.5;}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .barclient{fill:var(--mcp-primary);}
+    .barserver{fill:var(--mcp-accent);}
+    .bardb{fill:var(--mcp-success);}
+    .baralert{fill:var(--mcp-alert);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flowbad{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;stroke-dasharray:6 4;}
+    .lead{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;stroke-dasharray:4 3;}
+    .cross{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;stroke-linecap:round;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arbad" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-alert)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="34" y="34">One read, stage by stage</text>
+  <text class="sub" x="34" y="56">Nothing is acquired from a pool until every check has passed, and what runs is regenerated from the parse tree.</text>
+
+  <!-- the six checks -->
+  <text class="small" x="34" y="115">The six checks,</text>
+  <text class="small" x="34" y="129">in order:</text>
+  <g>
+    <rect class="chip" x="234" y="96" width="110" height="30" rx="4"/>
+    <text class="tiny" x="289" y="115" text-anchor="middle">one statement</text>
+    <rect class="chip" x="350" y="96" width="110" height="30" rx="4"/>
+    <text class="tiny" x="405" y="115" text-anchor="middle">root is a query</text>
+    <rect class="chip" x="466" y="96" width="110" height="30" rx="4"/>
+    <text class="tiny" x="521" y="115" text-anchor="middle">no nested mutation</text>
+    <rect class="chip" x="582" y="96" width="110" height="30" rx="4"/>
+    <text class="tiny" x="637" y="115" text-anchor="middle">no SELECT INTO</text>
+    <rect class="chip" x="698" y="96" width="110" height="30" rx="4"/>
+    <text class="tiny" x="753" y="115" text-anchor="middle">no blocked function</text>
+    <rect class="chip" x="814" y="96" width="110" height="30" rx="4"/>
+    <text class="tiny" x="869" y="115" text-anchor="middle">LIMIT, then clamp</text>
+  </g>
+  <path class="lead" d="M339,126 L339,170"/>
+
+  <!-- ROW A -->
+  <rect class="box" x="34" y="170" width="170" height="70" rx="4"/>
+  <rect class="barclient" x="34" y="170" width="5" height="70"/>
+  <text class="stage" x="50" y="194">1 · Arrive</text>
+  <text class="mono" x="50" y="213">tools/call</text>
+  <text class="monos" x="50" y="229">query_database</text>
+
+  <path class="flow" d="M204,205 L228,205" marker-end="url(#ar)"/>
+
+  <rect class="box" x="234" y="170" width="210" height="70" rx="4"/>
+  <rect class="barserver" x="234" y="170" width="5" height="70"/>
+  <text class="stage" x="250" y="194">2 · Validate</text>
+  <text class="mono" x="250" y="213">validate_read_query(sql)</text>
+  <text class="small" x="250" y="230">Pure. No pool touched.</text>
+
+  <path class="flow" d="M444,205 L468,205" marker-end="url(#ar)"/>
+
+  <rect class="box" x="474" y="170" width="200" height="70" rx="4"/>
+  <rect class="barserver" x="474" y="170" width="5" height="70"/>
+  <text class="stage" x="490" y="194">3 · Regenerate</text>
+  <text class="mono" x="490" y="213">render(comments=False)</text>
+  <text class="small" x="490" y="230">This becomes executed_sql.</text>
+
+  <path class="flow" d="M674,205 L698,205" marker-end="url(#ar)"/>
+
+  <rect class="box" x="704" y="170" width="222" height="70" rx="4"/>
+  <rect class="bardb" x="704" y="170" width="5" height="70"/>
+  <text class="stage" x="720" y="194">4 · Acquire</text>
+  <text class="mono" x="720" y="213">db.read_connection()</text>
+  <text class="small" x="720" y="230">Role mcp_readonly, SELECT only.</text>
+
+  <path class="flow" d="M815,240 L815,336" marker-end="url(#ar)"/>
+
+  <!-- refusal branch from stage 2 -->
+  <path class="flowbad" d="M339,240 L339,258" marker-end="url(#arbad)"/>
+  <rect class="fail" x="180" y="264" width="470" height="66" rx="4"/>
+  <rect class="baralert" x="180" y="264" width="5" height="66"/>
+  <g class="cross"><path d="M198,282 L210,294"/><path d="M210,282 L198,294"/></g>
+  <text class="stage" x="222" y="288">Refused, before anything was acquired</text>
+  <text class="monos" x="222" y="306">{"ok": false, "executed_sql": "", "error": "Refused by ..."}</text>
+  <text class="small" x="222" y="322">resultType complete, isError false. A value the model can correct.</text>
+
+  <!-- ROW B -->
+  <rect class="box" x="704" y="336" width="222" height="70" rx="4"/>
+  <rect class="bardb" x="704" y="336" width="5" height="70"/>
+  <text class="stage" x="720" y="360">5 · Execute</text>
+  <text class="mono" x="720" y="379">await conn.fetch(sql)</text>
+  <text class="small" x="720" y="396">statement_timeout applies here.</text>
+
+  <path class="flow" d="M698,371 L680,371" marker-end="url(#ar)"/>
+
+  <rect class="box" x="474" y="336" width="200" height="70" rx="4"/>
+  <rect class="barserver" x="474" y="336" width="5" height="70"/>
+  <text class="stage" x="490" y="360">6 · Coerce</text>
+  <text class="mono" x="490" y="379">jsonable(value)</text>
+  <text class="small" x="490" y="396">NUMERIC becomes a string.</text>
+
+  <path class="flow" d="M468,371 L450,371" marker-end="url(#ar)"/>
+
+  <rect class="box" x="34" y="336" width="410" height="70" rx="4"/>
+  <rect class="barserver" x="34" y="336" width="5" height="70"/>
+  <text class="stage" x="50" y="360">7 · Return</text>
+  <text class="mono" x="50" y="379">QueryResult(ok, executed_sql, row_count, columns, rows)</text>
+  <text class="small" x="50" y="396">Published as structuredContent against the generated outputSchema.</text>
+
+  <!-- database refusal branch -->
+  <path class="flowbad" d="M815,406 L815,424" marker-end="url(#arbad)"/>
+  <rect class="fail" x="560" y="430" width="366" height="66" rx="4"/>
+  <rect class="baralert" x="560" y="430" width="5" height="66"/>
+  <g class="cross"><path d="M578,448 L590,460"/><path d="M590,448 L578,460"/></g>
+  <text class="stage" x="602" y="454">PostgreSQL refused it</text>
+  <text class="monos" x="602" y="472">permission denied · canceling statement due to</text>
+  <text class="monos" x="602" y="486">statement timeout</text>
+
+  <line class="rule" x1="34" y1="430" x2="530" y2="430"/>
+  <text class="small" x="34" y="452">The second branch is the interesting one. It is the read-only role and the</text>
+  <text class="small" x="34" y="468">statement timeout doing the job the validator in stage 2 only approximates,</text>
+  <text class="small" x="34" y="484">and it is the layer that still holds when stage 2 is wrong.</text>
+</svg>

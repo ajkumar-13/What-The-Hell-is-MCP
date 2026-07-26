@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="t d">
+  <title id="t">Bounding a container log in two dimensions, and keeping the end that matters</title>
+  <desc id="d">The left half draws a container's whole log as a tall column, with two nested windows inside it. The outer window is what the tail lines parameter selects from the API server, which bounds how much crosses the wire; the inner window is what the max bytes parameter keeps, which bounds how much reaches the model. They bound different quantities, because a single line of structured logging can be several kilobytes, so a line count is not a size. The right half compares two ways of cutting that window down. The upper way keeps the oldest end and is marked wrong: it is what the Kubernetes API's own byte limit does when a tail is also requested, and it discards the newest lines, which are the only ones that explain a crash. The lower way keeps the newest end and moves the cut forward to the first newline, so the first line the model sees is a whole line rather than a fragment. A band across the bottom shows the truncation counters returned by a real run: nineteen hundred and seventy-nine bytes kept, thirty-one thousand and twenty bytes and four hundred and seventy lines dropped, reported rather than silently discarded.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .monos{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .wire{fill:var(--mcp-neutral-2);stroke:var(--mcp-ink);stroke-width:1;}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .lead{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+    .cut{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;stroke-dasharray:5 3;}
+    .keep{stroke:var(--mcp-success);stroke-width:1.5;fill:none;stroke-dasharray:5 3;}
+    .tick{stroke:var(--mcp-success);stroke-width:1.5;fill:none;stroke-linecap:round;}
+    .cross{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;stroke-linecap:round;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="800" height="600"/>
+  <text class="title" x="30" y="34">Two bounds, and the end you keep</text>
+  <text class="small" x="30" y="56">A pod that has been restarting for two days holds more log than any context window. One bound is not enough to fix that.</text>
+
+  <!-- ================= LEFT: the two bounds ================= -->
+  <rect class="zone" x="30" y="76" width="366" height="416" rx="10"/>
+  <text class="head" x="48" y="100">The two bounds act on different things</text>
+  <line class="rule" x1="48" y1="112" x2="378" y2="112"/>
+
+  <text class="tiny" x="56" y="132">oldest</text>
+  <rect class="chip" x="56" y="140" width="88" height="316"/>
+  <rect class="wire" x="56" y="316" width="88" height="140"/>
+  <rect class="box" x="56" y="392" width="88" height="64"/>
+  <text class="tiny" x="56" y="472">newest</text>
+
+  <line class="lead" x1="148" y1="180" x2="176" y2="180"/>
+  <text class="label" x="182" y="176">the whole log</text>
+  <text class="small" x="182" y="194">everything the container</text>
+  <text class="small" x="182" y="210">wrote, across every restart</text>
+
+  <line class="lead" x1="148" y1="330" x2="176" y2="330"/>
+  <text class="mono" x="182" y="326">tail_lines</text>
+  <text class="small" x="182" y="344">bounds what crosses the</text>
+  <text class="small" x="182" y="360">wire from the API server</text>
+
+  <line class="lead" x1="148" y1="410" x2="176" y2="410"/>
+  <text class="mono" x="182" y="406">max_bytes</text>
+  <text class="small" x="182" y="424">bounds what reaches the</text>
+  <text class="small" x="182" y="440">model's context window</text>
+
+  <text class="tiny" x="48" y="482">One line of structured JSON logging can be kilobytes, so a line count is not a size.</text>
+
+  <!-- ================= RIGHT: which end ================= -->
+  <text class="head" x="420" y="100">Which end survives the cut</text>
+  <line class="rule" x1="420" y1="112" x2="770" y2="112"/>
+
+  <!-- wrong -->
+  <rect class="zone" x="420" y="124" width="350" height="172" rx="10"/>
+  <path class="cross" d="M436,142 l9,9 M445,142 l-9,9"/>
+  <text class="label" x="460" y="152">Keep the oldest end</text>
+  <text class="small" x="436" y="172">What the API's own limitBytes does when</text>
+  <text class="small" x="436" y="188">tailLines is set too: it reads forward and stops.</text>
+  <rect class="box" x="436" y="198" width="318" height="80"/>
+  <text class="mono" x="448" y="216">0000 start up, nothing wrong</text>
+  <text class="mono" x="448" y="234">0001 serving on :8080</text>
+  <line class="cut" x1="436" y1="244" x2="754" y2="244"/>
+  <text class="monos" x="448" y="262">470 newer lines dropped, including the</text>
+  <text class="monos" x="448" y="274">traceback that explains the crash</text>
+
+  <!-- right -->
+  <rect class="zone" x="420" y="308" width="350" height="172" rx="10"/>
+  <path class="tick" d="M436,328 l4,4.5 l8,-10"/>
+  <text class="label" x="460" y="336">Keep the newest end</text>
+  <text class="small" x="436" y="356">Slice from the end, then move the cut forward</text>
+  <text class="small" x="436" y="372">to the first newline so no half-line survives.</text>
+  <rect class="box" x="436" y="382" width="318" height="80"/>
+  <text class="monos" x="448" y="398">470 older lines dropped</text>
+  <line class="keep" x1="436" y1="406" x2="754" y2="406"/>
+  <text class="mono" x="448" y="426">0470 Traceback (most recent call</text>
+  <text class="mono" x="448" y="444">0499 KeyError: 'DB_PASSWORD'</text>
+
+  <!-- ================= BOTTOM ================= -->
+  <rect class="box" x="30" y="508" width="740" height="64" rx="10"/>
+  <text class="label" x="48" y="530">Truncation is reported, never silent</text>
+  <text class="monos" x="48" y="548">truncated: true   bytes_returned: 1979   dropped_bytes: 31020   dropped_lines: 470</text>
+  <text class="tiny" x="48" y="564">Measured, from a 33 KB log read with max_bytes set to 2000. A model told that 470 lines are missing can ask for another window.</text>
+</svg>

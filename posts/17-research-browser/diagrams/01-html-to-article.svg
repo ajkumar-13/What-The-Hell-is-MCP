@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Two web pages before and after extraction, drawn to scale by byte count</title>
+  <desc id="d">Two pairs of nested squares, sharing one area scale so the four squares can be compared directly. On the left, a plain article template: the large outlined square is the 76,201 bytes of HTML the browser fetched, and the small solid square tucked into its bottom-left corner is the 4,126 bytes of article text the extractor kept, about eighteen times smaller. On the right, a portal page carrying a mega menu, advertising slots and a serialized store: the large outlined square is 243,128 bytes fetched, and the solid square inside it is 860 bytes kept, about two hundred and eighty-three times smaller. The right-hand page is three times heavier than the left-hand one and yields one fifth as much text, which is the argument the diagram makes: the worse the page, the more the extractor is worth.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .monosm{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .raw{fill:var(--mcp-neutral-1);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .kept{fill:var(--mcp-success);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+    .base{stroke:var(--mcp-ink-muted);stroke-width:0.75;fill:none;stroke-dasharray:3 3;}
+  ]]></style>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="40" y="40">What the extractor throws away</text>
+  <text class="small" x="40" y="62">Square areas are proportional to measured bytes, on one scale across both pages. Fixtures in code/17-research-browser/tests/fixtures/.</text>
+  <line class="rule" x1="40" y1="78" x2="920" y2="78"/>
+
+  <!-- shared baseline -->
+  <line class="base" x1="110" y1="430" x2="840" y2="430"/>
+
+  <!-- ============ PANEL A: article.html ============ -->
+  <text class="head" x="130" y="104">A plain article template</text>
+  <text class="monosm" x="130" y="124">article.html</text>
+
+  <rect class="raw" x="130" y="285.56" width="144.44" height="144.44"/>
+  <rect class="kept" x="130" y="396.39" width="33.61" height="33.61"/>
+
+  <rect class="kept" x="130" y="444" width="11" height="11"/>
+  <text class="mono" x="149" y="454">4,126 B kept as article text</text>
+  <rect class="raw" x="130" y="464" width="11" height="11"/>
+  <text class="mono" x="149" y="474">76,201 B fetched as HTML</text>
+  <text class="small" x="130" y="496">94.6 percent discarded, 18 times smaller.</text>
+  <text class="small" x="130" y="514">707 words reach the model.</text>
+
+  <!-- ============ PANEL B: nav-heavy.html ============ -->
+  <text class="head" x="560" y="104">A portal page: mega menu, ad slots, store</text>
+  <text class="monosm" x="560" y="124">nav-heavy.html</text>
+
+  <rect class="raw" x="560" y="172" width="258" height="258"/>
+  <rect class="kept" x="560" y="414.66" width="15.34" height="15.34"/>
+
+  <rect class="kept" x="560" y="444" width="11" height="11"/>
+  <text class="mono" x="579" y="454">860 B kept as article text</text>
+  <rect class="raw" x="560" y="464" width="11" height="11"/>
+  <text class="mono" x="579" y="474">243,128 B fetched as HTML</text>
+  <text class="small" x="560" y="496">99.6 percent discarded, 283 times smaller.</text>
+  <text class="small" x="560" y="514">134 words reach the model.</text>
+
+  <!-- annotation inside the large right square -->
+  <text class="small" x="596" y="222">Three times the weight of the page</text>
+  <text class="small" x="596" y="240">on the left, and one fifth of the</text>
+  <text class="small" x="596" y="258">text. The worse the page, the</text>
+  <text class="small" x="596" y="276">better this number gets.</text>
+  <text class="tiny" x="596" y="300">Measured, not estimated.</text>
+</svg>

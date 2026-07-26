@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Five layers between a model's SQL and the data, and which two are enforcement</title>
+  <desc id="d">Five layers are stacked top to bottom in the order a statement meets them. The top three live in the server and are drawn with dashed outlines, a sieve glyph and a group label reading Filter: an abstract syntax tree walk with sqlglot, a sixteen-name dangerous-function blocklist, and a required LIMIT with a ceiling of one thousand rows. The bottom two live in PostgreSQL, are drawn with solid heavy outlines, a filled wall glyph and a group label reading Enforcement: the login role mcp_readonly granted SELECT and nothing else with default_transaction_read_only forced on, and a thirty second server-side statement timeout. Each layer carries two columns of text, one naming what it stops and one naming where it stops being reliable, so the filters are shown to be fallible in specific ways while the two grants are not heuristics at all.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .sub{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .colhead{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:11px;fill:var(--mcp-ink-subtle);letter-spacing:0.4px;}
+    .name{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .cell{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .cellq{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .grouptxt{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11.5px;fill:var(--mcp-ink-muted);}
+    .chiptxt{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:10.5px;fill:var(--mcp-ink);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:10.5px;fill:var(--mcp-on-fill);}
+    .foot{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11.5px;fill:var(--mcp-ink-muted);}
+    .filterbox{fill:var(--mcp-surface);stroke:var(--mcp-ink-muted);stroke-width:1;stroke-dasharray:5 4;}
+    .forcebox{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .chipok{fill:var(--mcp-success);stroke:var(--mcp-ink);stroke-width:1;}
+    .glyphf{fill:none;stroke:var(--mcp-accent);stroke-width:1.5;}
+    .slot{stroke:var(--mcp-ink-muted);stroke-width:1;}
+    .wall{fill:var(--mcp-success);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .course{stroke:var(--mcp-bg);stroke-width:1;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+    .spine{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="34" y="36">Defense in depth, and which two layers are actually defenses</text>
+  <text class="sub" x="34" y="58">A statement from the model enters at the top. Three layers filter it. Two enforce, and would still hold if the other three were wrong.</text>
+
+  <text class="colhead" x="48" y="86">LAYER</text>
+  <text class="colhead" x="386" y="86">WHAT IT STOPS</text>
+  <text class="colhead" x="676" y="86">THE HONEST LIMIT</text>
+  <line class="rule" x1="34" y1="94" x2="926" y2="94"/>
+
+  <!-- flow spine -->
+  <path class="spine" d="M34,126 L34,486" marker-end="url(#ar)"/>
+
+  <!-- ============ GROUP A: filters ============ -->
+  <rect class="chip" x="48" y="104" width="50" height="17" rx="8"/>
+  <text class="chiptxt" x="73" y="116.5" text-anchor="middle">Filter</text>
+  <text class="grouptxt" x="108" y="116">In the server, in security.py. A pure function of a string, and each one can be wrong.</text>
+
+  <!-- row 1 -->
+  <rect class="filterbox" x="48" y="126" width="320" height="62" rx="4"/>
+  <rect class="glyphf" x="58" y="145" width="22" height="24" rx="2"/>
+  <line class="slot" x1="64" y1="145" x2="64" y2="169"/>
+  <line class="slot" x1="69" y1="145" x2="69" y2="169"/>
+  <line class="slot" x1="74" y1="145" x2="74" y2="169"/>
+  <text class="name" x="92" y="150">1 · Parse and walk the tree</text>
+  <text class="mono" x="92" y="170">sqlglot, dialect="postgres"</text>
+  <text class="cell" x="386" y="144">Two statements in one string. A DELETE nested</text>
+  <text class="cell" x="386" y="160">in a CTE. SELECT ... INTO. Any root that is</text>
+  <text class="cell" x="386" y="176">not SELECT, UNION, INTERSECT or EXCEPT.</text>
+  <text class="cellq" x="676" y="144">No grammar covers all of PostgreSQL.</text>
+  <text class="cellq" x="676" y="160">Unknown syntax becomes an opaque node,</text>
+  <text class="cellq" x="676" y="176">and then no check can see inside it.</text>
+
+  <!-- row 2 -->
+  <rect class="filterbox" x="48" y="194" width="320" height="62" rx="4"/>
+  <rect class="glyphf" x="58" y="213" width="22" height="24" rx="2"/>
+  <line class="slot" x1="64" y1="213" x2="64" y2="237"/>
+  <line class="slot" x1="69" y1="213" x2="69" y2="237"/>
+  <line class="slot" x1="74" y1="213" x2="74" y2="237"/>
+  <text class="name" x="92" y="218">2 · Function blocklist</text>
+  <text class="mono" x="92" y="238">16 names, matched on the tree</text>
+  <text class="cell" x="386" y="212">pg_sleep, pg_read_file, lo_import, dblink,</text>
+  <text class="cell" x="386" y="228">pg_terminate_backend, set_config, called</text>
+  <text class="cell" x="386" y="244">anywhere inside the statement.</text>
+  <text class="cellq" x="676" y="212">A blocklist names what was dangerous</text>
+  <text class="cellq" x="676" y="228">the day it was written. Extensions ship</text>
+  <text class="cellq" x="676" y="244">more, and the list does not update itself.</text>
+
+  <!-- row 3 -->
+  <rect class="filterbox" x="48" y="262" width="320" height="62" rx="4"/>
+  <rect class="glyphf" x="58" y="281" width="22" height="24" rx="2"/>
+  <line class="slot" x1="64" y1="281" x2="64" y2="305"/>
+  <line class="slot" x1="69" y1="281" x2="69" y2="305"/>
+  <line class="slot" x1="74" y1="281" x2="74" y2="305"/>
+  <text class="name" x="92" y="286">3 · LIMIT required, capped</text>
+  <text class="mono" x="92" y="306">ceiling 1000 rows, clamps</text>
+  <text class="cell" x="386" y="280">An unbounded SELECT flooding the context</text>
+  <text class="cell" x="386" y="296">window. A LIMIT that is an expression</text>
+  <text class="cell" x="386" y="312">rather than a plain integer literal.</text>
+  <text class="cellq" x="676" y="280">Bounds rows, never cost. A three-way</text>
+  <text class="cellq" x="676" y="296">self join returns 1000 rows and pins a</text>
+  <text class="cellq" x="676" y="312">replica for as long as it takes.</text>
+
+  <!-- ============ GROUP B: enforcement ============ -->
+  <rect class="chipok" x="48" y="338" width="88" height="17" rx="8"/>
+  <text class="onfill" x="92" y="350.5" text-anchor="middle">Enforcement</text>
+  <text class="grouptxt" x="146" y="350">In PostgreSQL, in sql/002-readonly-role.sql. A grant is not a heuristic.</text>
+
+  <!-- row 4 -->
+  <rect class="forcebox" x="48" y="362" width="320" height="62" rx="4"/>
+  <rect class="wall" x="58" y="381" width="22" height="24" rx="2"/>
+  <line class="course" x1="58" y1="389" x2="80" y2="389"/>
+  <line class="course" x1="58" y1="397" x2="80" y2="397"/>
+  <line class="course" x1="69" y1="381" x2="69" y2="389"/>
+  <line class="course" x1="64" y1="397" x2="64" y2="405"/>
+  <text class="name" x="92" y="386">4 · Role mcp_readonly</text>
+  <text class="mono" x="92" y="406">GRANT SELECT, and nothing else</text>
+  <text class="cell" x="386" y="380">Every write that survived layers 1 to 3.</text>
+  <text class="cell" x="386" y="396">default_transaction_read_only answers it</text>
+  <text class="cell" x="386" y="412">with "read-only transaction", at the backend.</text>
+  <text class="cellq" x="676" y="380">Only as narrow as the grants. It permits</text>
+  <text class="cellq" x="676" y="396">any SELECT, including one that reads</text>
+  <text class="cellq" x="676" y="412">every customer record in the table.</text>
+
+  <!-- row 5 -->
+  <rect class="forcebox" x="48" y="430" width="320" height="62" rx="4"/>
+  <rect class="wall" x="58" y="449" width="22" height="24" rx="2"/>
+  <line class="course" x1="58" y1="457" x2="80" y2="457"/>
+  <line class="course" x1="58" y1="465" x2="80" y2="465"/>
+  <line class="course" x1="69" y1="449" x2="69" y2="457"/>
+  <line class="course" x1="64" y1="465" x2="64" y2="473"/>
+  <text class="name" x="92" y="454">5 · statement_timeout 30s</text>
+  <text class="mono" x="92" y="474">set on the role, not the pool</text>
+  <text class="cell" x="386" y="448">pg_sleep reached through a wrapper the</text>
+  <text class="cell" x="386" y="464">blocklist never heard of. A cartesian join.</text>
+  <text class="cell" x="386" y="480">Any query whose cost the parser cannot see.</text>
+  <text class="cellq" x="676" y="448">Thirty seconds of load still happens</text>
+  <text class="cellq" x="676" y="464">before the backend kills it. Set it lower</text>
+  <text class="cellq" x="676" y="480">than you think you need.</text>
+
+  <line class="rule" x1="34" y1="504" x2="926" y2="504"/>
+  <text class="foot" x="34" y="524">Layers 1 to 3 are opinions about a string. Layers 4 and 5 are grants on a login role, enforced whether this server is right or not.</text>
+</svg>

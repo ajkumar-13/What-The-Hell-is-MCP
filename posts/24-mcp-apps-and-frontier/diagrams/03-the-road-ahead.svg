@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Shipped, moving, and open: what MCP does and does not yet answer</title>
+  <desc id="d">Three columns. The first, shipped, lists the 2026-07-28 core protocol and the two stable extensions: MCP Apps and enterprise-managed authorization. The second, moving, lists the tasks extension whose specification is still at draft, the OAuth client-credentials extension, and seven experimental extension repositories. The third, open, lists three things with no accepted proposal at all: tool-definition pinning, portable identity across servers, and agent-to-agent delegation, each with a one-line statement of what its absence costs. A band across the bottom describes the five-step Extensions Track process and highlights that a working reference implementation in an official software development kit is required before a proposal can even be reviewed.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-on-fill);}
+    .card{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .panel{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .hdr-done{fill:var(--mcp-success);}
+    .hdr-move{fill:var(--mcp-warn);}
+    .hdr-open{fill:var(--mcp-ink-muted);}
+    .tick{stroke:var(--mcp-success);stroke-width:1.5;fill:none;}
+    .half{stroke:var(--mcp-warn);stroke-width:1.5;fill:none;}
+    .gap{stroke:var(--mcp-ink-muted);stroke-width:1.5;fill:none;}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="32" y="38">Shipped, moving, and open.</text>
+
+  <!-- ============ column 1: shipped ============ -->
+  <rect class="card" x="32" y="62" width="292" height="316" rx="8"/>
+  <rect class="hdr-done" x="32" y="62" width="292" height="34" rx="8"/>
+  <rect class="hdr-done" x="32" y="82" width="292" height="14"/>
+  <text class="onfill" x="52" y="85">Shipped</text>
+
+  <path class="tick" d="M52,124 l7,8 l14,-17"/>
+  <text class="mono" x="84" y="130">2026-07-28 core</text>
+  <text class="small" x="84" y="150">Three primitives, two transports,</text>
+  <text class="small" x="84" y="168">one discovery method. Finished.</text>
+
+  <path class="tick" d="M52,200 l7,8 l14,-17"/>
+  <text class="mono" x="84" y="206">io.modelcontextprotocol/ui</text>
+  <text class="small" x="84" y="226">MCP Apps. Stable, 2026-01-26.</text>
+  <text class="small" x="84" y="244">Eleven hosts on the matrix.</text>
+
+  <path class="tick" d="M52,278 l7,8 l14,-17"/>
+  <text class="mono" x="84" y="284">.../enterprise-managed-</text>
+  <text class="mono" x="84" y="302">   authorization</text>
+  <text class="small" x="84" y="322">Stable. One host on the matrix.</text>
+
+  <text class="small" x="52" y="358">Stable means a dated or stable/ spec directory.</text>
+
+  <!-- ============ column 2: moving ============ -->
+  <rect class="card" x="342" y="62" width="292" height="316" rx="8"/>
+  <rect class="hdr-move" x="342" y="62" width="292" height="34" rx="8"/>
+  <rect class="hdr-move" x="342" y="82" width="292" height="14"/>
+  <text class="onfill" x="362" y="85">Moving</text>
+
+  <path class="half" d="M362,116 a9,9 0 1,0 0.1,0"/>
+  <path class="half" d="M371,116 l0,-9"/>
+  <text class="mono" x="394" y="122">io.modelcontextprotocol/tasks</text>
+  <text class="small" x="394" y="142">SEP Final, spec still at draft, repo</text>
+  <text class="small" x="394" y="160">self-describes as experimental.</text>
+  <text class="small" x="394" y="178">Absent from the client matrix.</text>
+
+  <path class="half" d="M362,208 a9,9 0 1,0 0.1,0"/>
+  <path class="half" d="M371,208 l0,-9"/>
+  <text class="mono" x="394" y="214">.../oauth-client-credentials</text>
+  <text class="small" x="394" y="234">Draft. No client listed as</text>
+  <text class="small" x="394" y="252">supporting it.</text>
+
+  <path class="half" d="M362,282 a9,9 0 1,0 0.1,0"/>
+  <path class="half" d="M371,282 l0,-9"/>
+  <text class="label" x="394" y="288">Seven experimental repos</text>
+  <text class="small" x="394" y="308">interceptors, variants, skills,</text>
+  <text class="small" x="394" y="326">grouping, tool-annotations,</text>
+  <text class="small" x="394" y="344">triggers-events, server-card.</text>
+
+  <text class="small" x="362" y="368">Each repo expresses stability differently.</text>
+
+  <!-- ============ column 3: open ============ -->
+  <rect class="card" x="652" y="62" width="276" height="316" rx="8"/>
+  <rect class="hdr-open" x="652" y="62" width="276" height="34" rx="8"/>
+  <rect class="hdr-open" x="652" y="82" width="276" height="14"/>
+  <text class="onfill" x="672" y="85">Open</text>
+
+  <path class="gap" d="M672,112 l18,18 M690,112 l-18,18"/>
+  <text class="label" x="706" y="128">Tool-definition pinning</text>
+  <text class="small" x="706" y="148">Nothing lets a client detect</text>
+  <text class="small" x="706" y="166">that an approved tool changed.</text>
+
+  <path class="gap" d="M672,196 l18,18 M690,196 l-18,18"/>
+  <text class="label" x="706" y="212">Identity</text>
+  <text class="small" x="706" y="232">Authorization exists. Portable</text>
+  <text class="small" x="706" y="250">end-user identity does not.</text>
+
+  <path class="gap" d="M672,280 l18,18 M690,280 l-18,18"/>
+  <text class="label" x="706" y="296">Agent to agent</text>
+  <text class="small" x="706" y="316">One host, many servers. No</text>
+  <text class="small" x="706" y="334">agent calling another agent.</text>
+
+  <text class="small" x="672" y="368">No accepted proposal for any of the three.</text>
+
+  <!-- ============ process band ============ -->
+  <rect class="panel" x="32" y="400" width="896" height="112" rx="8"/>
+  <text class="label" x="52" y="426">The Extensions Track, five steps</text>
+
+  <text class="mono" x="52" y="456">Propose</text>
+  <path class="flow" d="M114,451 L152,451" marker-end="url(#ar)"/>
+  <text class="mono" x="162" y="456">Implement</text>
+  <path class="flow" d="M242,451 L280,451" marker-end="url(#ar)"/>
+  <text class="mono" x="290" y="456">Review</text>
+  <path class="flow" d="M344,451 L382,451" marker-end="url(#ar)"/>
+  <text class="mono" x="392" y="456">Publish</text>
+  <path class="flow" d="M454,451 L492,451" marker-end="url(#ar)"/>
+  <text class="mono" x="502" y="456">Adopt</text>
+
+  <text class="small" x="52" y="486">At least one reference implementation in an official SDK is REQUIRED before the SEP can be reviewed. Not before it is accepted: before it is read.</text>
+  <text class="small" x="52" y="506">Promotion into core is optional and needs its own Standards Track SEP. Plenty of extensions should stay extensions forever.</text>
+</svg>

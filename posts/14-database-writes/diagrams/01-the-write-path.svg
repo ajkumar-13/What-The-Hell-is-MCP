@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">The write path, with the human confirmation on the critical path</title>
+  <desc id="d">A single vertical line runs down the middle of the diagram from an incoming write_database tool call to a committed transaction. It passes five stages in order and there is no branch around them: a deployment switch called ENABLE_WRITES, the SQL validator, a dry-run test, a human confirmation rendered from the validated statement, and finally one transaction containing both the mutation and its audit row. Five exits leave to the left, one from each stage, and each names the status the tool returns: disabled, rejected, dry_run, declined, and failed. Annotations on the right note that nobody is asked anything at the first three stages, that the approval parameter never appears in the published input schema, and that the audit row commits with the change or not at all.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .sub{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .gate{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .note{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .monos{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:10px;fill:var(--mcp-ink-muted);}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .entry{fill:var(--mcp-surface);stroke:var(--mcp-primary);stroke-width:1.5;}
+    .human{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .exit{fill:var(--mcp-bg);stroke:var(--mcp-border);stroke-width:1;}
+    .barhuman{fill:var(--mcp-primary);}
+    .bartx{fill:var(--mcp-success);}
+    .barsrv{fill:var(--mcp-accent);}
+    .barexit{fill:var(--mcp-warn);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flowexit{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;stroke-dasharray:5 4;}
+    .lead{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+
+  <text class="title" x="34" y="30">The write path. Every gate is on the line.</text>
+  <text class="sub" x="34" y="50">Nothing routes around a stage. The five exits on the left are the only other ways out, and each one is a status the tool returns.</text>
+
+  <!-- entry -->
+  <rect class="entry" x="300" y="70" width="300" height="40" rx="4"/>
+  <text class="mono" x="316" y="88">tools/call write_database</text>
+  <text class="monos" x="316" y="103">{ "sql": "...", "dry_run": false }</text>
+  <path class="flow" d="M450,110 L450,122" marker-end="url(#ar)"/>
+
+  <!-- stage 1 -->
+  <rect class="box" x="300" y="126" width="300" height="56" rx="4"/>
+  <rect class="barsrv" x="300" y="126" width="5" height="56"/>
+  <text class="gate" x="318" y="148">Gate 1 · the deployment switch</text>
+  <text class="mono" x="318" y="168">writes_enabled()</text>
+  <path class="flow" d="M450,182 L450,198" marker-end="url(#ar)"/>
+  <path class="flowexit" d="M300,154 L286,154" marker-end="url(#arm)"/>
+  <rect class="exit" x="34" y="132" width="246" height="44" rx="4"/>
+  <rect class="barexit" x="34" y="132" width="4" height="44"/>
+  <text class="mono" x="50" y="150">status: "disabled"</text>
+  <text class="small" x="50" y="166">ENABLE_WRITES is not true here.</text>
+  <text class="note" x="620" y="150">Off by default. With it off the write pool</text>
+  <text class="note" x="620" y="166">is never even opened.</text>
+
+  <!-- stage 2 -->
+  <rect class="box" x="300" y="202" width="300" height="56" rx="4"/>
+  <rect class="barsrv" x="300" y="202" width="5" height="56"/>
+  <text class="gate" x="318" y="224">Gate 2 · validate the statement</text>
+  <text class="mono" x="318" y="244">validate_write_statement(sql)</text>
+  <path class="flow" d="M450,258 L450,274" marker-end="url(#ar)"/>
+  <path class="flowexit" d="M300,230 L286,230" marker-end="url(#arm)"/>
+  <rect class="exit" x="34" y="208" width="246" height="44" rx="4"/>
+  <rect class="barexit" x="34" y="208" width="4" height="44"/>
+  <text class="mono" x="50" y="226">status: "rejected"</text>
+  <text class="small" x="50" y="242">Refused by the SQL validator.</text>
+  <text class="note" x="620" y="226">INSERT, UPDATE, DELETE only. WHERE is</text>
+  <text class="note" x="620" y="242">required. No DDL, TRUNCATE, COPY or GRANT.</text>
+
+  <!-- stage 3 -->
+  <rect class="box" x="300" y="278" width="300" height="56" rx="4"/>
+  <rect class="barsrv" x="300" y="278" width="5" height="56"/>
+  <text class="gate" x="318" y="300">Is this a dry run?</text>
+  <text class="mono" x="318" y="320">dry_run == True</text>
+  <path class="flow" d="M450,334 L450,350" marker-end="url(#ar)"/>
+  <path class="flowexit" d="M300,306 L286,306" marker-end="url(#arm)"/>
+  <rect class="exit" x="34" y="284" width="246" height="44" rx="4"/>
+  <rect class="barexit" x="34" y="284" width="4" height="44"/>
+  <text class="mono" x="50" y="302">status: "dry_run"</text>
+  <text class="small" x="50" y="318">Valid. Nothing ran, nobody was asked.</text>
+  <text class="note" x="620" y="302">Nobody has been asked anything yet, at any</text>
+  <text class="note" x="620" y="318">of the three stages above. Consent is spent</text>
+  <text class="note" x="620" y="334">only where the answer changes what happens.</text>
+
+  <!-- stage 4: the human -->
+  <rect class="human" x="300" y="354" width="300" height="56" rx="4"/>
+  <rect class="barhuman" x="300" y="354" width="5" height="56"/>
+  <text class="gate" x="318" y="376">Gate 3 · a human reads plan.sql</text>
+  <text class="mono" x="318" y="396">Elicit(...) over MRTR</text>
+  <path class="flow" d="M450,410 L450,426" marker-end="url(#ar)"/>
+  <path class="flowexit" d="M300,382 L286,382" marker-end="url(#arm)"/>
+  <rect class="exit" x="34" y="360" width="246" height="44" rx="4"/>
+  <rect class="barexit" x="34" y="360" width="4" height="44"/>
+  <text class="mono" x="50" y="378">status: "declined"</text>
+  <text class="small" x="50" y="394">decline, dismiss, or confirm = false.</text>
+  <text class="monos" x="620" y="374">Commit this DELETE against orders?</text>
+  <text class="monos" x="620" y="388">DELETE FROM orders WHERE id = 4242</text>
+  <text class="note" x="620" y="406">The approval parameter is stripped from the</text>
+  <text class="note" x="620" y="422">published input schema, so it cannot be forged.</text>
+
+  <!-- stage 5: the transaction -->
+  <rect class="box" x="300" y="430" width="300" height="66" rx="4"/>
+  <rect class="bartx" x="300" y="430" width="5" height="66"/>
+  <text class="gate" x="318" y="452">Gate 4 · one transaction</text>
+  <text class="mono" x="318" y="472">BEGIN · execute · audit insert · COMMIT</text>
+  <text class="small" x="318" y="488">status: "committed"</text>
+  <path class="flowexit" d="M300,463 L286,463" marker-end="url(#arm)"/>
+  <rect class="exit" x="34" y="441" width="246" height="44" rx="4"/>
+  <rect class="barexit" x="34" y="441" width="4" height="44"/>
+  <text class="mono" x="50" y="459">status: "failed"</text>
+  <text class="small" x="50" y="475">Rolled back, then audited separately.</text>
+  <text class="note" x="620" y="452">The audit row is inserted on this connection,</text>
+  <text class="note" x="620" y="468">inside this transaction. Both land, or neither</text>
+  <text class="note" x="620" y="484">does, and there is no unlogged change.</text>
+
+  <line class="rule" x1="34" y1="508" x2="926" y2="508"/>
+  <text class="sub" x="34" y="528">Gates 1, 2 and the dry run all return without asking. Only gate 3 spends a person's attention, which is what keeps it worth something.</text>
+</svg>

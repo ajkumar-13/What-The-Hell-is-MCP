@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">How a client discovers where to authenticate, and what the metadata document tells it</title>
+  <desc id="d">Four stacked panels. The first shows the fast path: an unauthenticated POST to the MCP endpoint returns 401 with a WWW-Authenticate header whose resource_metadata parameter is a URL, and the client fetches that URL. The second shows the fallback the client must try when no such header arrives: probe the well-known URI with the resource path inserted first, then the well-known URI at the root, taking whichever returns 200. The third panel prints the protected resource metadata document itself and annotates each of its four fields with what the client does with the value: resource is the audience the token must name, authorization_servers names who may issue acceptable tokens, scopes_supported is a published minimum rather than a full catalog, and bearer_methods_supported says the token travels in a header. The fourth panel shows the client then probing the authorization server's own metadata, OAuth 2.0 metadata first and OpenID Connect discovery second.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .monomute{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .client{fill:var(--mcp-primary);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="30">The discovery chain, hop by hop</text>
+  <text class="small" x="40" y="50">A server must publish one of the two entry points. A client must be able to follow both.</text>
+
+  <!-- Panel A -->
+  <rect class="zone" x="40" y="64" width="880" height="106" rx="9"/>
+  <text class="head" x="58" y="84">A. The challenge tells you where to look</text>
+  <rect class="client" x="58" y="94" width="128" height="30" rx="6"/>
+  <text class="onfill" x="122" y="113" text-anchor="middle">POST /mcp</text>
+  <path class="flow" d="M190,109 L216,109" marker-end="url(#ar)"/>
+  <rect class="server" x="220" y="94" width="150" height="30" rx="6"/>
+  <text class="onfill" x="295" y="113" text-anchor="middle">401 Unauthorized</text>
+  <path class="flow" d="M374,109 L400,109" marker-end="url(#ar)"/>
+  <rect class="box" x="404" y="94" width="228" height="30" rx="6"/>
+  <text class="mono" x="518" y="113" text-anchor="middle">GET the resource_metadata URL</text>
+  <text class="tiny" x="646" y="113">no guessing, one round trip</text>
+  <text class="monomute" x="58" y="146">www-authenticate: Bearer resource_metadata="https://mcp.example.com/.well-known/oauth-protected-resource/mcp"</text>
+  <text class="tiny" x="58" y="162">The SDK builds this header for you as soon as AuthSettings.resource_server_url is set.</text>
+
+  <!-- Panel B -->
+  <rect class="zone" x="40" y="182" width="880" height="86" rx="9"/>
+  <text class="head" x="58" y="202">B. No header, so probe the well-known URIs, in this order</text>
+  <rect class="chip" x="58" y="212" width="20" height="20" rx="5"/>
+  <text class="label" x="68" y="227" text-anchor="middle">1</text>
+  <text class="mono" x="88" y="227">https://mcp.example.com/.well-known/oauth-protected-resource/mcp</text>
+  <text class="tiny" x="560" y="227">path inserted between host and resource path</text>
+  <rect class="chip" x="58" y="238" width="20" height="20" rx="5"/>
+  <text class="label" x="68" y="253" text-anchor="middle">2</text>
+  <text class="mono" x="88" y="253">https://mcp.example.com/.well-known/oauth-protected-resource</text>
+  <text class="tiny" x="560" y="253">the root; a 404 here is normal for a server on a path</text>
+
+  <!-- Panel C -->
+  <rect class="zone" x="40" y="280" width="880" height="164" rx="9"/>
+  <text class="head" x="58" y="300">C. The document, and what the client does with each field</text>
+  <rect class="box" x="58" y="310" width="408" height="118" rx="7"/>
+  <text class="mono" x="72" y="330">{</text>
+  <text class="mono" x="72" y="348">  "resource": "https://mcp.example.com/mcp",</text>
+  <text class="mono" x="72" y="366">  "authorization_servers": ["https://auth.example.com"],</text>
+  <text class="mono" x="72" y="384">  "scopes_supported": ["system:read"],</text>
+  <text class="mono" x="72" y="402">  "bearer_methods_supported": ["header"]</text>
+  <text class="mono" x="72" y="420">}</text>
+
+  <path class="flow-thin" d="M470,348 L496,348" marker-end="url(#arm)"/>
+  <text class="small" x="502" y="352">the audience your token must name, sent back as resource=</text>
+  <path class="flow-thin" d="M470,366 L496,366" marker-end="url(#arm)"/>
+  <text class="small" x="502" y="370">who may issue tokens you accept; at least one required</text>
+  <path class="flow-thin" d="M470,384 L496,384" marker-end="url(#arm)"/>
+  <text class="small" x="502" y="388">your published minimum, not your whole catalog</text>
+  <path class="flow-thin" d="M470,402 L496,402" marker-end="url(#arm)"/>
+  <text class="small" x="502" y="406">a header, never a query string</text>
+
+  <!-- Panel D -->
+  <rect class="zone" x="40" y="456" width="880" height="66" rx="9"/>
+  <text class="head" x="58" y="476">D. Then the client goes to the authorization server, trying these in order</text>
+  <rect class="chip" x="58" y="486" width="20" height="20" rx="5"/>
+  <text class="label" x="68" y="501" text-anchor="middle">1</text>
+  <text class="mono" x="88" y="501">https://auth.example.com/.well-known/oauth-authorization-server</text>
+  <rect class="chip" x="530" y="486" width="20" height="20" rx="5"/>
+  <text class="label" x="540" y="501" text-anchor="middle">2</text>
+  <text class="mono" x="560" y="501">https://auth.example.com/.well-known/openid-configuration</text>
+</svg>

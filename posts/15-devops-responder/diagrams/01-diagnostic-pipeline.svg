@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">The read-only diagnostic pipeline, from a question to a checkable verdict</title>
+  <desc id="d">A left-to-right pipeline in four cards. The first card is on the client side of the protocol boundary: a person asks the host a question and the host's model chooses a tool to call. The remaining three cards are on the server side. The second card lists the five read-only tools and notes that each makes one blocking Kubernetes API call, handed to a worker thread by a single helper so the event loop is never blocked. The third card shows the three separate places the same failure appears, the pod phase, the container's current waiting state, the container's previous terminated state with its exit code, and the events, and notes that any one of them read alone is misleading. The fourth card is the analysis, a pure function with no network access, which returns a verdict, a confidence level, findings that each name the API field they came from, and the exact next call worth making. A band across the bottom states that the read-only property is structural: neither read module contains a delete, patch, create, or replace call, and a test greps both modules to keep it that way.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .client{fill:var(--mcp-primary);stroke:var(--mcp-ink);stroke-width:1;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+    .bound{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;stroke-dasharray:4 4;}
+    .cross{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;stroke-linecap:round;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="36" y="34">The diagnostic pipeline: a question, then a verdict you can check</text>
+  <text class="small" x="36" y="56">Four stages, one direction. Every stage reads, and no stage has a path to a write.</text>
+
+  <!-- ===================== STAGE 1 ===================== -->
+  <rect class="zone" x="36" y="80" width="168" height="340" rx="10"/>
+  <rect class="client" x="50" y="94" width="24" height="20" rx="5"/>
+  <text class="onfill" x="62" y="109" text-anchor="middle">1</text>
+  <text class="head" x="84" y="109">Ask</text>
+  <line class="rule" x1="50" y1="126" x2="190" y2="126"/>
+
+  <text class="small" x="50" y="150">A person asks the host.</text>
+  <rect class="chip" x="50" y="162" width="140" height="46" rx="6"/>
+  <text class="mono" x="60" y="180">"Why is checkout</text>
+  <text class="mono" x="60" y="196">failing?"</text>
+
+  <text class="small" x="50" y="234">The host's model picks</text>
+  <text class="small" x="50" y="250">the tool. Tools are the</text>
+  <text class="small" x="50" y="266">model-controlled</text>
+  <text class="small" x="50" y="282">primitive.</text>
+
+  <rect class="chip" x="50" y="300" width="98" height="22" rx="5"/>
+  <text class="mono" x="60" y="315">tools/call</text>
+
+  <text class="tiny" x="50" y="348">One request. No session,</text>
+  <text class="tiny" x="50" y="364">no handshake, capabilities</text>
+  <text class="tiny" x="50" y="380">re-declared every time.</text>
+
+  <!-- boundary -->
+  <line class="bound" x1="220" y1="76" x2="220" y2="424"/>
+  <text class="tiny" x="220" y="438" text-anchor="middle">protocol boundary</text>
+
+  <path class="flow" d="M206,250 L232,250" marker-end="url(#ar)"/>
+
+  <!-- ===================== STAGE 2 ===================== -->
+  <rect class="zone" x="236" y="80" width="196" height="340" rx="10"/>
+  <rect class="server" x="250" y="94" width="24" height="20" rx="5"/>
+  <text class="onfill" x="262" y="109" text-anchor="middle">2</text>
+  <text class="head" x="284" y="109">Read</text>
+  <line class="rule" x1="250" y1="126" x2="418" y2="126"/>
+
+  <text class="mono" x="250" y="150">list_pods</text>
+  <text class="mono" x="250" y="170">describe_pod</text>
+  <text class="mono" x="250" y="190">get_events</text>
+  <text class="mono" x="250" y="210">get_logs</text>
+  <text class="mono" x="250" y="230">list_deployments</text>
+
+  <line class="rule" x1="250" y1="248" x2="418" y2="248"/>
+
+  <text class="small" x="250" y="272">Each tool makes one</text>
+  <text class="small" x="250" y="288">blocking API call. The</text>
+  <text class="small" x="250" y="304">client is synchronous.</text>
+
+  <rect class="chip" x="250" y="318" width="168" height="40" rx="6"/>
+  <text class="mono" x="260" y="334">cluster.call() -&gt;</text>
+  <text class="mono" x="260" y="350">asyncio.to_thread</text>
+
+  <text class="tiny" x="250" y="380">On the event loop instead,</text>
+  <text class="tiny" x="250" y="396">the whole transport stalls.</text>
+
+  <path class="flow" d="M434,250 L460,250" marker-end="url(#ar)"/>
+
+  <!-- ===================== STAGE 3 ===================== -->
+  <rect class="zone" x="464" y="80" width="220" height="340" rx="10"/>
+  <rect class="server" x="478" y="94" width="24" height="20" rx="5"/>
+  <text class="onfill" x="490" y="109" text-anchor="middle">3</text>
+  <text class="head" x="512" y="109">Correlate</text>
+  <line class="rule" x1="478" y1="126" x2="670" y2="126"/>
+
+  <text class="small" x="478" y="148">The same failure, in three</text>
+  <text class="small" x="478" y="164">places at once.</text>
+
+  <rect class="box" x="478" y="176" width="192" height="42" rx="6"/>
+  <text class="mono" x="488" y="193">status.phase</text>
+  <text class="tiny" x="488" y="210">Running. Looks fine.</text>
+
+  <rect class="box" x="478" y="226" width="192" height="42" rx="6"/>
+  <text class="mono" x="488" y="243">...state.waiting</text>
+  <text class="tiny" x="488" y="260">CrashLoopBackOff. No cause.</text>
+
+  <rect class="box" x="478" y="276" width="192" height="42" rx="6"/>
+  <text class="mono" x="488" y="293">...lastState.terminated</text>
+  <text class="tiny" x="488" y="310">exit code 1. The cause.</text>
+
+  <rect class="box" x="478" y="326" width="192" height="42" rx="6"/>
+  <text class="mono" x="488" y="343">events</text>
+  <text class="tiny" x="488" y="360">BackOff, seen 42 times.</text>
+
+  <text class="tiny" x="478" y="390">Read one and stop and you</text>
+  <text class="tiny" x="478" y="406">get a confident wrong answer.</text>
+
+  <path class="flow" d="M686,250 L712,250" marker-end="url(#ar)"/>
+
+  <!-- ===================== STAGE 4 ===================== -->
+  <rect class="zone" x="716" y="80" width="208" height="340" rx="10"/>
+  <rect class="server" x="730" y="94" width="24" height="20" rx="5"/>
+  <text class="onfill" x="742" y="109" text-anchor="middle">4</text>
+  <text class="head" x="764" y="109">Verdict</text>
+  <line class="rule" x1="730" y1="126" x2="910" y2="126"/>
+
+  <rect class="chip" x="730" y="140" width="180" height="44" rx="6"/>
+  <text class="mono" x="740" y="158">verdict: crash_loop</text>
+  <text class="mono" x="740" y="176">confidence: high</text>
+
+  <text class="label" x="730" y="206">findings[]</text>
+  <text class="small" x="730" y="224">each names the API field</text>
+  <text class="small" x="730" y="240">it came from, so a human</text>
+  <text class="small" x="730" y="256">can check it with kubectl</text>
+
+  <text class="label" x="730" y="286">next_steps[]</text>
+  <text class="small" x="730" y="304">the exact next call, with</text>
+  <text class="small" x="730" y="320">its arguments filled in</text>
+
+  <line class="rule" x1="730" y1="338" x2="910" y2="338"/>
+  <rect class="chip" x="730" y="350" width="180" height="22" rx="5"/>
+  <text class="mono" x="740" y="365">analyse(pod, events)</text>
+  <text class="tiny" x="730" y="392">A pure function. No network,</text>
+  <text class="tiny" x="730" y="408">so it is tested without a cluster.</text>
+
+  <!-- ===================== BOTTOM BAND ===================== -->
+  <rect class="zone" x="236" y="452" width="688" height="62" rx="10"/>
+  <path class="cross" d="M254,472 l9,9 M263,472 l-9,9"/>
+  <text class="label" x="280" y="474">Read-only is structural, not advisory.</text>
+  <text class="small" x="280" y="492">Neither read module contains a delete_, patch_, create_, or replace_ call, so no tool above has a path to a write.</text>
+  <text class="tiny" x="280" y="508">readOnlyHint is only a hint: it prevents nothing. test_the_read_modules_contain_no_mutating_api_calls is what prevents it.</text>
+</svg>

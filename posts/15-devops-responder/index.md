@@ -1,1065 +1,655 @@
-# Blog 7: DevOps First Responder – Part 1
-## Read & Diagnose Your Kubernetes Cluster with AI
+# 15 · Project 2 · A DevOps first responder
 
+> **TL;DR.** Debugging a Kubernetes cluster is almost entirely reading, correlating, and
+> summarizing, which is exactly the shape of work a read-only Model Context Protocol (MCP)
+> server plus a model is good at. This post builds one: eight tools that list, describe,
+> read logs, and diagnose, with the read/write split enforced by the import graph rather
+> than by an annotation. Two details carry most of the value, and neither is obvious: every
+> call into the synchronous Kubernetes client is pushed onto a worker thread, and every log
+> read is bounded in two dimensions so a pod that has been crashing for two days cannot
+> flood the model's context.
+>
+> **After reading this you will be able to:**
+> - Call a synchronous client library from an `async` tool without freezing the transport.
+> - Correlate pod phase, container status, and events into one verdict a human can check.
+> - Bound a log read in lines and in bytes, keep the end that matters, and report what was dropped.
+> - Make a server's read-only claim structural instead of advisory.
 
-> *"It's 3 AM. Your K8s cluster is failing. Instead of typing kubectl commands half-asleep, you ask: 'What's wrong with my cluster?' and get an actual answer."*
-
----
-
-## Introduction
-
-In Blogs 5-6, we gave AI access to a database, with strict guardrails. Now we're shifting domains entirely: from data analysis to **infrastructure operations**.
-
-We're building an MCP server that connects to a live Kubernetes cluster. No more guessing at `kubectl` commands. You'll ask Claude, "Why is checkout-service crashing?" and it will pull pod statuses, read logs, check events, and give you a diagnosis.
-
-This blog covers the **read-only** tools: listing, inspecting, and diagnosing. Blog 8 adds the ability to *fix* things, with human approval, of course.
-
-### What We're Building
-
-An MCP server that exposes four tools:
-
-| Tool | Purpose |
-|------|---------|
-| `list_pods` | List pods with status, restarts, age |
-| `get_pod_logs` | Read logs from any pod/container |
-| `describe_pod` | Full pod details, conditions, events |
-| `list_events` | Recent cluster events (warnings, errors) |
-
-Plus a **diagnostic prompt** that pre-loads crashing pod info for instant root-cause analysis.
+![A left-to-right pipeline in four stages. On the left, a model asks a question in natural language. The second stage is a set of read-only tools that each make one Kubernetes API call on a worker thread. The third stage collects three separate sources for the same pod: its phase, its per-container status including the previous state, and the events recorded against it. The fourth stage is a pure analysis function that correlates all three into a single verdict with a confidence level, a list of findings that each name the API field they came from, and the next call worth making. A dashed boundary runs down the diagram showing that nothing in the pipeline can write to the cluster.](diagrams/01-diagnostic-pipeline.svg)
+*Four stages, one direction, and no path back to a write.*
 
 ---
 
-## Prerequisites
+## 1. The brief
 
-| Requirement | How to Get It |
-|-------------|---------------|
-| Python 3.10+ | python.org |
-| A Kubernetes cluster | minikube, kind, Docker Desktop K8s, or a cloud cluster |
-| `kubectl` configured | `kubectl cluster-info` should work |
-| Blogs 1-4 completed | Understanding of MCP servers, tools, resources, prompts |
-
-### Quick Cluster Setup (If You Don't Have One)
+A service is failing. Here is what an engineer types, in roughly this order:
 
 ```bash
-# Option 1: minikube (recommended for learning)
-# Install: https://minikube.sigs.k8s.io/docs/start/
-minikube start
-
-# Option 2: kind (Kubernetes IN Docker)
-# Install: https://kind.sigs.k8s.io/docs/user/quick-start/
-kind create cluster
-
-# Option 3: Docker Desktop
-# Enable Kubernetes in Docker Desktop Settings → Kubernetes → Enable
-
-# Verify it works:
-kubectl cluster-info
-kubectl get pods -A
-```
-
----
-
-## 1. Project Architecture
-
-```
-mcp-k8s-agent/
-├── pyproject.toml
-└── src/
-    ├── __init__.py
-    ├── server.py          # MCP server: tools, resources, prompts
-    ├── k8s_client.py      # Kubernetes API wrapper
-    └── formatters.py      # Output formatting for LLM consumption
-```
-
-| File | Responsibility |
-|------|----------------|
-| `server.py` | MCP entry point, tool/resource/prompt definitions |
-| `k8s_client.py` | Kubernetes Python client wrapper with async support |
-| `formatters.py` | Convert K8s API objects to clean, LLM-readable output |
-
----
-
-## 2. Project Setup
-
-```bash
-mkdir mcp-k8s-agent
-cd mcp-k8s-agent
-uv init
-
-# kubernetes: Official K8s Python client
-# mcp[cli]: MCP server framework + CLI tools
-uv add "mcp[cli]" kubernetes
-```
-
-Create the `src/__init__.py`:
-
-```python
-# src/__init__.py - empty, marks directory as Python package
-```
-
----
-
-## 3. The Kubernetes Client Wrapper
-
-The official `kubernetes` Python client is synchronous. Since MCP servers are async, we wrap the sync calls to avoid blocking the event loop.
-
-Create `src/k8s_client.py`:
-
-```python
-# src/k8s_client.py - Kubernetes API Wrapper
-import asyncio
-import logging
-import sys
-from datetime import datetime, timezone
-from functools import partial
-
-from kubernetes import client, config
-from kubernetes.client.rest import ApiException
-
-# Safe logging (never print to stdout)
-logging.basicConfig(
-    stream=sys.stderr,
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
-logger = logging.getLogger(__name__)
-
-
-class K8sClient:
-    """Wraps the Kubernetes Python client with async support."""
-
-    def __init__(self):
-        self.core_v1: client.CoreV1Api | None = None
-        self.apps_v1: client.AppsV1Api | None = None
-
-    def connect(self):
-        """
-        Load kubeconfig and initialize API clients.
-        Tries in-cluster config first (for running inside K8s),
-        then falls back to local kubeconfig (~/.kube/config).
-        """
-        try:
-            config.load_incluster_config()
-            logger.info("Loaded in-cluster Kubernetes config")
-        except config.ConfigException:
-            config.load_kube_config()
-            logger.info("Loaded local kubeconfig")
-
-        self.core_v1 = client.CoreV1Api()
-        self.apps_v1 = client.AppsV1Api()
-        logger.info("Kubernetes API clients initialized")
-
-    async def _run_sync(self, func, *args, **kwargs):
-        """Run a synchronous K8s API call in a thread pool."""
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, partial(func, *args, **kwargs))
-
-    # ========== POD OPERATIONS ==========
-
-    async def list_pods(self, namespace: str = "default") -> list[dict]:
-        """List pods in a namespace with key status fields."""
-        try:
-            result = await self._run_sync(
-                self.core_v1.list_namespaced_pod, namespace=namespace
-            )
-        except ApiException as e:
-            raise RuntimeError(f"K8s API error listing pods: {e.status} {e.reason}")
-
-        pods = []
-        now = datetime.now(timezone.utc)
-
-        for pod in result.items:
-            # Calculate age
-            created = pod.metadata.creation_timestamp
-            age = now - created if created else None
-            age_str = _format_duration(age) if age else "unknown"
-
-            # Calculate restarts and ready count
-            restarts = 0
-            ready_count = 0
-            total_containers = len(pod.spec.containers)
-
-            if pod.status.container_statuses:
-                for cs in pod.status.container_statuses:
-                    restarts += cs.restart_count
-                    if cs.ready:
-                        ready_count += 1
-
-            pods.append(
-                {
-                    "name": pod.metadata.name,
-                    "namespace": pod.metadata.namespace,
-                    "status": pod.status.phase,
-                    "ready": f"{ready_count}/{total_containers}",
-                    "restarts": restarts,
-                    "age": age_str,
-                    "node": pod.spec.node_name or "unscheduled",
-                }
-            )
-
-        return pods
-
-    async def get_pod_logs(
-        self,
-        pod_name: str,
-        namespace: str = "default",
-        container: str | None = None,
-        tail_lines: int = 100,
-        previous: bool = False,
-    ) -> str:
-        """Get logs from a pod (optionally a specific container)."""
-        kwargs = {
-            "name": pod_name,
-            "namespace": namespace,
-            "tail_lines": tail_lines,
-            "previous": previous,
-        }
-        if container:
-            kwargs["container"] = container
-
-        try:
-            logs = await self._run_sync(
-                self.core_v1.read_namespaced_pod_log, **kwargs
-            )
-            return logs or "(no logs available)"
-        except ApiException as e:
-            if e.status == 404:
-                return f"Pod '{pod_name}' not found in namespace '{namespace}'."
-            if e.status == 400 and "previous terminated" in str(e.body).lower():
-                return "(no previous container logs available)"
-            raise RuntimeError(f"K8s API error reading logs: {e.status} {e.reason}")
-
-    async def describe_pod(self, pod_name: str, namespace: str = "default") -> dict:
-        """Get detailed pod information including conditions and events."""
-        try:
-            pod = await self._run_sync(
-                self.core_v1.read_namespaced_pod,
-                name=pod_name,
-                namespace=namespace,
-            )
-        except ApiException as e:
-            if e.status == 404:
-                raise RuntimeError(
-                    f"Pod '{pod_name}' not found in namespace '{namespace}'."
-                )
-            raise RuntimeError(f"K8s API error: {e.status} {e.reason}")
-
-        # Get events for this pod
-        field_selector = f"involvedObject.name={pod_name}"
-        try:
-            events = await self._run_sync(
-                self.core_v1.list_namespaced_event,
-                namespace=namespace,
-                field_selector=field_selector,
-            )
-            event_list = [
-                {
-                    "type": ev.type,
-                    "reason": ev.reason,
-                    "message": ev.message,
-                    "count": ev.count,
-                    "last_seen": ev.last_timestamp.isoformat()
-                    if ev.last_timestamp
-                    else "unknown",
-                }
-                for ev in events.items
-            ]
-        except ApiException:
-            event_list = []
-
-        # Build container statuses
-        container_statuses = []
-        if pod.status.container_statuses:
-            for cs in pod.status.container_statuses:
-                status_detail = {}
-                if cs.state.running:
-                    status_detail = {
-                        "state": "running",
-                        "started_at": cs.state.running.started_at.isoformat()
-                        if cs.state.running.started_at
-                        else None,
-                    }
-                elif cs.state.waiting:
-                    status_detail = {
-                        "state": "waiting",
-                        "reason": cs.state.waiting.reason,
-                        "message": cs.state.waiting.message,
-                    }
-                elif cs.state.terminated:
-                    status_detail = {
-                        "state": "terminated",
-                        "reason": cs.state.terminated.reason,
-                        "exit_code": cs.state.terminated.exit_code,
-                        "message": cs.state.terminated.message,
-                    }
-
-                container_statuses.append(
-                    {
-                        "name": cs.name,
-                        "image": cs.image,
-                        "ready": cs.ready,
-                        "restart_count": cs.restart_count,
-                        **status_detail,
-                    }
-                )
-
-        # Build conditions
-        conditions = []
-        if pod.status.conditions:
-            for cond in pod.status.conditions:
-                conditions.append(
-                    {
-                        "type": cond.type,
-                        "status": cond.status,
-                        "reason": cond.reason,
-                        "message": cond.message,
-                    }
-                )
-
-        return {
-            "name": pod.metadata.name,
-            "namespace": pod.metadata.namespace,
-            "phase": pod.status.phase,
-            "node": pod.spec.node_name,
-            "labels": dict(pod.metadata.labels or {}),
-            "containers": container_statuses,
-            "conditions": conditions,
-            "events": event_list,
-        }
-
-    # ========== EVENT OPERATIONS ==========
-
-    async def list_events(
-        self,
-        namespace: str = "default",
-        event_type: str | None = None,
-        limit: int = 30,
-    ) -> list[dict]:
-        """List recent cluster events, optionally filtered by type."""
-        try:
-            events = await self._run_sync(
-                self.core_v1.list_namespaced_event, namespace=namespace
-            )
-        except ApiException as e:
-            raise RuntimeError(f"K8s API error listing events: {e.status} {e.reason}")
-
-        event_list = []
-        for ev in events.items:
-            if event_type and ev.type != event_type:
-                continue
-            event_list.append(
-                {
-                    "type": ev.type,
-                    "reason": ev.reason,
-                    "object": f"{ev.involved_object.kind}/{ev.involved_object.name}",
-                    "message": ev.message,
-                    "count": ev.count,
-                    "first_seen": ev.first_timestamp.isoformat()
-                    if ev.first_timestamp
-                    else "unknown",
-                    "last_seen": ev.last_timestamp.isoformat()
-                    if ev.last_timestamp
-                    else "unknown",
-                }
-            )
-
-        # Sort by last_seen descending, limit results
-        event_list.sort(key=lambda e: e["last_seen"], reverse=True)
-        return event_list[:limit]
-
-    # ========== DEPLOYMENT OPERATIONS ==========
-
-    async def list_deployments(self, namespace: str = "default") -> list[dict]:
-        """List deployments with replica status."""
-        try:
-            result = await self._run_sync(
-                self.apps_v1.list_namespaced_deployment, namespace=namespace
-            )
-        except ApiException as e:
-            raise RuntimeError(
-                f"K8s API error listing deployments: {e.status} {e.reason}"
-            )
-
-        deployments = []
-        for dep in result.items:
-            deployments.append(
-                {
-                    "name": dep.metadata.name,
-                    "namespace": dep.metadata.namespace,
-                    "replicas": dep.spec.replicas,
-                    "ready_replicas": dep.status.ready_replicas or 0,
-                    "available_replicas": dep.status.available_replicas or 0,
-                    "updated_replicas": dep.status.updated_replicas or 0,
-                    "image": dep.spec.template.spec.containers[0].image
-                    if dep.spec.template.spec.containers
-                    else "unknown",
-                }
-            )
-
-        return deployments
-
-
-# ========== HELPERS ==========
-
-
-def _format_duration(delta) -> str:
-    """Format a timedelta into a human-readable age string."""
-    total_seconds = int(delta.total_seconds())
-    if total_seconds < 60:
-        return f"{total_seconds}s"
-    if total_seconds < 3600:
-        return f"{total_seconds // 60}m"
-    if total_seconds < 86400:
-        return f"{total_seconds // 3600}h"
-    return f"{total_seconds // 86400}d"
-
-
-# Global instance
-k8s = K8sClient()
-```
-
-### Key Design Decisions
-
-| Decision | Reason |
-|----------|--------|
-| Sync client in thread pool | K8s Python client is sync; `run_in_executor` prevents blocking the event loop |
-| In-cluster config fallback | Server can run inside K8s or on your laptop |
-| Structured dict output | JSON is easier for LLMs to parse than raw text |
-| Age calculation | Humans (and LLMs) understand "3d" better than ISO timestamps |
-| Error wrapping | Clean error messages instead of raw API exceptions |
-
----
-
-## 4. Output Formatters
-
-LLMs work better with clean, structured text. Raw K8s API responses are massive JSON blobs. Our formatters extract what matters.
-
-Create `src/formatters.py`:
-
-```python
-# src/formatters.py - Format K8s data for LLM consumption
-import json
-
-
-def format_pod_list(pods: list[dict]) -> str:
-    """Format pod list as a readable table."""
-    if not pods:
-        return "No pods found in this namespace."
-
-    lines = ["| Name | Status | Ready | Restarts | Age | Node |"]
-    lines.append("|------|--------|-------|----------|-----|------|")
-
-    for pod in pods:
-        lines.append(
-            f"| {pod['name']} | {pod['status']} | {pod['ready']} "
-            f"| {pod['restarts']} | {pod['age']} | {pod['node']} |"
-        )
-
-    # Add summary
-    total = len(pods)
-    running = sum(1 for p in pods if p["status"] == "Running")
-    crashing = sum(1 for p in pods if p["restarts"] > 3)
-
-    summary = f"\n**Summary:** {total} pods | {running} running"
-    if crashing:
-        summary += f" | {crashing} with high restarts"
-
-    return "\n".join(lines) + summary
-
-
-def format_pod_detail(detail: dict) -> str:
-    """Format detailed pod info for diagnosis."""
-    lines = [f"# Pod: {detail['name']}"]
-    lines.append(f"**Namespace:** {detail['namespace']}")
-    lines.append(f"**Phase:** {detail['phase']}")
-    lines.append(f"**Node:** {detail['node']}")
-
-    if detail.get("labels"):
-        label_str = ", ".join(f"{k}={v}" for k, v in detail["labels"].items())
-        lines.append(f"**Labels:** {label_str}")
-
-    # Containers
-    lines.append("\n## Containers\n")
-    for c in detail.get("containers", []):
-        state = c.get("state", "unknown")
-        lines.append(f"### {c['name']} ({state})")
-        lines.append(f"- **Image:** {c['image']}")
-        lines.append(f"- **Ready:** {c['ready']}")
-        lines.append(f"- **Restarts:** {c['restart_count']}")
-        if c.get("reason"):
-            lines.append(f"- **Reason:** {c['reason']}")
-        if c.get("message"):
-            lines.append(f"- **Message:** {c['message']}")
-        if c.get("exit_code") is not None:
-            lines.append(f"- **Exit Code:** {c['exit_code']}")
-
-    # Conditions
-    if detail.get("conditions"):
-        lines.append("\n## Conditions\n")
-        lines.append("| Type | Status | Reason | Message |")
-        lines.append("|------|--------|--------|---------|")
-        for cond in detail["conditions"]:
-            lines.append(
-                f"| {cond['type']} | {cond['status']} "
-                f"| {cond.get('reason', '-')} | {cond.get('message', '-')} |"
-            )
-
-    # Events
-    if detail.get("events"):
-        lines.append("\n## Recent Events\n")
-        lines.append("| Type | Reason | Message | Count |")
-        lines.append("|------|--------|---------|-------|")
-        for ev in detail["events"][-10:]:  # Last 10 events
-            lines.append(
-                f"| {ev['type']} | {ev['reason']} "
-                f"| {ev.get('message', '-')[:80]} | {ev.get('count', 1)} |"
-            )
-
-    return "\n".join(lines)
-
-
-def format_event_list(events: list[dict]) -> str:
-    """Format cluster events for review."""
-    if not events:
-        return "No events found."
-
-    lines = ["| Type | Reason | Object | Message | Count | Last Seen |"]
-    lines.append("|------|--------|--------|---------|-------|-----------|")
-
-    for ev in events:
-        msg = (ev.get("message") or "-")[:60]
-        lines.append(
-            f"| {ev['type']} | {ev['reason']} | {ev['object']} "
-            f"| {msg} | {ev.get('count', 1)} | {ev['last_seen']} |"
-        )
-
-    warnings = sum(1 for e in events if e["type"] == "Warning")
-    if warnings:
-        lines.append(f"\n**{warnings} warning events** in this list.")
-
-    return "\n".join(lines)
-
-
-def format_deployment_list(deployments: list[dict]) -> str:
-    """Format deployment list as a readable table."""
-    if not deployments:
-        return "No deployments found in this namespace."
-
-    lines = ["| Name | Ready | Up-to-date | Available | Image |"]
-    lines.append("|------|-------|------------|-----------|-------|")
-
-    for dep in deployments:
-        lines.append(
-            f"| {dep['name']} | {dep['ready_replicas']}/{dep['replicas']} "
-            f"| {dep['updated_replicas']} | {dep['available_replicas']} "
-            f"| {dep['image']} |"
-        )
-
-    return "\n".join(lines)
-```
-
----
-
-## 5. The MCP Server
-
-Now the main event. We wire up the K8s client and formatters to MCP tools, resources, and prompts.
-
-Create `src/server.py`:
-
-```python
-# src/server.py - MCP DevOps First Responder (Read & Diagnose)
-import json
-import logging
-import sys
-from contextlib import asynccontextmanager
-
-from mcp.server.fastmcp import FastMCP
-
-from .k8s_client import k8s
-from .formatters import (
-    format_pod_list,
-    format_pod_detail,
-    format_event_list,
-    format_deployment_list,
-)
-
-# Safe logging (never print to stdout — STDIO transport)
-logging.basicConfig(
-    stream=sys.stderr,
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
-logger = logging.getLogger(__name__)
-
-
-# ============ LIFECYCLE ============
-@asynccontextmanager
-async def lifespan(server: FastMCP):
-    """Connect to Kubernetes on startup."""
-    k8s.connect()
-    logger.info("K8s DevOps First Responder ready")
-    try:
-        yield
-    finally:
-        logger.info("K8s DevOps First Responder shutting down")
-
-
-mcp = FastMCP("K8s DevOps First Responder", lifespan=lifespan)
-
-
-# ============ TOOLS ============
-
-@mcp.tool(
-    annotations={
-        "readOnlyHint": True,
-        "destructiveHint": False,
-    }
-)
-async def list_pods(namespace: str = "default") -> str:
-    """
-    List all pods in a Kubernetes namespace with their status.
-
-    Returns a table showing each pod's name, status, ready containers,
-    restart count, age, and node. Use this to get an overview of what's
-    running and spot unhealthy pods.
-
-    Args:
-        namespace: Kubernetes namespace to query (default: "default").
-                   Use "kube-system" for system pods.
-    """
-    try:
-        pods = await k8s.list_pods(namespace)
-        return format_pod_list(pods)
-    except RuntimeError as e:
-        return f"Error: {e}"
-
-
-@mcp.tool(
-    annotations={
-        "readOnlyHint": True,
-        "destructiveHint": False,
-    }
-)
-async def get_pod_logs(
-    pod_name: str,
-    namespace: str = "default",
-    container: str | None = None,
-    tail_lines: int = 100,
-    previous: bool = False,
-) -> str:
-    """
-    Get logs from a Kubernetes pod.
-
-    Args:
-        pod_name: Name of the pod (e.g., "checkout-service-7d8f9").
-        namespace: Kubernetes namespace (default: "default").
-        container: Specific container name (required for multi-container pods).
-        tail_lines: Number of log lines to return (default: 100, max: 500).
-        previous: If True, get logs from the previous (crashed) container instance.
-                  Useful for diagnosing CrashLoopBackOff.
-    """
-    tail_lines = max(1, min(tail_lines, 500))  # Cap to prevent context flooding
-
-    try:
-        logs = await k8s.get_pod_logs(
-            pod_name=pod_name,
-            namespace=namespace,
-            container=container,
-            tail_lines=tail_lines,
-            previous=previous,
-        )
-        header = f"**Logs for {pod_name}"
-        if container:
-            header += f" (container: {container})"
-        if previous:
-            header += " [PREVIOUS INSTANCE]"
-        header += f" (last {tail_lines} lines):**\n\n"
-
-        return header + f"```\n{logs}\n```"
-    except RuntimeError as e:
-        return f"Error: {e}"
-
-
-@mcp.tool(
-    annotations={
-        "readOnlyHint": True,
-        "destructiveHint": False,
-    }
-)
-async def describe_pod(pod_name: str, namespace: str = "default") -> str:
-    """
-    Get detailed information about a specific pod, including container
-    statuses, conditions, and recent events.
-
-    Use this when a pod is unhealthy and you need to understand why.
-    It shows waiting reasons, exit codes, and Kubernetes events.
-
-    Args:
-        pod_name: Name of the pod to inspect.
-        namespace: Kubernetes namespace (default: "default").
-    """
-    try:
-        detail = await k8s.describe_pod(pod_name, namespace)
-        return format_pod_detail(detail)
-    except RuntimeError as e:
-        return f"Error: {e}"
-
-
-@mcp.tool(
-    annotations={
-        "readOnlyHint": True,
-        "destructiveHint": False,
-    }
-)
-async def list_events(
-    namespace: str = "default",
-    event_type: str | None = None,
-    limit: int = 30,
-) -> str:
-    """
-    List recent Kubernetes events in a namespace.
-
-    Events reveal what Kubernetes is doing behind the scenes: scheduling,
-    pulling images, restarting containers, scaling, etc. Warning events
-    often indicate problems.
-
-    Args:
-        namespace: Kubernetes namespace (default: "default").
-        event_type: Filter by event type: "Warning" or "Normal".
-                    Omit to see all events.
-        limit: Maximum number of events to return (default: 30).
-    """
-    limit = max(1, min(limit, 100))
-
-    try:
-        events = await k8s.list_events(
-            namespace=namespace, event_type=event_type, limit=limit
-        )
-        return format_event_list(events)
-    except RuntimeError as e:
-        return f"Error: {e}"
-
-
-@mcp.tool(
-    annotations={
-        "readOnlyHint": True,
-        "destructiveHint": False,
-    }
-)
-async def list_deployments(namespace: str = "default") -> str:
-    """
-    List all deployments in a namespace with their replica status.
-
-    Shows desired, ready, up-to-date, and available replica counts,
-    plus the container image. Useful for understanding the overall
-    health and scale of your services.
-
-    Args:
-        namespace: Kubernetes namespace (default: "default").
-    """
-    try:
-        deployments = await k8s.list_deployments(namespace)
-        return format_deployment_list(deployments)
-    except RuntimeError as e:
-        return f"Error: {e}"
-
-
-# ============ RESOURCE ============
-
-@mcp.resource("k8s://cluster-overview")
-async def cluster_overview() -> str:
-    """
-    A snapshot of the cluster state: pods and deployments in the
-    default namespace. Attach this to your conversation for context.
-    """
-    try:
-        pods = await k8s.list_pods("default")
-        deployments = await k8s.list_deployments("default")
-
-        output = "# Cluster Overview (default namespace)\n\n"
-        output += "## Pods\n\n" + format_pod_list(pods)
-        output += "\n\n## Deployments\n\n" + format_deployment_list(deployments)
-        return output
-    except RuntimeError as e:
-        return f"Error loading cluster overview: {e}"
-
-
-# ============ PROMPT ============
-
-@mcp.prompt(title="Diagnose Crash Loop")
-async def diagnose_crashloop(namespace: str = "default") -> str:
-    """
-    Pre-built diagnostic prompt that identifies crashing pods,
-    fetches their logs and events, and asks the LLM to diagnose
-    the root cause.
-    """
-    try:
-        pods = await k8s.list_pods(namespace)
-    except RuntimeError as e:
-        return f"Could not list pods: {e}"
-
-    # Find pods in trouble
-    crashing = [p for p in pods if p["restarts"] > 3 or p["status"] != "Running"]
-
-    if not crashing:
-        return (
-            f"All pods in namespace '{namespace}' appear healthy. "
-            "No crash loops detected."
-        )
-
-    # Build diagnostic context
-    context = f"# Crash Loop Diagnosis — namespace: {namespace}\n\n"
-    context += f"**{len(crashing)} unhealthy pod(s) detected.**\n\n"
-
-    for pod in crashing[:5]:  # Limit to 5 pods to avoid context overflow
-        context += f"---\n## Pod: {pod['name']}\n"
-        context += f"- **Status:** {pod['status']}\n"
-        context += f"- **Restarts:** {pod['restarts']}\n"
-        context += f"- **Ready:** {pod['ready']}\n\n"
-
-        # Try to get logs
-        try:
-            logs = await k8s.get_pod_logs(
-                pod["name"], namespace, tail_lines=30, previous=True
-            )
-            context += f"### Previous Container Logs (last 30 lines)\n```\n{logs}\n```\n\n"
-        except RuntimeError:
-            context += "*(Could not retrieve previous logs)*\n\n"
-
-        # Get current logs too
-        try:
-            current_logs = await k8s.get_pod_logs(
-                pod["name"], namespace, tail_lines=30
-            )
-            context += f"### Current Logs (last 30 lines)\n```\n{current_logs}\n```\n\n"
-        except RuntimeError:
-            pass
-
-    context += (
-        "---\n\n"
-        "Please analyze the above pod statuses and logs.\n"
-        "1. What is the root cause of each crash loop?\n"
-        "2. What specific action should be taken to fix it?\n"
-        "3. Are there any patterns across multiple pods?"
-    )
-
-    return context
-
-
-# ============ ENTRY POINT ============
-
-if __name__ == "__main__":
-    mcp.run(transport="stdio")
-```
-
----
-
-## 6. Understanding the Design
-
-### Why Structured Output?
-
-We return markdown tables and formatted text instead of raw JSON because:
-
-1. **LLMs read markdown well.** Tables, headers, and bullet points help Claude parse the data.
-2. **Context efficiency.** A formatted table is smaller than raw K8s API JSON.
-3. **Human readability.** When Claude shows you the output, it's already clean.
-
-### Why Tool Annotations?
-
-Every tool is marked `readOnlyHint: True` because this blog only covers read operations. This tells the host (Claude Desktop) that these tools are safe, no approval dialog needed.
-
-In Blog 8, we'll add write tools (`restart_pod`, `scale_deployment`) with `destructiveHint: True`, which triggers host approval.
-
-### Why a Diagnostic Prompt?
-
-The `diagnose_crashloop` prompt does something powerful: it **pre-fetches data** before the conversation starts. When a user selects this prompt, it:
-
-1. Lists all pods
-2. Finds ones with high restarts or non-Running status
-3. Fetches their logs (current + previous)
-4. Packages everything into a structured question
-
-The LLM gets all the context it needs in one shot, instead of making 5-10 tool calls.
-
----
-
-## 7. Connecting to Claude Desktop
-
-### Option A: Quick Install
-
-```bash
-cd mcp-k8s-agent
-uv run mcp install src/server.py
-```
-
-### Option B: Manual Configuration
-
-Add to your `claude_desktop_config.json`:
-
-**Windows:**
-```json
-{
-  "mcpServers": {
-    "k8s-agent": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--directory",
-        "C:\\Users\\YourName\\mcp-k8s-agent",
-        "python",
-        "-m",
-        "src.server"
-      ]
-    }
-  }
-}
-```
-
-**macOS/Linux:**
-```json
-{
-  "mcpServers": {
-    "k8s-agent": {
-      "command": "uv",
-      "args": [
-        "run",
-        "--directory",
-        "/Users/yourname/mcp-k8s-agent",
-        "python",
-        "-m",
-        "src.server"
-      ]
-    }
-  }
-}
-```
-
-> **Note:** We use `python -m src.server` (module mode) because we have relative imports (`from .k8s_client import k8s`). Alternatively, restructure as a proper Python package.
-
-Restart Claude Desktop after updating the config.
-
----
-
-## 8. Testing
-
-### Create a Test Deployment
-
-Let's deploy something intentionally broken so we have pods to diagnose:
-
-```bash
-# Deploy a healthy app
-kubectl create deployment nginx-healthy --image=nginx:latest
-
-# Deploy a crashing app (bad image name)
-kubectl create deployment broken-app --image=nonexistent-image:v1
-
-# Wait a moment for pods to start/fail
-sleep 15
-
-# Verify
 kubectl get pods
+kubectl describe pod checkout-3c-aaa
+kubectl logs checkout-3c-aaa --previous
+kubectl get events --sort-by=.lastTimestamp
+kubectl rollout history deployment/checkout
 ```
 
-You should see `nginx-healthy` running and `broken-app` in `ErrImagePull` or `ImagePullBackOff`.
+Every one of those commands reads. Not one of them changes anything. The hard part is not
+running them, it is holding five screens of output in your head at once and noticing which
+two disagree: the pod says `Running`, the container says `CrashLoopBackOff`, and the exit
+code that explains both is in a third place neither of them showed you.
 
-### Ask Claude
+That is a correlation problem over structured data, and it is the single thing a model plus
+a well-shaped tool surface is genuinely good at. So this project builds the reading half of
+a first responder, and [Post 16](../16-devops-remediation/index.md) builds the half that can
+change something.
 
-**Test 1: Overview**
-> "What pods are running in my cluster?"
+The complete server is in [code/15-devops-responder/](../../code/15-devops-responder/). It
+has eleven tools across both posts, and eight of them only read. These are those eight,
+exactly as they appear in `tools/list`:
 
-Claude will call `list_pods` and show you a clean table.
+| Tool | Arguments | What it answers |
+|---|---|---|
+| `list_pods` | `namespace` | What is running, and how many pods are unhappy |
+| `describe_pod` | `pod_name`, `namespace` | Everything about one pod, from all three sources at once |
+| `get_events` | `namespace`, `event_type`, `limit` | What the cluster has been doing lately |
+| `get_logs` | `pod_name`, `namespace`, `container`, `tail_lines`, `previous`, `max_bytes` | A bounded slice of a container's output |
+| `list_deployments` | `namespace` | Which deployments have fewer replicas ready than desired |
+| `diagnose_pod` | `pod_name`, `namespace` | Why one pod is broken, with the evidence |
+| `find_crash_loops` | `namespace`, `limit` | Every unhealthy pod in a namespace, each diagnosed |
+| `get_rollout_history` | `deployment_name`, `namespace` | The revisions you could go back to |
 
-**Test 2: Diagnosis**
-> "Why is broken-app failing?"
+Two of those are worth pausing on before any code. `diagnose_pod` is `describe_pod` with the
+reasoning already done, which is a different product decision than it looks: it moves the
+correlation from the model's context window into a function you can unit test.
+`get_rollout_history` is the odd one out: it only reads, so it carries the same annotations
+as everything else in the table, but it lives in the writing module because its only real use
+is deciding what [Post 16](../16-devops-remediation/index.md) should roll back to. The
+diagnoses in section 7 point at it by name.
 
-Claude will call `describe_pod` and/or `get_pod_logs` and explain the image pull error.
+## 2. What goes over the wire, before any Python
 
-**Test 3: Events**
-> "Show me warning events in the default namespace."
+A tool call in revision 2026-07-28 is one JavaScript Object Notation Remote Procedure Call
+(JSON-RPC) request with a `name`, an `arguments` object, and a mandatory `_meta` block.
+There is no `initialize` handshake and no session, so every request carries its own protocol
+revision and its own declared capabilities. Asking what is running looks like this:
 
-Claude will call `list_events(event_type="Warning")` and highlight issues.
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 1,
+  "method": "tools/call",
+  "params": {
+    "name": "list_pods",
+    "arguments": { "namespace": "default" },
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientInfo": { "name": "ExampleClient", "version": "1.0.0" },
+      "io.modelcontextprotocol/clientCapabilities": {}
+    }
+  }
+}
+```
 
-**Test 4: Use the Prompt**
-Select the "Diagnose Crash Loop" prompt. It will automatically find broken-app, fetch its logs, and ask Claude for a root cause analysis.
+The answer carries `structuredContent`, which is the part the model actually reasons over.
+This is a real result, captured from the server running against the test fixture in
+[tests/conftest.py](../../code/15-devops-responder/tests/conftest.py), trimmed to two of its
+four pods:
 
-### Clean Up
+```json
+{
+  "namespace": "default",
+  "total": 4,
+  "running": 4,
+  "unhealthy": 1,
+  "pods": [
+    {
+      "name": "checkout-3c-aaa",
+      "namespace": "default",
+      "phase": "Running",
+      "ready": "0/1",
+      "restarts": 7,
+      "age": "14h",
+      "node": "node-1",
+      "reason": "CrashLoopBackOff"
+    },
+    {
+      "name": "checkout-3c-bbb",
+      "namespace": "default",
+      "phase": "Running",
+      "ready": "1/1",
+      "restarts": 0,
+      "age": "14h",
+      "node": "node-1",
+      "reason": ""
+    }
+  ]
+}
+```
+
+Read the summary line. `running: 4` and `unhealthy: 1` are both true at the same time,
+because a pod in a crash loop is in phase `Running`. If you only summarize by phase you will
+report a healthy namespace while one of its services is down. That contradiction is the
+whole subject of section 5, and it shows up in the very first tool.
+
+On the wire the field is `structuredContent`; the Python software development kit (SDK)
+exposes it as `structured_content`. Every tool in this server returns a dataclass, and the
+SDK derives an `outputSchema` from it. [Post 06](../06-tools-in-depth/index.md) covered the
+silent failure that makes this worth asserting on: a class whose attributes are only
+assigned inside `__init__` has no type hints for the SDK to read, so `outputSchema` comes
+out `null`, nothing raises, and the tool ships an object's memory address to the model. Every
+result class here uses class-body annotations, and a test checks all eleven.
+
+## 3. Talking to Kubernetes from Python
+
+Now the code, and the first real trap.
+
+**The official `kubernetes` client is synchronous.** Every method on `CoreV1Api` is a
+blocking Hypertext Transfer Protocol (HTTP) request. Your tool is `async def`. Put the two
+together carelessly and you get this:
+
+```python
+@mcp.tool()
+async def list_pods(namespace: str = "default") -> PodList:
+    result = core_v1.list_namespaced_pod(namespace=namespace)   # blocks the event loop
+```
+
+That line runs on the event loop thread. For as long as the application programming
+interface (API) server takes to answer, the transport is frozen: no second tool call, no
+progress notification, no cancellation, nothing. On a healthy cluster you will never notice.
+On the cluster you actually care about, the one where the API server is under load because
+something is wrong, you will notice a great deal.
+
+The whole of the fix is one function in
+[cluster.py](../../code/15-devops-responder/src/k8s_responder/cluster.py):
+
+```python
+async def call(fn: Callable[..., Any], /, *args: Any, **kwargs: Any) -> Any:
+    """Run one blocking Kubernetes API call on a worker thread."""
+    try:
+        return await asyncio.to_thread(fn, *args, **kwargs)
+    except ApiException as exc:
+        raise ClusterError(
+            f"Kubernetes API error {exc.status} {exc.reason}".strip(),
+            status=exc.status or 0,
+            reason=exc.reason or "",
+        ) from exc
+    except urllib3.exceptions.HTTPError as exc:
+        raise ClusterError(f"Could not reach the Kubernetes API: {exc}") from exc
+```
+
+Every tool in the package reaches the cluster through that one function and no other. Being
+a single chokepoint is what makes the next three properties cheap: error translation happens
+once, the `ApiException` type stops leaking into tool code, and the threading rule is
+checkable.
+
+**Use `asyncio.to_thread`, not `get_event_loop().run_in_executor`.** The older spelling,
+which the previous edition of this post used and which most tutorials still show, is
+`asyncio.get_event_loop().run_in_executor(None, partial(fn, **kwargs))`. Three things are
+wrong with it. `get_event_loop()` is deprecated when called from a coroutine. It returns the
+wrong object when no loop is running, and in a threaded context it can quietly create a
+second one. And it does not forward keyword arguments, which is why every example wraps the
+call in `functools.partial`. `to_thread` has none of those problems.
+
+**The rule is asserted, not documented.** The fakes in `conftest.py` record the thread name
+of every API call they receive, so the property becomes an ordinary test:
+
+```python
+async def test_kubernetes_calls_run_on_a_worker_thread(fake):
+    async with Client(mcp) as c:
+        await c.call_tool("list_pods", {})
+        await c.call_tool("describe_pod", {"pod_name": "checkout-3c-aaa"})
+        await c.call_tool("list_deployments", {})
+
+    assert fake.recorder.calls, "the fake cluster was never called"
+    assert "MainThread" not in fake.recorder.threads()
+```
+
+That is the difference between a convention and a guarantee. Somebody will add a tool in six
+months and call `conn.core_v1.list_namespaced_pod(...)` directly because it is one line
+shorter, and this test is what tells them.
+
+Connecting is the other job in that module, and the order matters. In-cluster service
+account credentials are tried first, and a kubeconfig context is the fallback. When the
+server runs as a pod, the service account is the only correct answer, and falling through to
+a developer's kubeconfig inside a cluster would be surprising in exactly the way you do not
+want infrastructure tooling to be surprising. Credentials load on the first tool call rather
+than at startup, so a missing kubeconfig produces a readable tool error instead of a server
+that refuses to launch and tells the host nothing.
+
+## 4. Read-only by construction
+
+Every tool in this post is annotated `read_only_hint=True`. That annotation does nothing.
+
+It is worth being precise about how little it does, because the previous edition of this post
+said these tools were "safe, no approval dialog needed", and that is not what the
+specification says. `ToolAnnotations` carries this note:
+
+> NOTE: all properties in `ToolAnnotations` are **hints**. They are not guaranteed to provide
+> a faithful description of tool behavior (including descriptive properties like `title`).
+> Clients should never make tool use decisions based on `ToolAnnotations` received from
+> untrusted servers.
+
+And the tools page adds that clients **must** consider annotations untrusted unless they come
+from trusted servers. So `readOnlyHint` does not stop a tool from writing, does not suppress
+a host's approval dialog, and is not a permission. It is metadata a user interface may use as
+it sees fit, and a host is free to prompt on every call or on none.
+
+What actually makes these tools read-only is that they contain no writing code. The package
+splits along that line:
+
+| Module | Job | Can it write? |
+|---|---|---|
+| `app.py` | the `MCPServer` instance and stderr logging | no |
+| `cluster.py` | credentials, the `to_thread` wrapper, limits | no |
+| `inspect.py` | listing, describing, events, logs | no |
+| `diagnose.py` | crash-loop analysis | no |
+| `remediate.py` | restart, scale, rollback (Post 16) | yes, and only here |
+
+`inspect.py` and `diagnose.py` import `cluster` for the connection and the `list_namespaced_*`
+and `read_namespaced_*` calls, and nothing else. There is no `delete_`, no `patch_`, and no
+`create_` anywhere in either file, so there is no code path from either module to a change in
+the cluster, whatever any annotation claims. That is checkable too, and it is checked:
+
+```python
+def test_the_read_modules_contain_no_mutating_api_calls():
+    for module in (inspect_module, diagnose_module):
+        source = pyinspect.getsource(module)
+        for verb in (
+            "delete_namespaced",
+            "patch_namespaced",
+            "create_namespaced",
+            "replace_namespaced",
+        ):
+            assert verb not in source, f"{module.__name__} can call {verb}"
+```
+
+Grepping your own source in a test looks crude the first time you see it. It is also the only
+form of this check that cannot be defeated by a refactor, because it does not care how the
+call is spelled or which helper wraps it.
+
+The same reasoning is why there is no `--read-only` flag. The writing tools exist because
+[`__init__.py`](../../code/15-devops-responder/src/k8s_responder/__init__.py) imports
+`remediate`. Delete that one line and the capability is gone from the process, which is a
+stronger guarantee than any switch parsed at runtime.
+
+None of this is the real control. The real control is role-based access control (RBAC): the
+service account the server runs under. A minimal role for this post grants `get` and `list`
+on `pods`, `pods/log`, and `events` in the core API group, and on `deployments` and
+`replicasets` in `apps`. If the server has no `delete` verb, no bug in this code can delete
+anything. [Post 19](../19-security/index.md) is the general version of that argument, and
+[Post 13](../13-database-analyst/index.md) made it about database roles.
+
+## 5. Where a crash loop actually shows up
+
+Here is the correlation problem, concretely. One pod, three sources, and no single one of
+them tells you what is wrong.
+
+![Three stacked panels showing the same failing pod from three different parts of the Kubernetes API. The first panel is the pod status, which reports phase Running, which looks fine. The second panel is the container status inside that pod, which reports state waiting with reason CrashLoopBackOff and a restart count of seven, which says there is a loop but not why. The third panel is the previous container state, terminated with exit code 1, and alongside it the events recorded against the pod, a BackOff warning seen forty-two times. An arrow joins all three into a single verdict box at the bottom. Annotations mark what each source alone would let you conclude, and each of the first two alone is wrong.](diagrams/02-where-a-crashloop-shows-up.svg)
+*Read any one of the three and stop, and you report something that is true and useless.*
+
+**The pod phase says `Running`.** That is not a bug in Kubernetes. The pod exists, it is
+scheduled, and it has a container that keeps being started, so `Running` is the honest
+answer to the question "is this pod alive". It is the wrong question.
+
+**The container status says `waiting`, reason `CrashLoopBackOff`.** This is where most
+tutorials stop, and it is a restatement of the symptom. `CrashLoopBackOff` means "the kubelet
+is waiting before trying again", which you knew.
+
+**The previous container state has the exit code.** `lastState.terminated.exitCode` is the
+one field that says anything about the cause, and it describes an instance of the container
+that no longer exists. This is the single most-missed field in Kubernetes debugging, and it
+is why `get_logs` has a `previous` parameter at all.
+
+**The events say how the kubelet got there.** They are the cluster narrating itself:
+scheduling decisions, image pulls, probe failures, back-off timers. They also expire, one
+hour by default, so an empty list means "nothing recently", not "nothing ever".
+
+`describe_pod` returns all four in one result, and `PodDetail` has a field for each. The part
+worth copying is `container_states()`, which flattens `status.containerStatuses` and then
+appends `status.initContainerStatuses`:
+
+```python
+statuses = list(pod.status.container_statuses or []) if pod.status else []
+statuses += list(pod.status.init_container_statuses or []) if pod.status else []
+```
+
+A pod that never gets past its init container looks identical to a healthy pod if you only
+read `containerStatuses`. That is two lines to avoid an entire category of wrong answer, and
+there is a test named `test_init_containers_are_analysed_too` that fails if either is removed.
+
+One more piece of defensive shape. Reading events is a separate RBAC verb from reading pods,
+so a service account can perfectly well be allowed one and not the other. Losing events
+should degrade a diagnosis, not fail it:
+
+```python
+    except ClusterError:
+        # Event access is a separate RBAC verb from pod access. Losing events is
+        # a degraded diagnosis, not a failed one.
+        return []
+```
+
+## 6. Logs, and the size problem
+
+A pod that has been restarting for two days can hold hundreds of megabytes of logs. The naive
+tool hands all of it to the model. This is the failure the project exists to avoid, and one
+bound is not enough to avoid it.
+
+![A diagram in two halves. The left half shows a container's full log as a tall column, with a small window at its bottom end marked as what tail_lines selects from the API server, and an even smaller window inside that marked as what max_bytes keeps for the model, illustrating that the two bounds act on different quantities: one bounds the wire, the other bounds the context window. The right half shows two ways of cutting that window down to size side by side. The upper one keeps the oldest end and is marked as wrong, because the stack trace that explains the failure is at the newest end and has been thrown away. The lower one keeps the newest end and snaps the cut up to the nearest newline, and is marked as correct, with the dropped byte and line counts reported back in the result.](diagrams/03-log-truncation.svg)
+*`tail_lines` bounds the wire. `max_bytes` bounds the context. They are not the same bound.*
+
+**`tail_lines` bounds what crosses the wire.** It is the API server's own parameter, and it
+selects a number of lines from the end of the log. It says nothing about size.
+
+**`max_bytes` bounds what reaches the model.** This matters because a single line of
+structured JSON logging can be several kilobytes on its own. Five hundred lines is a
+reasonable-sounding request that can be five megabytes of context.
+
+So `get_logs` takes both, clamps both against configured maxima, and reports what happened:
+
+```python
+    cfg = limits()
+    tail_lines = clamp(tail_lines, 1, cfg.max_tail_lines)
+    max_bytes = clamp(max_bytes, 1_000, cfg.max_log_bytes)
+```
+
+Clamping rather than rejecting is deliberate. A model that asks for a hundred thousand lines
+is not being malicious, it just does not know the limit. Silently doing the sensible thing
+beats an error it has to recover from, as long as the result says what was actually done, and
+it does: `lines_requested` comes back as the clamped value.
+
+**Why the API's own `limitBytes` is not used.** The Kubernetes client documents it like this:
+
+> If set, the number of bytes to read from the server before terminating the log output. This
+> may not display a complete final line of logging, and may return slightly more or slightly
+> less than the specified limit.
+
+Read that against `tailLines`. The API server selects the tail, then reads bytes forward from
+the beginning of that selection and stops. The bytes it drops are the newest ones, which are
+the only ones that ever explain a crash, and it will happily stop in the middle of a line.
+Both halves of that are the opposite of what you want, so the byte bound is applied locally
+instead, in `_tail_bytes`:
+
+```python
+    encoded = text.encode("utf-8")
+    if len(encoded) <= max_bytes:
+        return text, 0, 0
+
+    window = encoded[-max_bytes:]
+    newline = window.find(b"\n")
+    if newline != -1 and newline + 1 < len(window):
+        window = window[newline + 1 :]
+```
+
+Three decisions in seven lines. The slice is taken from the **end**, because that is where the
+failure is. The cut is then moved forward to the first newline, so the first line the model
+sees is a whole line: a fragment reads like a different error than it is, and a model will
+confidently reason about a stack trace that was cut in half. And the slicing happens on bytes
+with the boundary fixed afterward, because slicing a `str` gives you no control over the byte
+size at all while slicing bytes blindly can split a multi-byte character.
+
+Here is the result of asking for five hundred lines of a log with a two-kilobyte ceiling,
+captured from a real run:
+
+```json
+{
+  "pod": "checkout-3c-aaa",
+  "lines_requested": 500,
+  "lines_returned": 30,
+  "bytes_returned": 1979,
+  "truncated": true,
+  "dropped_bytes": 31020,
+  "dropped_lines": 470,
+  "note": "Truncated to the most recent 2000 bytes. 470 older line(s) and 31020 byte(s) were dropped from the start of this slice. Raise max_bytes or lower tail_lines to see a different window."
+}
+```
+
+The `note` field is doing real work. A model handed a silently shortened log will reason about
+it as though it were complete. Told that 470 lines are missing from the front, it can ask for
+a different window, or say it cannot tell. Being explicitly incomplete is more useful than
+being quietly wrong.
+
+Two smaller things in the same tool. A 404 becomes a sentence in `note` with an empty `logs`
+string rather than an error, because "that pod does not exist" is an answer. And a 400 on a
+`previous=True` read becomes the sentence "No previous instance of this container has logs.
+The container has either never restarted, or its previous log was already rotated away",
+which is the difference between a tool that helps and a tool that returns
+`ApiException: (400)`.
+
+## 7. Diagnosing, as a pure function
+
+The analysis in [diagnose.py](../../code/15-devops-responder/src/k8s_responder/diagnose.py)
+is one function, `analyse(pod, events)`, that touches no network. The tools are thin wrappers
+that fetch and then call it. That split is worth the small amount of plumbing it costs: the
+interesting logic is the correlation, and correlation is testable without a cluster, a
+server, or an event loop. All twenty-four tests in
+[tests/test_diagnose.py](../../code/15-devops-responder/tests/test_diagnose.py) call it
+directly, and they run in 0.06 seconds.
+
+The function runs ten checks in order and returns on the first match:
+
+```python
+    checks = (
+        _check_terminating,
+        _check_oom,
+        _check_image,
+        _check_config,
+        _check_unschedulable,
+        _check_crash_loop,
+        _check_probe_failure,
+        _check_failed_phase,
+        _check_restarting,
+        _check_pending,
+    )
+```
+
+**The order is specificity, not severity.** `_check_oom` runs before `_check_crash_loop`
+because a pod being killed for memory reports *both*. It has a `CrashLoopBackOff` waiting
+reason and an `OOMKilled` previous state, and only one of those is actionable. Report the
+loop and you send the reader to the application logs; report the kill and you send them to
+`resources.limits.memory`, which is where the answer is. There is a test called
+`test_oom_beats_crashloop` whose entire job is to pin that ordering.
+
+**Exit codes are translated, not repeated.** A number is not a diagnosis. The module carries
+a small table of the ones worth explaining, including the `128+N` codes that are a signal
+number in disguise: 137 is SIGKILL, which means the out-of-memory killer or a liveness probe
+that stopped waiting; 139 is a segmentation fault; 127 means the entrypoint is not in the
+image. Unknown codes say so rather than guessing.
+
+The most interesting entry in that table is zero:
+
+```python
+    0: (
+        "the process exited successfully, which under restartPolicy Always is "
+        "still a restart; a container whose main process finishes is a crash "
+        "loop as far as Kubernetes is concerned"
+    ),
+```
+
+which comes with a comment worth reading twice, because it describes a bug this code does not
+have and most code does:
+
+```python
+    # `_EXIT_CODES.get(code or -1)` would be a bug: exit code 0 is falsy, and 0
+    # is the one code most worth explaining, because "it exited successfully"
+    # reads like good news right up until you notice it is in a restart loop.
+```
+
+**Two failure shapes that look like something else.** A container between back-off windows is
+genuinely `running`, so a check that only looks for the `CrashLoopBackOff` waiting reason
+reports the pod as fine. The fallback catches it on restart count plus a non-zero previous
+exit code, and drops the confidence to `medium`. And a pod that is `Pending` is usually not
+broken at all, it is downloading an image, so `Pending` on its own is a low-confidence
+`pending` verdict, while `Pending` plus a `FailedScheduling` event is a high-confidence
+`unschedulable` one with the scheduler's own message quoted back.
+
+**Every finding names the field it came from.** This is the part that makes a machine-written
+diagnosis checkable by a human:
+
+```python
+@dataclass
+class Finding:
+    source: str
+    signal: str
+    detail: str
+```
+
+Here is a real `diagnose_pod` result against the fixture, with the prose fields trimmed:
+
+```json
+{
+  "pod": "checkout-3c-aaa",
+  "verdict": "crash_loop",
+  "confidence": "high",
+  "summary": "Container app is in a crash loop.",
+  "likely_cause": "Container app has restarted 7 time(s). Its previous instance exited with code 1, which is a generic application error; the log tail almost always names it.",
+  "restart_count": 7,
+  "findings": [
+    { "source": "status.phase", "signal": "phase", "detail": "Running" },
+    { "source": "status.containerStatuses[app].state.waiting", "signal": "CrashLoopBackOff", "detail": "back-off 5m0s restarting" },
+    { "source": "status.containerStatuses[app].lastState.terminated", "signal": "Error", "detail": "previous instance exited with code 1" },
+    { "source": "status.containerStatuses[app].restartCount", "signal": "restarts", "detail": "7" },
+    { "source": "events", "signal": "BackOff", "detail": "Back-off restarting failed container app in pod checkout-3c-aaa (seen 42 time(s))" }
+  ],
+  "next_steps": [
+    "get_logs(pod_name='checkout-3c-aaa', container='app', previous=True) is the log that matters; the current instance has usually produced nothing yet",
+    "get_events(namespace='default', event_type='Warning')",
+    "If the exit code appeared right after a deploy, compare against get_rollout_history"
+  ]
+}
+```
+
+Every `source` there is a path you can check with one `kubectl` command. That is the
+difference between a diagnosis a human can verify and one they have to trust, and on
+infrastructure the second kind is worth very little.
+
+`next_steps` is the other half. It names the exact next call, with the arguments filled in,
+including `previous=True`, which is the argument a model will otherwise omit. A tool that
+tells the model what to do next is cheaper than a tool that makes the model work it out.
+
+And when nothing matches, the verdict is `unknown` with confidence `low` and the sentence
+"Not determined from pod status, container status, or events." A wrong confident answer costs
+more than an honest empty one, especially at the point in an incident where somebody is
+deciding whether to page a second person.
+
+## 8. Running it
+
+The suite needs no cluster:
 
 ```bash
-kubectl delete deployment nginx-healthy broken-app
+cd code/15-devops-responder && PYTHONPATH=src pytest tests -q
+```
+```
+........................................................................ [ 92%]
+......                                                                   [100%]
+78 passed in 1.34s
 ```
 
----
+Seventy-eight tests across both posts, in under two seconds, with no Kubernetes anywhere.
+`tests/conftest.py` is a fake `CoreV1Api` and `AppsV1Api` pair, installed through
+`cluster.use()`, and two decisions make it worth having. The fakes return **real
+`kubernetes.client` model objects**, `V1Pod` and `V1ContainerStatus` and `CoreV1Event`, so the
+nested-optional shape the production code has to survive is the shape it is tested against; a
+dict-shaped fake would let `pod["status"]["phase"]` pass in the suite and fail against a
+cluster. And they raise **real `ApiException`s**, so the 404 and 400 branches are exercised
+with the exception the real client throws.
 
-## 9. Troubleshooting
+Nothing in the package type-checks the API objects, which is exactly why the substitution
+works. [Post 12](../12-testing-and-debugging/index.md) has the general pattern, including the
+reason every test here opens its client with `async with` inside the test body instead of
+taking it from a yield fixture.
 
-| Problem | Cause | Fix |
-|---------|-------|-----|
-| "No module named kubernetes" | Missing dependency | `uv add kubernetes` |
-| "Unable to load kubeconfig" | kubectl not configured | Run `kubectl cluster-info` first |
-| "Forbidden: pods" | RBAC permissions | Use cluster-admin for local dev |
-| Empty pod list | Wrong namespace | Try `namespace="kube-system"` |
-| "Server exited immediately" | Import error or crash | Run `uv run python -m src.server` manually |
+To run the server against a real cluster:
 
----
-
-## Key Takeaways
-- Kubernetes Python client for real cluster access
-- Async wrappers for sync API calls (run_in_executor)
-- Structured output (markdown tables) for LLM readability
-- Tool annotations mark all tools as read-only
-- Diagnostic prompt pre-fetches crash data
-- Formatters keep context clean and efficient
-
-
----
-
-## What's Next?
-
-Diagnosing is half the battle. Now let's give our agent the power to actually **fix** things—safely.
-
-In **Blog 8: DevOps First Responder – Part 2**, we'll add:
-- `restart_pod` — Delete and recreate a crashing pod (with approval)
-- `scale_deployment` — Scale replicas up or down
-- `rollback_deployment` — Rollback to a previous revision
-- Human-in-the-loop for every mutating action
-
-The same approval pattern from Blog 6 (database writes), now applied to infrastructure.
-
----
-
-## Quick Reference
-
-### Project Structure
-```
-mcp-k8s-agent/
-├── pyproject.toml
-└── src/
-    ├── __init__.py
-    ├── server.py
-    ├── k8s_client.py
-    └── formatters.py
+```bash
+uv run python -m k8s_responder                    # stdio, what a desktop host spawns
+uv run python -m k8s_responder --context staging  # pick a kubeconfig context
 ```
 
-### Tools
-| Tool | Arguments | Returns |
-|------|-----------|---------|
-| `list_pods` | `namespace` | Pod table with status |
-| `get_pod_logs` | `pod_name`, `namespace`, `container`, `tail_lines`, `previous` | Log text |
-| `describe_pod` | `pod_name`, `namespace` | Detailed pod info |
-| `list_events` | `namespace`, `event_type`, `limit` | Event table |
-| `list_deployments` | `namespace` | Deployment table |
+Under stdio, standard output is the protocol channel. A stray `print()` anywhere in the
+package would be parsed as a JSON-RPC frame and break the connection in a way that names
+neither `print` nor your tool. All logging goes to standard error, configured on the first
+lines of `app.py`. [Post 04](../04-transports/index.md) has the full anatomy of that failure.
 
-### Resource
-| URI | Description |
-|-----|-------------|
-| `k8s://cluster-overview` | Pods + deployments in default namespace |
+## 9. When this is the wrong tool
 
-### Prompt
-| Name | Description |
-|------|-------------|
-| `diagnose_crashloop` | Auto-detects crashing pods, fetches logs, requests diagnosis |
+Three honest limits.
+
+**This is not monitoring.** Every tool here is a point-in-time read, taken when somebody
+asks. It has no history, no alerting, and no idea what normal looks like for your cluster. It
+answers "what is wrong right now", which is a question you ask after your monitoring has
+already told you something is wrong.
+
+**It cannot see inside your application.** Exit code 1 with an unhelpful log tail is where
+this server runs out of things to say, and it says so rather than inventing a cause. Metrics,
+traces, and profiles live in systems this does not touch.
+
+**It is a poor fit for very large namespaces.** `list_pods` returns every pod in the
+namespace, and a namespace with four hundred pods is a large result to put in a context
+window regardless of how tidy the rows are. `find_crash_loops` is the answer to that: it
+scans everything, describes only what is unhealthy, and caps the diagnoses it returns. It
+also reads the namespace's events once rather than once per pod, which is two API calls for a
+whole namespace instead of two per pod, and there is a test that counts them.
 
 ---
 
-| [← Blog 6: Database Analyst Part 2](../blog-6/blog.md) | [Blog 8: DevOps First Responder Part 2 →](../blog-8/blog.md) |
-|:---|---:|
+## Common pitfalls
+
+- **Calling a synchronous client from an `async` tool.** The `kubernetes` package blocks, and
+  on the event loop it freezes the entire transport until the API server answers. Route every
+  call through one `asyncio.to_thread` helper, and assert on the thread name in a test rather
+  than trusting the next person to remember.
+- **Reaching for `asyncio.get_event_loop().run_in_executor`.** It is the spelling most
+  tutorials still show. `get_event_loop()` is deprecated inside a coroutine, returns the wrong
+  thing with no loop running, and can create a second loop in a threaded context. It also
+  forces a `functools.partial` because it will not forward keyword arguments.
+- **Treating `readOnlyHint` as enforcement.** It is a hint, the specification says clients
+  must consider annotations untrusted, and it neither prevents a write nor suppresses a
+  prompt. What makes a module read-only is that it contains no writing code, and what makes a
+  service account read-only is RBAC.
+- **Bounding a log by lines alone.** Five hundred lines of structured JSON logging is
+  megabytes. Bound the bytes separately, keep the newest end, snap the cut to a line boundary,
+  and report the dropped counts so the model knows it is looking at a window.
+- **Using the API's `limitBytes` together with `tailLines`.** It reads forward from the start
+  of the selected tail and stops, so it discards the newest lines, which are the only ones
+  that explain a crash, and it may cut mid-line while doing it.
+- **Reading the pod phase and stopping.** A crash-looping pod is in phase `Running`. The
+  reason is in the container's waiting state, the cause is in its *previous* terminated state,
+  and the sequence is in the events. Any single one of those alone produces a confident wrong
+  answer.
+- **Ignoring init containers.** A pod wedged in its init container has an empty
+  `containerStatuses` list and looks perfectly healthy. Read `initContainerStatuses` too.
+- **Writing `codes.get(exit_code or -1)`.** Exit code 0 is falsy, and it is the code most
+  worth explaining, because a container whose main process finishes cleanly restarts forever
+  under `restartPolicy: Always`.
+
+---
+
+## Further reading
+
+- Specification, *"Tools"*, revision 2026-07-28. The `ToolAnnotations` note quoted in
+  section 4, and the requirement that clients treat annotations as untrusted.
+  <https://modelcontextprotocol.io/specification/draft/server/tools>
+- Kubernetes Python client. <https://github.com/kubernetes-client/python>. The synchronous
+  API surface this project wraps, and the source of the `limitBytes` description in section 6.
+- Kubernetes documentation, *"Debug Running Pods"*. The manual version of the correlation in
+  section 5, including `--previous` and the container state fields.
+  <https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/>
+- Model Context Protocol, *"Tool annotations are not enforcement"* (2026).
+  <https://blog.modelcontextprotocol.io/posts/2026-03-16-tool-annotations/>
+- MCP Python SDK, `mcp==2.0.0b2`. Every result and every transcript in this post came from
+  this version driving [code/15-devops-responder/](../../code/15-devops-responder/).
+
+Full citations in [REFERENCES.md](../../REFERENCES.md).
+
+---
+
+## What to read next
+
+- **[Post 16 — Project 2 · Safe remediation with approval](../16-devops-remediation/index.md)**:
+  the other half of this server, where three tools can change the cluster and none of them
+  does so until a human has seen the exact change.
+- **[Post 14 — Project 1 · Writes, transactions, and an audit trail](../14-database-writes/index.md)**:
+  the same read-then-write progression applied to a database, and the audit trail this
+  project does not have.
+- **[Post 12 — Testing and debugging MCP](../12-testing-and-debugging/index.md)**: the
+  in-memory client pattern that lets seventy-eight tests exercise a Kubernetes server with no
+  Kubernetes.

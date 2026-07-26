@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="t d">
+  <title id="t">Where a blast-radius guard belongs, and the three guards this server applies</title>
+  <desc id="d">Two lanes compare where a limit can be enforced. The upper lane, marked wrong, puts the check inside the tool body: the model proposes an out-of-bounds change, a person is shown an approval prompt for it, the person approves, and only then does the tool refuse, so somebody was asked to authorize a change the server was never going to make. The lower lane, marked correct, puts the check inside the resolver, which the SDK runs before the elicitation is rendered: the guard raises, the call fails immediately with an error the model can read, and the ask-the-human step is struck through because it never happens. Below the lanes a table lists the three guards, their defaults and the environment variable or command-line flag that changes each: a maximum replica count of twenty, three protected namespaces closed to writes, and per-call ceilings on log lines and log bytes. Two footer lines state that reads are never restricted, and that these guards are convenience rather than security, because the control that actually matters is the role-based access control granted to the service account.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .monos{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+    .tick{stroke:var(--mcp-success);stroke-width:1.5;fill:none;stroke-linecap:round;}
+    .cross{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;stroke-linecap:round;}
+    .strike{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;stroke-linecap:round;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="800" height="600"/>
+  <text class="title" x="30" y="34">Guards fire before the human, not after</text>
+  <text class="small" x="30" y="56">The same limit, in two places. Only one of them keeps a person from being asked to approve the impossible.</text>
+
+  <!-- ============ LANE A: WRONG ============ -->
+  <rect class="zone" x="30" y="76" width="740" height="118" rx="10"/>
+  <path class="cross" d="M46,86 l10,10 M56,86 l-10,10"/>
+  <text class="head" x="72" y="96">Guard inside the tool body</text>
+  <text class="small" x="272" y="96">the change reaches a person before it is checked</text>
+
+  <rect class="box" x="46" y="112" width="126" height="34" rx="6"/>
+  <text class="small" x="109" y="133" text-anchor="middle">propose 500</text>
+  <path class="flow" d="M174,129 L198,129" marker-end="url(#ar)"/>
+  <rect class="box" x="204" y="112" width="126" height="34" rx="6"/>
+  <text class="small" x="267" y="133" text-anchor="middle">ask the human</text>
+  <path class="flow" d="M332,129 L356,129" marker-end="url(#ar)"/>
+  <rect class="box" x="362" y="112" width="126" height="34" rx="6"/>
+  <text class="small" x="425" y="133" text-anchor="middle">human approves</text>
+  <path class="flow" d="M490,129 L514,129" marker-end="url(#ar)"/>
+  <rect class="box" x="520" y="112" width="210" height="34" rx="6"/>
+  <text class="small" x="625" y="133" text-anchor="middle">tool refuses anyway</text>
+
+  <text class="tiny" x="46" y="176">A person authorized something the server was never going to do, and learned that prompts do not mean anything.</text>
+
+  <!-- ============ LANE B: RIGHT ============ -->
+  <rect class="zone" x="30" y="206" width="740" height="118" rx="10"/>
+  <path class="tick" d="M46,216 l5,5.5 l10,-12"/>
+  <text class="head" x="72" y="226">Guard inside the resolver</text>
+  <text class="small" x="272" y="226">the SDK runs the resolver before it renders the question</text>
+
+  <rect class="box" x="46" y="242" width="126" height="34" rx="6"/>
+  <text class="small" x="109" y="263" text-anchor="middle">propose 500</text>
+  <path class="flow" d="M174,259 L198,259" marker-end="url(#ar)"/>
+  <rect class="box" x="204" y="242" width="170" height="34" rx="6"/>
+  <text class="mono" x="289" y="263" text-anchor="middle">guard_replicas()</text>
+  <path class="flow" d="M376,259 L400,259" marker-end="url(#ar)"/>
+  <rect class="box" x="406" y="242" width="170" height="34" rx="6"/>
+  <text class="small" x="491" y="263" text-anchor="middle">call fails, isError</text>
+
+  <rect class="chip" x="600" y="242" width="130" height="34" rx="6"/>
+  <text class="small" x="665" y="263" text-anchor="middle">ask the human</text>
+  <path class="strike" d="M604,272 L726,246"/>
+
+  <text class="tiny" x="46" y="306">assert seen == [] and assert fake.recorder.names() == []: no question was rendered, and no API call was made.</text>
+
+  <!-- ============ THE GUARDS ============ -->
+  <rect class="zone" x="30" y="340" width="740" height="168" rx="10"/>
+  <text class="label" x="46" y="364">Guard</text>
+  <text class="label" x="266" y="364">Default</text>
+  <text class="label" x="486" y="364">Override</text>
+  <line class="rule" x1="46" y1="374" x2="754" y2="374"/>
+
+  <text class="small" x="46" y="396">Maximum replica count</text>
+  <text class="mono" x="266" y="396">20</text>
+  <text class="monos" x="486" y="396">K8S_RESPONDER_MAX_REPLICAS</text>
+  <text class="monos" x="486" y="412">--max-replicas</text>
+
+  <text class="small" x="46" y="434">Namespaces closed to writes</text>
+  <text class="monos" x="266" y="434">kube-system, kube-public,</text>
+  <text class="monos" x="266" y="450">kube-node-lease</text>
+  <text class="monos" x="486" y="434">K8S_RESPONDER_PROTECTED_NAMESPACES</text>
+  <text class="monos" x="486" y="450">--protect</text>
+
+  <text class="small" x="46" y="472">Log lines and bytes per call</text>
+  <text class="monos" x="266" y="472">500 lines, 40000 bytes</text>
+  <text class="monos" x="486" y="472">K8S_RESPONDER_MAX_TAIL_LINES</text>
+  <text class="monos" x="486" y="488">K8S_RESPONDER_MAX_LOG_BYTES</text>
+
+  <!-- ============ FOOTER ============ -->
+  <text class="small" x="30" y="534">Reads are never restricted. Refusing to restart a pod in kube-system is not a reason to refuse to look at one.</text>
+  <text class="tiny" x="30" y="556">These guards are convenience, and they live in the same process as the next bug. The control that matters is RBAC on the service account.</text>
+</svg>

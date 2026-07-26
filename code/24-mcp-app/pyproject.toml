@@ -1,0 +1,34 @@
+[project]
+name = "mcp-app-demo"
+version = "0.1.0"
+description = "The smallest useful MCP Apps server from post 24: one tool, one ui:// resource, one widget"
+readme = "README.md"
+requires-python = ">=3.10"
+
+# Pinned exactly, for the same reason as every other project in this series:
+# 2.0.0b2 is the pre-release that implements protocol revision 2026-07-28, and
+# it is also the release that first ships `mcp.server.apps`. The 1.x line has
+# neither.
+dependencies = [
+    "mcp[cli]==2.0.0b2",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.24.0",
+]
+
+[project.scripts]
+mcp-app-demo = "mcp_app_demo.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcp_app_demo"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

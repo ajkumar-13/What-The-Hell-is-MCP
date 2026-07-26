@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="t d">
+  <title id="t">The lethal trifecta as three overlapping sets</title>
+  <desc id="d">Three equal circles overlap in the classic three-set arrangement. The upper circle is numbered one and labeled access to private data. The lower left circle is numbered two and labeled exposure to untrusted content. The lower right circle is numbered three and labeled an outbound channel. Only the region where all three circles overlap is filled with a diagonal hatch pattern and outlined, and it is labeled exfiltration is possible; a leader line runs from it to a note explaining that an attacker who can write into the untrusted content can make the model read the private data and send it out. A second note says that removing any one of the three closes the path, and that no amount of filtering closes it while all three remain. Three chips along the bottom give an example of each property drawn from the series' own projects: the database analyst holding a select grant on customer tables, the research browser fetching arbitrary pages, and the devops responder able to patch a live cluster.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .sub{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .muted{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .set{fill:var(--mcp-neutral-1);fill-opacity:0.55;stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .core{fill:url(#hatch);stroke:none;}
+    .coreline{fill:none;stroke:var(--mcp-ink);stroke-width:1.5;}
+    .mark{fill:var(--mcp-ink);stroke:var(--mcp-bg);stroke-width:1.5;}
+    .marknum{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+  ]]></style>
+
+  <defs>
+    <pattern id="hatch" width="9" height="9" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="9" stroke="var(--mcp-ink-muted)" stroke-width="1"/>
+    </pattern>
+    <clipPath id="cA"><circle cx="400" cy="222" r="135"/></clipPath>
+    <clipPath id="cB"><circle cx="332" cy="339" r="135"/></clipPath>
+    <clipPath id="cAB" clip-path="url(#cA)"><circle cx="332" cy="339" r="135"/></clipPath>
+    <clipPath id="cAC" clip-path="url(#cA)"><circle cx="468" cy="339" r="135"/></clipPath>
+    <clipPath id="cBC" clip-path="url(#cB)"><circle cx="468" cy="339" r="135"/></clipPath>
+  </defs>
+
+  <rect class="bg" width="800" height="600"/>
+
+  <text class="title" x="28" y="32">The lethal trifecta</text>
+  <text class="sub" x="28" y="52">Willison, 2025. Each property alone is ordinary. Only the region where all three overlap is an exfiltration path.</text>
+
+  <!-- the three sets -->
+  <circle class="set" cx="400" cy="222" r="135"/>
+  <circle class="set" cx="332" cy="339" r="135"/>
+  <circle class="set" cx="468" cy="339" r="135"/>
+
+  <!-- the triple intersection, hatched and outlined -->
+  <g clip-path="url(#cAB)">
+    <circle class="core" cx="468" cy="339" r="135"/>
+    <circle class="coreline" cx="468" cy="339" r="135"/>
+  </g>
+  <g clip-path="url(#cAC)">
+    <circle class="coreline" cx="332" cy="339" r="135"/>
+  </g>
+  <g clip-path="url(#cBC)">
+    <circle class="coreline" cx="400" cy="222" r="135"/>
+  </g>
+
+  <!-- lobe labels -->
+  <circle class="mark" cx="400" cy="130" r="12"/>
+  <text class="marknum" x="400" y="134" text-anchor="middle">1</text>
+  <text class="label" x="400" y="164" text-anchor="middle">access to private data</text>
+  <text class="muted" x="400" y="180" text-anchor="middle">the model can read it</text>
+
+  <circle class="mark" cx="272" cy="366" r="12"/>
+  <text class="marknum" x="272" y="370" text-anchor="middle">2</text>
+  <text class="label" x="272" y="398" text-anchor="middle">untrusted content</text>
+  <text class="muted" x="272" y="414" text-anchor="middle">anyone can write it</text>
+
+  <circle class="mark" cx="528" cy="366" r="12"/>
+  <text class="marknum" x="528" y="370" text-anchor="middle">3</text>
+  <text class="label" x="528" y="398" text-anchor="middle">an outbound channel</text>
+  <text class="muted" x="528" y="414" text-anchor="middle">a write or a fetch</text>
+
+  <!-- the intersection label, on an opaque backing so the hatch stays legible -->
+  <ellipse cx="400" cy="298" rx="54" ry="24" fill="var(--mcp-surface)" stroke="none"/>
+  <text class="label" x="400" y="294" text-anchor="middle">exfiltration</text>
+  <text class="label" x="400" y="310" text-anchor="middle">is possible</text>
+
+  <!-- callout, top right -->
+  <path class="flow-thin" d="M438,286 C500,270 540,200 596,164"/>
+  <text class="small" x="600" y="120">An attacker who can write</text>
+  <text class="small" x="600" y="138">into 2 can make the model</text>
+  <text class="small" x="600" y="156">read 1 and send it out</text>
+  <text class="small" x="600" y="174">through 3.</text>
+
+  <!-- callout, bottom right -->
+  <text class="small" x="596" y="420">Remove any one circle and</text>
+  <text class="small" x="596" y="438">the path closes. No amount</text>
+  <text class="small" x="596" y="456">of filtering closes it while</text>
+  <text class="small" x="596" y="474">all three remain.</text>
+
+  <!-- examples -->
+  <rect class="chip" x="28" y="502" width="240" height="70" rx="6"/>
+  <circle class="mark" cx="46" cy="522" r="10"/>
+  <text class="marknum" x="46" y="526" text-anchor="middle">1</text>
+  <text class="small" x="64" y="526">the database analyst</text>
+  <text class="muted" x="42" y="546">holds a SELECT grant on the</text>
+  <text class="muted" x="42" y="562">customer tables</text>
+
+  <rect class="chip" x="280" y="502" width="240" height="70" rx="6"/>
+  <circle class="mark" cx="298" cy="522" r="10"/>
+  <text class="marknum" x="298" y="526" text-anchor="middle">2</text>
+  <text class="small" x="316" y="526">the research browser</text>
+  <text class="muted" x="294" y="546">fetches arbitrary pages that</text>
+  <text class="muted" x="294" y="562">strangers wrote</text>
+
+  <rect class="chip" x="532" y="502" width="240" height="70" rx="6"/>
+  <circle class="mark" cx="550" cy="522" r="10"/>
+  <text class="marknum" x="550" y="526" text-anchor="middle">3</text>
+  <text class="small" x="568" y="526">the devops responder</text>
+  <text class="muted" x="546" y="546">can patch a live cluster and</text>
+  <text class="muted" x="546" y="562">reach the network</text>
+</svg>

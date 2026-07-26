@@ -1,0 +1,175 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 720" role="img" aria-labelledby="t d">
+  <title id="t">Reading one tool result: the isError branch and all five content block types</title>
+  <desc id="d">A decision flow that starts at a call to call_tool. The first question asks whether the call raised, and a raised call is a transport or protocol fault. The second question asks whether isError is true on the returned result, and it is read before any content is touched; a true value means the tool ran and failed, on a response whose resultType is still complete and on which nothing raised. Both failure answers converge on a single failed outcome, so a caller has one shape to branch on rather than two. On the success path the structured content field is kept as the machine-readable form of the answer, and then every content block is dispatched by its type through six branches: text is used as is, image and audio are described by mime type and size rather than inlined so their base64 never reaches the model, a resource link is treated as a pointer the host may choose to follow, an embedded resource is inlined when it is text and described when it is a blob, and an unrecognized type from a newer server falls through to a readable placeholder instead of raising. Everything converges on one outcome object carrying an ok flag, the flattened blocks, and the structured content.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .monom{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .monob{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:600;font-size:12px;fill:var(--mcp-ink);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .soft{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .future{fill:var(--mcp-neutral-1);stroke:var(--mcp-ink-muted);stroke-width:1;stroke-dasharray:5 4;}
+    .ok{fill:var(--mcp-success);stroke:var(--mcp-ink);stroke-width:1;}
+    .bad{fill:var(--mcp-alert);stroke:var(--mcp-ink);stroke-width:1;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-on-fill);}
+    .onfills{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-on-fill);}
+    .glyph{stroke:var(--mcp-on-fill);stroke-width:1.5;fill:none;stroke-linecap:round;}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="720"/>
+  <text class="title" x="40" y="34">Reading one tool result</text>
+  <text class="small" x="40" y="56">Two failure paths that look nothing alike on the wire, folded into one outcome. Then six content branches, not one.</text>
+
+  <!-- ================= the call ================= -->
+  <rect class="zone" x="140" y="76" width="300" height="42" rx="8"/>
+  <text class="monob" x="290" y="103" text-anchor="middle">await conn.call_tool(name, args)</text>
+
+  <!-- ================= decision 1 ================= -->
+  <path class="flow" d="M290,120 L290,140" marker-end="url(#ar)"/>
+  <rect class="zone" x="140" y="142" width="300" height="44" rx="8"/>
+  <text class="label" x="290" y="163" text-anchor="middle">Did the call raise?</text>
+  <text class="tiny" x="290" y="179" text-anchor="middle">the only thing a try/except can see</text>
+
+  <path class="flow" d="M442,164 L606,164" marker-end="url(#ar)"/>
+  <text class="tiny" x="524" y="157" text-anchor="middle">yes</text>
+
+  <rect class="bad" x="610" y="142" width="310" height="44" rx="6"/>
+  <path class="glyph" d="M626,157 l9,9 M635,157 l-9,9"/>
+  <text class="onfills" x="652" y="161">transport or protocol fault</text>
+  <text class="onfills" x="652" y="177">the process died, or JSON-RPC refused it</text>
+
+  <!-- ================= decision 2 ================= -->
+  <path class="flow" d="M290,188 L290,208" marker-end="url(#ar)"/>
+  <text class="tiny" x="304" y="203">no</text>
+  <rect class="zone" x="140" y="210" width="300" height="58" rx="8"/>
+  <text class="label" x="290" y="231" text-anchor="middle">Is result.is_error true?</text>
+  <text class="tiny" x="290" y="247" text-anchor="middle">read this first, before touching content.</text>
+  <text class="tiny" x="290" y="261" text-anchor="middle">plain bool, default False. None is a ValidationError.</text>
+
+  <path class="flow" d="M442,239 L606,239" marker-end="url(#ar)"/>
+  <text class="tiny" x="524" y="232" text-anchor="middle">yes</text>
+
+  <rect class="bad" x="610" y="210" width="310" height="58" rx="6"/>
+  <path class="glyph" d="M626,232 l9,9 M635,232 l-9,9"/>
+  <text class="onfills" x="652" y="230">the tool ran and it failed</text>
+  <text class="onfills" x="652" y="246">resultType is still "complete". HTTP 200.</text>
+  <text class="onfills" x="652" y="261">Nothing raised, so nothing caught it.</text>
+
+  <!-- ================= failure converge ================= -->
+  <path class="flow" d="M765,190 L765,206" marker-end="url(#ar)"/>
+  <path class="flow" d="M765,272 L765,292" marker-end="url(#ar)"/>
+  <rect class="zone" x="610" y="294" width="310" height="62" rx="8"/>
+  <text class="head" x="626" y="315">One failed outcome, either way</text>
+  <text class="monom" x="626" y="333">ToolOutcome(ok=False)</text>
+  <text class="monom" x="626" y="349">for_model(): "TOOL FAILED (find_process): ..."</text>
+
+  <!-- ================= success path ================= -->
+  <path class="flow" d="M290,270 L290,292" marker-end="url(#ar)"/>
+  <text class="tiny" x="304" y="286">no</text>
+  <rect class="ok" x="140" y="294" width="300" height="42" rx="6"/>
+  <path class="glyph" d="M158,313 l5,5.5 l10,-12"/>
+  <text class="onfills" x="184" y="311">the tool succeeded</text>
+  <text class="onfills" x="184" y="327">absent and false mean the same thing</text>
+
+  <line class="rule" x1="40" y1="372" x2="920" y2="372"/>
+  <text class="head" x="40" y="396">Now read the payload. There are two fields, and one of them has six shapes.</text>
+
+  <!-- ================= structuredContent ================= -->
+  <path class="flow" d="M290,338 L290,410" marker-end="url(#ar)"/>
+  <rect class="zone" x="40" y="412" width="430" height="62" rx="8"/>
+  <text class="label" x="56" y="433">structuredContent</text>
+  <text class="monom" x="176" y="433">-&gt; outcome.structured</text>
+  <text class="small" x="56" y="451">Present when the tool declares an outputSchema. Any JSON value,</text>
+  <text class="small" x="56" y="466">not only an object. snake_case in Python: structured_content.</text>
+
+  <!-- ================= content ================= -->
+  <rect class="zone" x="490" y="412" width="430" height="62" rx="8"/>
+  <text class="label" x="506" y="433">content</text>
+  <text class="monom" x="566" y="433">-&gt; dispatch each block on its type</text>
+  <text class="small" x="506" y="451">Required, may be empty. Reading .text off every block silently</text>
+  <text class="small" x="506" y="466">drops four of the five kinds below.</text>
+
+  <path class="flow" d="M705,476 L705,498" marker-end="url(#ar)"/>
+  <path class="flow-thin" d="M100,516 L860,516"/>
+  <path class="flow-thin" d="M110,516 L110,538" marker-end="url(#arm)"/>
+  <path class="flow-thin" d="M260,516 L260,538" marker-end="url(#arm)"/>
+  <path class="flow-thin" d="M410,516 L410,538" marker-end="url(#arm)"/>
+  <path class="flow-thin" d="M560,516 L560,538" marker-end="url(#arm)"/>
+  <path class="flow-thin" d="M710,516 L710,538" marker-end="url(#arm)"/>
+  <path class="flow-thin" d="M855,516 L855,538" marker-end="url(#arm)"/>
+
+  <!-- six branches -->
+  <rect class="chip" x="40" y="540" width="140" height="98" rx="6"/>
+  <text class="monob" x="52" y="560">text</text>
+  <text class="tiny" x="52" y="580">the common case</text>
+  <text class="tiny" x="52" y="596">use it as it stands</text>
+  <text class="tiny" x="52" y="616">block.text</text>
+
+  <rect class="chip" x="190" y="540" width="140" height="98" rx="6"/>
+  <text class="monob" x="202" y="560">image</text>
+  <text class="tiny" x="202" y="580">mimeType, base64</text>
+  <text class="tiny" x="202" y="596">describe the size,</text>
+  <text class="tiny" x="202" y="612">never inline it</text>
+  <text class="tiny" x="202" y="630">keep data for the UI</text>
+
+  <rect class="chip" x="340" y="540" width="140" height="98" rx="6"/>
+  <text class="monob" x="352" y="560">audio</text>
+  <text class="tiny" x="352" y="580">mimeType, base64</text>
+  <text class="tiny" x="352" y="596">same treatment</text>
+  <text class="tiny" x="352" y="616">as an image</text>
+
+  <rect class="chip" x="490" y="540" width="140" height="98" rx="6"/>
+  <text class="monob" x="502" y="560">resource_link</text>
+  <text class="tiny" x="502" y="580">uri and name</text>
+  <text class="tiny" x="502" y="596">a pointer, not the</text>
+  <text class="tiny" x="502" y="612">content. The host</text>
+  <text class="tiny" x="502" y="628">decides to follow it</text>
+
+  <rect class="chip" x="640" y="540" width="140" height="98" rx="6"/>
+  <text class="monob" x="652" y="560">resource</text>
+  <text class="tiny" x="652" y="580">nested contents</text>
+  <text class="tiny" x="652" y="596">text: inline it</text>
+  <text class="tiny" x="652" y="612">blob: describe it</text>
+
+  <rect class="future" x="790" y="540" width="130" height="98" rx="6"/>
+  <text class="monob" x="802" y="560">anything else</text>
+  <text class="tiny" x="802" y="580">a newer server,</text>
+  <text class="tiny" x="802" y="596">a versioned union</text>
+  <text class="tiny" x="802" y="616">placeholder,</text>
+  <text class="tiny" x="802" y="632">never a crash</text>
+
+  <!-- ================= converge ================= -->
+  <path class="flow-thin" d="M110,640 L110,656"/>
+  <path class="flow-thin" d="M260,640 L260,656"/>
+  <path class="flow-thin" d="M410,640 L410,656"/>
+  <path class="flow-thin" d="M560,640 L560,656"/>
+  <path class="flow-thin" d="M710,640 L710,656"/>
+  <path class="flow-thin" d="M855,640 L855,656"/>
+  <path class="flow-thin" d="M110,656 L855,656"/>
+  <path class="flow" d="M480,656 L480,668" marker-end="url(#ar)"/>
+
+  <rect class="zone" x="40" y="670" width="880" height="34" rx="8"/>
+  <text class="monob" x="480" y="692" text-anchor="middle">ToolOutcome(ok=True, blocks=(...), structured=...)   ·   one type, one flag, whatever happened</text>
+</svg>

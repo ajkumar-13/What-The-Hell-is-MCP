@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Token validation as five gates, with the two failure codes and the arrow that must never exist</title>
+  <desc id="d">A bearer token enters at the top and falls through five gates in order. Gate one asks whether a token is present at all. Gate two asks whether it verifies, by signature or introspection. Gate three asks whether it has expired. Gate four, marked as the one implementations most often skip, asks whether this server is the token's intended audience. Gate five asks whether the token carries the scopes the current call needs. The first four failures all exit with 401 Unauthorized and a WWW-Authenticate challenge; the fifth exits with 403 Forbidden and an insufficient_scope challenge, which tells the client to step up rather than log in again. Below the gates, a panel contrasts two arrows from the server to an upstream API: forwarding the client's own token is crossed out and labelled forbidden, while calling the upstream with a separate token the server obtained itself is ticked.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .keybox{fill:var(--mcp-surface);stroke:var(--mcp-accent);stroke-width:1.5;}
+    .client{fill:var(--mcp-primary);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .pass{fill:var(--mcp-success);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .cross{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;stroke-linecap:round;}
+    .tick{stroke:var(--mcp-success);stroke-width:1.5;fill:none;stroke-linecap:round;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="30">Five gates, two status codes</text>
+  <text class="small" x="40" y="50">Every request runs the whole gate. There is no session to remember that the last one passed.</text>
+
+  <text class="head" x="60" y="88">The check, in order</text>
+  <text class="head" x="560" y="88">What you return if it fails</text>
+
+  <!-- gate 1 -->
+  <rect class="box" x="60" y="98" width="380" height="44" rx="7"/>
+  <text class="label" x="76" y="118">1. Is there an Authorization: Bearer header?</text>
+  <text class="tiny" x="76" y="134">tokens never arrive in the query string</text>
+  <path class="flow-thin" d="M444,120 L552,120" marker-end="url(#arm)"/>
+  <rect class="chip" x="556" y="102" width="364" height="36" rx="6"/>
+  <text class="mono" x="570" y="125">401 + WWW-Authenticate: Bearer resource_metadata=...</text>
+
+  <!-- gate 2 -->
+  <rect class="box" x="60" y="152" width="380" height="44" rx="7"/>
+  <text class="label" x="76" y="172">2. Does it verify?</text>
+  <text class="tiny" x="76" y="188">signature against the issuer's keys, or introspection</text>
+  <path class="flow-thin" d="M444,174 L552,174" marker-end="url(#arm)"/>
+  <rect class="chip" x="556" y="156" width="364" height="36" rx="6"/>
+  <text class="mono" x="570" y="179">401  error="invalid_token"</text>
+
+  <!-- gate 3 -->
+  <rect class="box" x="60" y="206" width="380" height="44" rx="7"/>
+  <text class="label" x="76" y="226">3. Is it still inside its lifetime?</text>
+  <text class="tiny" x="76" y="242">short-lived tokens are the point; expect to see this one</text>
+  <path class="flow-thin" d="M444,228 L552,228" marker-end="url(#arm)"/>
+  <rect class="chip" x="556" y="210" width="364" height="36" rx="6"/>
+  <text class="mono" x="570" y="233">401  invalid or expired token</text>
+
+  <!-- gate 4, the one that gets skipped -->
+  <rect class="keybox" x="60" y="260" width="380" height="44" rx="7"/>
+  <text class="label" x="76" y="280">4. Is the audience me?</text>
+  <text class="tiny" x="76" y="296">compare against the resource you published in your metadata</text>
+  <rect class="server" x="316" y="252" width="124" height="18" rx="5"/>
+  <text class="onfill" x="378" y="266" text-anchor="middle">the skipped one</text>
+  <path class="flow-thin" d="M444,282 L552,282" marker-end="url(#arm)"/>
+  <rect class="chip" x="556" y="264" width="364" height="36" rx="6"/>
+  <text class="mono" x="570" y="280">401  a token for another service</text>
+  <text class="tiny" x="570" y="295">MUST reject tokens that do not name you in the audience</text>
+
+  <!-- gate 5 -->
+  <rect class="box" x="60" y="320" width="380" height="44" rx="7"/>
+  <text class="label" x="76" y="340">5. Does it carry the scopes this call needs?</text>
+  <text class="tiny" x="76" y="356">emit every scope the operation needs, in one challenge</text>
+  <path class="flow-thin" d="M444,342 L552,342" marker-end="url(#arm)"/>
+  <rect class="chip" x="556" y="324" width="364" height="36" rx="6"/>
+  <text class="mono" x="570" y="340">403  error="insufficient_scope", scope="..."</text>
+  <text class="tiny" x="570" y="355">403 means step up, not log in again</text>
+
+  <!-- pass -->
+  <path class="flow" d="M250,368 L250,384" marker-end="url(#ar)"/>
+  <rect class="pass" x="60" y="388" width="380" height="34" rx="7"/>
+  <text class="onfill" x="250" y="409" text-anchor="middle">Serve the request</text>
+  <text class="tiny" x="456" y="409">get_access_token() hands the handler the AccessToken</text>
+
+  <!-- upstream panel -->
+  <rect class="zone" x="40" y="436" width="880" height="86" rx="9"/>
+  <text class="head" x="58" y="456">And when your server calls something else</text>
+
+  <rect class="server" x="58" y="470" width="120" height="32" rx="6"/>
+  <text class="onfill" x="118" y="490" text-anchor="middle">your server</text>
+
+  <path class="flow-thin" d="M184,479 L322,479" marker-end="url(#arm)"/>
+  <path class="cross" d="M246,472 l14,14 M260,472 l-14,14"/>
+  <text class="tiny" x="184" y="470">the client's token, forwarded</text>
+  <rect class="chip" x="326" y="466" width="150" height="26" rx="6"/>
+  <text class="mono" x="401" y="484" text-anchor="middle">upstream API</text>
+  <text class="tiny" x="184" y="498">MUST NOT pass it through</text>
+
+  <path class="flow-thin" d="M540,479 L678,479" marker-end="url(#arm)"/>
+  <path class="tick" d="M600,479 l5,6 l11,-14"/>
+  <text class="tiny" x="540" y="470">a separate token, issued to you</text>
+  <rect class="chip" x="682" y="466" width="150" height="26" rx="6"/>
+  <text class="mono" x="757" y="484" text-anchor="middle">upstream API</text>
+  <text class="tiny" x="540" y="498">you are an OAuth client here, not a proxy</text>
+</svg>

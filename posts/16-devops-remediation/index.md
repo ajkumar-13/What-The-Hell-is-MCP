@@ -1,1085 +1,783 @@
-# Blog 8: DevOps First Responder – Part 2
-## Fix & Remediate with Human-in-the-Loop Approval
+# 16 · Project 2 · Safe remediation with approval
 
-*Reading Time: 25 minutes*
+> **TL;DR.** A Model Context Protocol (MCP) tool that changes a cluster is defensible only
+> when a human has seen the exact change first, and "exact" has to be provable rather than
+> promised. This post adds three writing tools to the Kubernetes first responder from
+> [Post 15](../15-devops-responder/index.md), each gated by an elicitation whose question is
+> a pure function of the tool's arguments, so what was approved and what is reported are the
+> same text by construction. Along the way it fixes two failures the previous edition
+> shipped: a rollback that restored only container images, and a revision lookup that could
+> roll one deployment back onto another deployment's pod template.
+>
+> **After reading this you will be able to:**
+> - Gate a mutating tool behind an approval the model can neither see nor forge.
+> - Render a change preview that is provably identical in the question and in the result.
+> - Roll a deployment back the way `kubectl rollout undo` does, and say what that does not cover.
+> - Put blast-radius limits where they fire before a human is ever asked.
 
----
-
-> *"Diagnosing is half the battle. Now let's give our agent the power to actually fix things—safely."*
-
----
-
-## Introduction
-
-In Blog 7, we built an MCP server that reads from a Kubernetes cluster: listing pods, fetching logs, describing resources, and diagnosing crash loops.
-
-But reading doesn't fix anything. When it's 3 AM and the checkout service is down, you don't just want *diagnosis*—you want *action*.
-
-Today we're adding **write operations** to our K8s agent:
-
-| Tool | Action | Risk Level |
-|------|--------|------------|
-| `restart_pod` | Delete a pod so its controller recreates it | Medium |
-| `scale_deployment` | Change the number of replicas | Medium |
-| `rollback_deployment` | Roll back to a previous revision | High |
-
-Every operation requires **human approval** via MCP tool annotations, exactly like the database write pattern from Blog 6.
+![A four-stage loop drawn left to right. First, the model proposes a change by calling a tool with arguments. Second, a resolver runs before anything else: it checks the blast-radius guards, and if the change is out of bounds it fails the call here, with no question ever shown to anyone. Third, if the guards pass, the resolver renders a preview built only from the arguments into an elicitation question, the server returns an input required result and the original request ends; the client asks the human, then retries the same tool call with the answer attached. Fourth, on the retry the server applies the change, reads the cluster back to verify it, and returns a result carrying the same preview object that was put in the question, plus the observed before and after state and any warnings. A note marks that the guard stage runs before the human stage, not after.](diagrams/01-propose-preview-approve.svg)
+*The guard fires before anybody is asked. The preview that is approved is the object that comes back.*
 
 ---
 
-## 1. The Approval Pattern (Review)
+## 1. The three remediations worth automating
 
-This is the same human-in-the-loop pattern from Blog 6, applied to infrastructure:
+[Post 15](../15-devops-responder/index.md) built the reading half of this server: eight tools
+that list, describe, read logs, and diagnose, in a package where the read modules physically
+cannot write. This post adds the other half, and it is deliberately small:
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│              HUMAN-IN-THE-LOOP FOR K8s ACTIONS              │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  1. User: "Restart the payment-service pod"                 │
-│                                                             │
-│  2. LLM decides: call restart_pod("payment-service-xyz")    │
-│                                                             │
-│  3. Tool has destructiveHint: true → Host shows dialog:     │
-│     ┌─────────────────────────────────────────────────┐    │
-│     │ ⚠️  Pod Restart Requested                        │    │
-│     │                                                  │    │
-│     │  Pod: payment-service-7d8f9b6c4f-x2k9j          │    │
-│     │  Namespace: production                           │    │
-│     │                                                  │    │
-│     │  [Cancel]                    [Allow]             │    │
-│     └─────────────────────────────────────────────────┘    │
-│                                                             │
-│  4. User clicks "Allow" → Pod deleted, controller recreates │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
+| Tool | What it does | Reversible? |
+|---|---|---|
+| `restart_pod` | deletes a pod so its controller creates a replacement | no |
+| `scale_deployment` | sets `spec.replicas` | partly |
+| `rollback_deployment` | replaces `spec.template` with a previous revision's | yes, by rolling forward |
 
-> ⚠️ **Reminder:** Host approval dialogs are a UX feature, not a security guarantee. Your code must still validate inputs and handle errors gracefully. Some hosts may not show dialogs at all.
+Three, and no more. The test for whether a remediation belongs on this list is not whether it
+is useful, it is whether the change can be described completely in a sentence a person can
+evaluate in the ten seconds they will actually spend on it. "Delete this pod" passes.
+"Reconcile the cluster to the desired state" does not.
 
----
+Everything in this post lives in
+[remediate.py](../../code/15-devops-responder/src/k8s_responder/remediate.py), which is the
+only module in the package that contains a `delete_`, `patch_`, or `create_` call. Delete its
+import from `__init__.py` and the writing capability is gone from the process, which is a
+stronger guarantee than any runtime flag.
 
-## 2. Extending the K8s Client
+## 2. What "approval" cannot mean
 
-We need three new methods on our K8s client. Add these to `src/k8s_client.py`:
+The obvious design is a parameter:
 
 ```python
-# Add these methods to the K8sClient class in src/k8s_client.py
-
-    # ========== MUTATING OPERATIONS ==========
-
-    async def delete_pod(self, pod_name: str, namespace: str = "default") -> dict:
-        """
-        Delete a pod. If managed by a Deployment/ReplicaSet, the controller
-        will automatically create a replacement.
-        
-        Returns info about the deleted pod.
-        """
-        # First, verify the pod exists and get its info
-        try:
-            pod = await self._run_sync(
-                self.core_v1.read_namespaced_pod,
-                name=pod_name,
-                namespace=namespace,
-            )
-        except ApiException as e:
-            if e.status == 404:
-                raise RuntimeError(
-                    f"Pod '{pod_name}' not found in namespace '{namespace}'."
-                )
-            raise RuntimeError(f"K8s API error: {e.status} {e.reason}")
-
-        # Check if pod is managed by a controller (safe to delete)
-        owner_refs = pod.metadata.owner_references or []
-        managed = any(ref.controller for ref in owner_refs)
-
-        # Delete the pod
-        try:
-            await self._run_sync(
-                self.core_v1.delete_namespaced_pod,
-                name=pod_name,
-                namespace=namespace,
-            )
-        except ApiException as e:
-            raise RuntimeError(f"Failed to delete pod: {e.status} {e.reason}")
-
-        return {
-            "pod_name": pod_name,
-            "namespace": namespace,
-            "managed_by_controller": managed,
-            "warning": None if managed else (
-                "This pod is NOT managed by a controller. "
-                "It will NOT be recreated automatically."
-            ),
-        }
-
-    async def scale_deployment(
-        self,
-        deployment_name: str,
-        replicas: int,
-        namespace: str = "default",
-    ) -> dict:
-        """Scale a deployment to the specified replica count."""
-        # Get current state first
-        try:
-            dep = await self._run_sync(
-                self.apps_v1.read_namespaced_deployment,
-                name=deployment_name,
-                namespace=namespace,
-            )
-        except ApiException as e:
-            if e.status == 404:
-                raise RuntimeError(
-                    f"Deployment '{deployment_name}' not found "
-                    f"in namespace '{namespace}'."
-                )
-            raise RuntimeError(f"K8s API error: {e.status} {e.reason}")
-
-        old_replicas = dep.spec.replicas
-
-        # Apply the scale
-        body = {"spec": {"replicas": replicas}}
-        try:
-            await self._run_sync(
-                self.apps_v1.patch_namespaced_deployment_scale,
-                name=deployment_name,
-                namespace=namespace,
-                body=body,
-            )
-        except ApiException as e:
-            raise RuntimeError(f"Failed to scale deployment: {e.status} {e.reason}")
-
-        return {
-            "deployment": deployment_name,
-            "namespace": namespace,
-            "previous_replicas": old_replicas,
-            "new_replicas": replicas,
-        }
-
-    async def rollback_deployment(
-        self,
-        deployment_name: str,
-        namespace: str = "default",
-        revision: int | None = None,
-    ) -> dict:
-        """
-        Rollback a deployment. If revision is None, rolls back to
-        the previous revision.
-        """
-        # Get current deployment
-        try:
-            dep = await self._run_sync(
-                self.apps_v1.read_namespaced_deployment,
-                name=deployment_name,
-                namespace=namespace,
-            )
-        except ApiException as e:
-            if e.status == 404:
-                raise RuntimeError(
-                    f"Deployment '{deployment_name}' not found "
-                    f"in namespace '{namespace}'."
-                )
-            raise RuntimeError(f"K8s API error: {e.status} {e.reason}")
-
-        current_image = "unknown"
-        if dep.spec.template.spec.containers:
-            current_image = dep.spec.template.spec.containers[0].image
-
-        # Get revision history via ReplicaSets
-        try:
-            rs_list = await self._run_sync(
-                self.apps_v1.list_namespaced_replica_set,
-                namespace=namespace,
-                label_selector=",".join(
-                    f"{k}={v}"
-                    for k, v in (dep.spec.selector.match_labels or {}).items()
-                ),
-            )
-        except ApiException:
-            rs_list = None
-
-        # Perform rollback via patch (remove current template hash to trigger rollback)
-        # Kubernetes rollback is done by patching the deployment with a previous
-        # ReplicaSet's template. For simplicity, we use the rollback annotation approach.
-        annotations = dep.spec.template.metadata.annotations or {}
-        
-        # The standard way to rollback is to use kubectl rollout undo, which
-        # patches the deployment with the previous ReplicaSet's pod template.
-        # We'll find the previous RS and patch with its template.
-        if rs_list and rs_list.items:
-            # Sort ReplicaSets by revision number
-            sorted_rs = sorted(
-                rs_list.items,
-                key=lambda rs: int(
-                    (rs.metadata.annotations or {}).get(
-                        "deployment.kubernetes.io/revision", "0"
-                    )
-                ),
-                reverse=True,
-            )
-
-            # Current is first, previous is second
-            if len(sorted_rs) < 2:
-                raise RuntimeError(
-                    "No previous revision found. Cannot rollback."
-                )
-
-            target_rs = sorted_rs[1]  # Previous revision
-            if revision:
-                # Find specific revision
-                for rs in sorted_rs:
-                    rev = int(
-                        (rs.metadata.annotations or {}).get(
-                            "deployment.kubernetes.io/revision", "0"
-                        )
-                    )
-                    if rev == revision:
-                        target_rs = rs
-                        break
-                else:
-                    raise RuntimeError(f"Revision {revision} not found.")
-
-            target_image = "unknown"
-            if target_rs.spec.template.spec.containers:
-                target_image = target_rs.spec.template.spec.containers[0].image
-
-            # Patch deployment with the target RS's pod template
-            patch_body = {
-                "spec": {
-                    "template": {
-                        "spec": {
-                            "containers": [
-                                {
-                                    "name": c.name,
-                                    "image": c.image,
-                                }
-                                for c in target_rs.spec.template.spec.containers
-                            ]
-                        }
-                    }
-                }
-            }
-
-            try:
-                await self._run_sync(
-                    self.apps_v1.patch_namespaced_deployment,
-                    name=deployment_name,
-                    namespace=namespace,
-                    body=patch_body,
-                )
-            except ApiException as e:
-                raise RuntimeError(
-                    f"Failed to rollback deployment: {e.status} {e.reason}"
-                )
-
-            target_revision = int(
-                (target_rs.metadata.annotations or {}).get(
-                    "deployment.kubernetes.io/revision", "?"
-                )
-            )
-
-            return {
-                "deployment": deployment_name,
-                "namespace": namespace,
-                "previous_image": current_image,
-                "rolled_back_to_image": target_image,
-                "target_revision": target_revision,
-            }
-
-        raise RuntimeError("Could not find ReplicaSet history for rollback.")
-
-    async def get_deployment_history(
-        self, deployment_name: str, namespace: str = "default"
-    ) -> list[dict]:
-        """Get revision history for a deployment."""
-        try:
-            dep = await self._run_sync(
-                self.apps_v1.read_namespaced_deployment,
-                name=deployment_name,
-                namespace=namespace,
-            )
-        except ApiException as e:
-            if e.status == 404:
-                raise RuntimeError(
-                    f"Deployment '{deployment_name}' not found."
-                )
-            raise RuntimeError(f"K8s API error: {e.status} {e.reason}")
-
-        # Get ReplicaSets for this deployment
-        try:
-            rs_list = await self._run_sync(
-                self.apps_v1.list_namespaced_replica_set,
-                namespace=namespace,
-                label_selector=",".join(
-                    f"{k}={v}"
-                    for k, v in (dep.spec.selector.match_labels or {}).items()
-                ),
-            )
-        except ApiException as e:
-            raise RuntimeError(f"Failed to list ReplicaSets: {e.status} {e.reason}")
-
-        history = []
-        for rs in rs_list.items:
-            revision = int(
-                (rs.metadata.annotations or {}).get(
-                    "deployment.kubernetes.io/revision", "0"
-                )
-            )
-            image = "unknown"
-            if rs.spec.template.spec.containers:
-                image = rs.spec.template.spec.containers[0].image
-
-            history.append(
-                {
-                    "revision": revision,
-                    "image": image,
-                    "replicas": rs.status.replicas or 0,
-                    "ready_replicas": rs.status.ready_replicas or 0,
-                    "created": rs.metadata.creation_timestamp.isoformat()
-                    if rs.metadata.creation_timestamp
-                    else "unknown",
-                }
-            )
-
-        history.sort(key=lambda h: h["revision"], reverse=True)
-        return history
+@mcp.tool()
+async def restart_pod(pod_name: str, approved: bool) -> str:
+    if not approved:
+        return "Not approved."
 ```
 
----
+`approved` is now in the published input schema, which is in the tool description the model
+reads, which means the model fills it in. You have built a field whose only purpose is to be
+set to `true` by the thing you were gating.
 
-## 3. Adding Format Helpers
+The annotation route is no better. Every writing tool here does carry
+`destructive_hint=True`, and it is worth being exact about what that buys, because the
+previous edition of this post said the annotation was what triggered host approval. It is
+not. The specification says of `ToolAnnotations`:
 
-Add these formatting functions to `src/formatters.py`:
+> NOTE: all properties in `ToolAnnotations` are **hints**. They are not guaranteed to provide
+> a faithful description of tool behavior (including descriptive properties like `title`).
+> Clients should never make tool use decisions based on `ToolAnnotations` received from
+> untrusted servers.
 
-```python
-# Add to src/formatters.py
+A host may prompt on `destructiveHint`, may prompt on everything, or may prompt on nothing.
+You cannot build a safety property on a flag the other side is explicitly told to distrust.
 
-def format_restart_result(result: dict) -> str:
-    """Format pod restart result."""
-    lines = [
-        f"✅ **Pod Restarted Successfully**\n",
-        f"- **Pod:** {result['pod_name']}",
-        f"- **Namespace:** {result['namespace']}",
-        f"- **Managed by controller:** {'Yes' if result['managed_by_controller'] else 'No'}",
-    ]
-    if result.get("warning"):
-        lines.append(f"\n⚠️ **Warning:** {result['warning']}")
-    else:
-        lines.append(
-            "\nThe controller will automatically create a new pod to replace the deleted one."
-        )
-    return "\n".join(lines)
+What works is the mechanism from [Post 08](../08-elicitation-and-mrtr/index.md): the server
+answers the tool call with a question instead of a result, and does not act until the client
+comes back with an answer. Since revision 2026-07-28 there is no server-to-client request
+channel, so the server cannot call out and block. It returns `resultType: "input_required"`,
+the original request ends, and the client retries the same call with `inputResponses`
+attached. That pattern is Multi Round-Trip Requests (MRTR).
 
+Here is the shape on the wire. Round one, the model's call:
 
-def format_scale_result(result: dict) -> str:
-    """Format deployment scale result."""
-    direction = "up" if result["new_replicas"] > result["previous_replicas"] else "down"
-    return (
-        f"✅ **Deployment Scaled {direction.title()}**\n\n"
-        f"- **Deployment:** {result['deployment']}\n"
-        f"- **Namespace:** {result['namespace']}\n"
-        f"- **Previous replicas:** {result['previous_replicas']}\n"
-        f"- **New replicas:** {result['new_replicas']}\n\n"
-        f"Pods will reach the desired count shortly. "
-        f"Use `list_pods` to verify."
-    )
-
-
-def format_rollback_result(result: dict) -> str:
-    """Format deployment rollback result."""
-    return (
-        f"✅ **Deployment Rolled Back**\n\n"
-        f"- **Deployment:** {result['deployment']}\n"
-        f"- **Namespace:** {result['namespace']}\n"
-        f"- **Previous image:** `{result['previous_image']}`\n"
-        f"- **Rolled back to:** `{result['rolled_back_to_image']}`\n"
-        f"- **Target revision:** {result['target_revision']}\n\n"
-        f"Kubernetes is now rolling out the previous version. "
-        f"Use `list_pods` to monitor progress."
-    )
-
-
-def format_deployment_history(history: list[dict]) -> str:
-    """Format deployment revision history."""
-    if not history:
-        return "No revision history found."
-
-    lines = ["| Revision | Image | Replicas | Ready | Created |"]
-    lines.append("|----------|-------|----------|-------|---------|")
-
-    for rev in history:
-        lines.append(
-            f"| {rev['revision']} | `{rev['image']}` "
-            f"| {rev['replicas']} | {rev['ready_replicas']} "
-            f"| {rev['created']} |"
-        )
-
-    current = history[0] if history else None
-    if current:
-        lines.append(f"\n**Current revision:** {current['revision']} (`{current['image']}`)")
-
-    return "\n".join(lines)
-```
-
----
-
-## 4. The Write Tools
-
-Now we add the mutating tools to `src/server.py`. Add these after the existing read-only tools:
-
-```python
-# Add to src/server.py after the existing read tools
-
-# Import the new formatters at the top:
-# from .formatters import (
-#     ...,
-#     format_restart_result,
-#     format_scale_result,
-#     format_rollback_result,
-#     format_deployment_history,
-# )
-
-
-# ============ MUTATING TOOLS (require approval) ============
-
-@mcp.tool(
-    annotations={
-        "destructiveHint": True,
-        "readOnlyHint": False,
-        "idempotentHint": False,
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "method": "tools/call",
+  "params": {
+    "name": "scale_deployment",
+    "arguments": { "deployment_name": "checkout", "replicas": 5 },
+    "_meta": {
+      "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+      "io.modelcontextprotocol/clientCapabilities": { "elicitation": { "form": {} } }
     }
-)
-async def restart_pod(pod_name: str, namespace: str = "default") -> str:
-    """
-    Restart a pod by deleting it. If managed by a Deployment or ReplicaSet,
-    Kubernetes will automatically create a replacement.
+  }
+}
+```
 
-    ⚠️ This is a destructive action. The pod will be terminated and
-    any in-memory state will be lost.
+Round one's answer is not a result, it is a question:
 
-    Args:
-        pod_name: Exact name of the pod to restart (e.g., "checkout-7d8f9-abc12").
-        namespace: Kubernetes namespace (default: "default").
-    """
-    try:
-        result = await k8s.delete_pod(pod_name, namespace)
-        return format_restart_result(result)
-    except RuntimeError as e:
-        return f"❌ Error: {e}"
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 7,
+  "result": {
+    "resultType": "input_required",
+    "inputRequests": {
+      "k8s_responder.remediate:confirm_scale": {
+        "method": "elicitation/create",
+        "params": {
+          "mode": "form",
+          "message": "Approve this change to the cluster?\n\n  operation:    scale deployment\n  target:       deployment/checkout\n  ...",
+          "requestedSchema": {
+            "type": "object",
+            "properties": {
+              "approve": { "type": "boolean" },
+              "reason": { "type": "string", "default": "" }
+            },
+            "required": ["approve"]
+          }
+        }
+      }
+    },
+    "requestState": "v1.aead..."
+  }
+}
+```
 
+Then the client shows the message to a person, and retries with a **new** JSON-RPC id, the
+same arguments, the answer under `inputResponses`, and the `requestState` echoed back byte
+for byte. Note where those two fields sit: inside `params`, as siblings of `name` and
+`arguments`, not inside `_meta`.
 
-@mcp.tool(
-    annotations={
-        "destructiveHint": True,
-        "readOnlyHint": False,
-        "idempotentHint": True,  # Scaling to same count is safe to retry
-    }
-)
+The key in `inputRequests` is derived from the resolver's `module:qualname`, which is stable
+across workers. That is what makes this work on a stateless Hypertext Transfer Protocol
+(HTTP) deployment where the retry lands on a different machine.
+
+None of that appears in the tool body. In the Python software development kit (SDK) it is a
+parameter the model cannot see:
+
+```python
+@mcp.tool(title="Scale a deployment", annotations=SCALING)
 async def scale_deployment(
     deployment_name: str,
     replicas: int,
+    approval: Annotated[ElicitationResult[Approval], Resolve(confirm_scale)],
     namespace: str = "default",
-) -> str:
-    """
-    Scale a deployment to the specified number of replicas.
-
-    ⚠️ This changes the number of running pod instances. Scaling down
-    will terminate pods. Scaling to zero stops all instances.
-
-    Args:
-        deployment_name: Name of the deployment (e.g., "checkout-service").
-        replicas: Desired number of replicas (0-50).
-        namespace: Kubernetes namespace (default: "default").
-    """
-    # Validate bounds
-    if replicas < 0:
-        return "❌ Replica count cannot be negative."
-    if replicas > 50:
-        return "❌ Replica count capped at 50. For higher values, scale manually."
-
-    try:
-        result = await k8s.scale_deployment(deployment_name, replicas, namespace)
-        return format_scale_result(result)
-    except RuntimeError as e:
-        return f"❌ Error: {e}"
-
-
-@mcp.tool(
-    annotations={
-        "destructiveHint": True,
-        "readOnlyHint": False,
-        "idempotentHint": False,
-    }
-)
-async def rollback_deployment(
-    deployment_name: str,
-    namespace: str = "default",
-    revision: int | None = None,
-) -> str:
-    """
-    Roll back a deployment to a previous revision.
-
-    ⚠️ This replaces the current pod template with a previous version.
-    All pods will be gradually replaced during the rollout.
-
-    Args:
-        deployment_name: Name of the deployment.
-        namespace: Kubernetes namespace (default: "default").
-        revision: Specific revision number to roll back to.
-                  If omitted, rolls back to the previous revision.
-                  Use get_deployment_history to see available revisions.
-    """
-    try:
-        result = await k8s.rollback_deployment(deployment_name, namespace, revision)
-        return format_rollback_result(result)
-    except RuntimeError as e:
-        return f"❌ Error: {e}"
-
-
-@mcp.tool(
-    annotations={
-        "readOnlyHint": True,
-        "destructiveHint": False,
-    }
-)
-async def get_deployment_history(
-    deployment_name: str,
-    namespace: str = "default",
-) -> str:
-    """
-    Show the revision history of a deployment.
-
-    Lists all revisions with their images, replica counts, and creation dates.
-    Use this before rollback_deployment to choose the right revision.
-
-    Args:
-        deployment_name: Name of the deployment.
-        namespace: Kubernetes namespace (default: "default").
-    """
-    try:
-        history = await k8s.get_deployment_history(deployment_name, namespace)
-        return format_deployment_history(history)
-    except RuntimeError as e:
-        return f"❌ Error: {e}"
+) -> ScaleResult:
 ```
 
----
-
-## 5. The Updated Server (Complete)
-
-Here's the complete `src/server.py` with both read and write tools:
+`Resolve` strips `approval` from the published schema and fills it in by asking. The security
+property is measured rather than asserted, in
+[tests/test_server.py](../../code/15-devops-responder/tests/test_server.py):
 
 ```python
-# src/server.py - MCP DevOps First Responder (Full: Read + Write)
-import logging
-import sys
-from contextlib import asynccontextmanager
+async def test_the_approval_parameter_is_hidden_from_the_model():
+    async with Client(mcp) as c:
+        tools = {t.name: t for t in (await c.list_tools()).tools}
 
-from mcp.server.fastmcp import FastMCP
+    assert set(tools["scale_deployment"].input_schema["properties"]) == {
+        "deployment_name",
+        "replicas",
+        "namespace",
+    }
+```
 
-from .k8s_client import k8s
-from .formatters import (
-    format_pod_list,
-    format_pod_detail,
-    format_event_list,
-    format_deployment_list,
-    format_restart_result,
-    format_scale_result,
-    format_rollback_result,
-    format_deployment_history,
-)
+The equality is deliberate. `assert "approval" not in props` would pass forever while the
+next resolved parameter you add quietly leaks into the schema.
 
-# Safe logging (never print to stdout)
-logging.basicConfig(
-    stream=sys.stderr,
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
-logger = logging.getLogger(__name__)
+## 3. The preview, and why it must be a pure function
 
+A confirmation dialog that says "Are you sure?" is theater. The question has to name the
+operation, the target, the exact API call, whether it can be undone, and how far it reaches.
+That is a `ChangePreview`:
 
-# ============ LIFECYCLE ============
-@asynccontextmanager
-async def lifespan(server: FastMCP):
-    """Connect to Kubernetes on startup."""
-    k8s.connect()
-    logger.info("K8s DevOps First Responder ready (read + write mode)")
-    try:
-        yield
-    finally:
-        logger.info("K8s DevOps First Responder shutting down")
+```python
+@dataclass
+class ChangePreview:
+    operation: str
+    target: str
+    namespace: str
+    change: str
+    api_call: str
+    reversible: str
+    blast_radius: str
+```
 
+Every field is derived from the tool's arguments and nothing else. That constraint is not
+stylistic, and getting it wrong produces one of the nastiest bugs in this revision of the
+protocol.
 
-mcp = FastMCP("K8s DevOps First Responder", lifespan=lifespan)
+**The SDK pins a recorded answer to a digest of the exact rendered question.** It computes a
+SHA-256 hash, where SHA-256 is the 256-bit Secure Hash Algorithm, over the question text, and
+it re-runs the resolver on every round of the exchange. Put a live replica count or a
+timestamp in the message and round two renders a different string, the digest stops matching,
+the recorded answer looks stale, and the server asks again. The call never converges; it
+spins until it hits `input_required_max_rounds` and raises. From the outside it looks as
+though the user's answer was ignored.
 
+So the preview describes the **intended** change, which is knowable from the arguments, and
+the **observed** before and after state is read in the tool body and returned in the result.
+Those are two different jobs and they belong in two different places.
 
-# ============ READ-ONLY TOOLS ============
+Here is the question the server actually produced for `scale_deployment("checkout", 5)`,
+captured verbatim from a real run:
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False})
-async def list_pods(namespace: str = "default") -> str:
-    """
-    List all pods in a Kubernetes namespace with their status.
+```
+Approve this change to the cluster?
 
-    Args:
-        namespace: Kubernetes namespace to query (default: "default").
-    """
-    try:
-        pods = await k8s.list_pods(namespace)
-        return format_pod_list(pods)
-    except RuntimeError as e:
-        return f"❌ Error: {e}"
+  operation:    scale deployment
+  target:       deployment/checkout
+  namespace:    default
+  change:       set spec.replicas to 5
+  api call:     PATCH /apis/apps/v1/namespaces/default/deployments/checkout/scale
+  reversible:   Partly. The replica count can be set back, but pods terminated on the way down do not come back, and pods created on the way up start cold.
+  blast radius: Every pod of this deployment. Scaling to 5 changes how much traffic it can serve and how much cluster capacity it holds.
+```
 
+Two tests hold that shape in place. The first counts the questions, because one question
+means the digest matched:
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False})
-async def get_pod_logs(
-    pod_name: str,
-    namespace: str = "default",
-    container: str | None = None,
-    tail_lines: int = 100,
-    previous: bool = False,
-) -> str:
-    """
-    Get logs from a Kubernetes pod.
-
-    Args:
-        pod_name: Name of the pod.
-        namespace: Kubernetes namespace (default: "default").
-        container: Specific container name (for multi-container pods).
-        tail_lines: Number of log lines (default: 100, max: 500).
-        previous: If True, get logs from the previous crashed instance.
-    """
-    tail_lines = max(1, min(tail_lines, 500))
-    try:
-        logs = await k8s.get_pod_logs(
-            pod_name, namespace, container, tail_lines, previous
+```python
+async def test_the_question_is_asked_once_and_shows_the_whole_preview(fake):
+    seen: list[str] = []
+    async with answering("accept", APPROVE, seen=seen) as c:
+        await c.call_tool(
+            "scale_deployment", {"deployment_name": "checkout", "replicas": 5}
         )
-        header = f"**Logs for {pod_name}"
-        if container:
-            header += f" (container: {container})"
-        if previous:
-            header += " [PREVIOUS INSTANCE]"
-        header += f" (last {tail_lines} lines):**\n\n"
-        return header + f"```\n{logs}\n```"
-    except RuntimeError as e:
-        return f"❌ Error: {e}"
 
+    assert len(seen) == 1
+```
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False})
-async def describe_pod(pod_name: str, namespace: str = "default") -> str:
-    """
-    Full pod details with containers, conditions, and events.
+The second is the interesting one. It calls the tool, changes the cluster underneath, calls
+the tool again with identical arguments, and asserts the two questions are byte-identical:
 
-    Args:
-        pod_name: Name of the pod to inspect.
-        namespace: Kubernetes namespace (default: "default").
-    """
+```python
+async def test_the_same_arguments_render_the_same_question(fake):
+    ...
+    fake.deployments[0].spec.replicas = 11
+    ...
+    assert first == second
+```
+
+If anybody ever writes "scaling from 3 to 5" into the preview, that test goes red, because
+the "3" is a live reading and the live reading changed.
+
+**The same object comes back in the result.** `ScaleResult`, `RestartResult`, and
+`RollbackResult` all carry a `preview` field, and it is populated from the same function call
+that built the question. So the model can report what was approved without paraphrasing it,
+and a refused change still returns its preview, so the model can explain what would have
+happened:
+
+```python
+async def test_a_refused_change_still_returns_its_preview(fake):
+    async with answering("decline") as c:
+        result = await c.call_tool(
+            "scale_deployment", {"deployment_name": "checkout", "replicas": 6}
+        )
+
+    preview = result.structured_content["preview"]
+    assert preview["change"] == "set spec.replicas to 6"
+```
+
+**Three answers, not two.** An `ElicitResult` carries `accept`, `decline`, or `cancel`, and
+accept means the form came back rather than that the user said yes. A checkbox left unchecked
+arrives as an accept with `approve: false`. All four paths are distinct here:
+
+```python
+def _refusal(approval: ElicitationResult[Approval], what: str) -> str | None:
+    if isinstance(approval, DeclinedElicitation):
+        return f"Not applied. The user declined to approve {what}."
+    if isinstance(approval, CancelledElicitation):
+        return f"Not applied. The approval prompt for {what} was dismissed."
+    if isinstance(approval, AcceptedElicitation) and not approval.data.approve:
+        return f"Not applied. The user answered no to {what}."
+    return None
+```
+
+The specification does not say what a server must *return* after a decline or a cancel, and
+it is worth flagging that as an open choice rather than a rule. A `"complete"` result with
+`isError: true`, a `"complete"` result describing the abandonment without `isError`, and
+another `input_required` re-asking are all permitted. This server picks the middle one: a
+declined change is not a tool failure, and the model gets a sentence it can relay.
+
+## 4. Restart, and what a restart actually is
+
+Kubernetes has no restart verb for a pod. Deleting one that a controller owns is the restart:
+the ReplicaSet notices the shortfall and creates a replacement, with a new name and a new
+Internet Protocol (IP) address.
+
+That last clause is the whole reason this tool has a refusal in it. If the pod has **no**
+controlling owner, deleting it is not a restart, it is a removal. Nothing recreates it. The
+human approved a restart, and doing something strictly more destructive than the thing they
+were shown is not covered by that approval, so the tool stops:
+
+```json
+{
+  "approved": true,
+  "applied": false,
+  "outcome": "Refused. Pod 'orphan-pod' has no controlling owner, so deleting it would not restart it, it would remove it permanently. Delete it with kubectl if that is genuinely what you want.",
+  "warnings": [
+    "A pod with no controller is usually either created by hand or left behind by a deleted controller."
+  ]
+}
+```
+
+Note `approved: true, applied: false`. Those are two different facts and the result keeps them
+apart: the human said yes, and the server declined anyway.
+
+The other habit worth copying is that the tool reads the pod back rather than assuming the
+delete worked. Kubernetes accepting a delete means the object is marked for deletion, not that
+it is gone:
+
+```python
     try:
-        detail = await k8s.describe_pod(pod_name, namespace)
-        return format_pod_detail(detail)
-    except RuntimeError as e:
-        return f"❌ Error: {e}"
+        after = await call(
+            conn.core_v1.read_namespaced_pod, name=pod_name, namespace=namespace
+        )
+        state = (
+            "terminating"
+            if after.metadata.deletion_timestamp
+            else "still present with no deletion timestamp"
+        )
+    except ClusterError as err:
+        state = "gone" if err.status == 404 else f"unverifiable ({err})"
+```
 
+Three outcomes, all of them reported truthfully, including the one where the server cannot
+tell.
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False})
-async def list_events(
-    namespace: str = "default",
-    event_type: str | None = None,
-    limit: int = 30,
-) -> str:
-    """
-    List recent Kubernetes events. Warning events often indicate problems.
+## 5. Scale, and reading back rather than assuming
 
-    Args:
-        namespace: Kubernetes namespace (default: "default").
-        event_type: Filter: "Warning" or "Normal". Omit for all.
-        limit: Max events to return (default: 30).
-    """
-    limit = max(1, min(limit, 100))
-    try:
-        events = await k8s.list_events(namespace, event_type, limit)
-        return format_event_list(events)
-    except RuntimeError as e:
-        return f"❌ Error: {e}"
+`scale_deployment` patches `spec.replicas` through the `scale` subresource. Two things about
+it are worth more than the patch itself.
 
+**It reads the deployment back.** The result carries `previous_replicas`,
+`requested_replicas`, and `observed_replicas` as three separate numbers, and if the observed
+value does not match the requested one it says so in a warning, naming the two things that
+usually cause it: a HorizontalPodAutoscaler, or an admission webhook. Reporting "scaled to 5"
+when a controller immediately set it back to 3 is worse than reporting nothing.
 
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False})
-async def list_deployments(namespace: str = "default") -> str:
-    """
-    List deployments with replica status.
+**Scaling to zero is allowed.** Stopping a service that is melting a database is a legitimate
+first response. The preview says plainly what it means, and there is a test that checks the
+sentence survives:
 
-    Args:
-        namespace: Kubernetes namespace (default: "default").
-    """
-    try:
-        deployments = await k8s.list_deployments(namespace)
-        return format_deployment_list(deployments)
-    except RuntimeError as e:
-        return f"❌ Error: {e}"
+```python
+async def test_scaling_to_zero_is_allowed_and_says_what_it_means(fake):
+    ...
+    assert "serve no traffic" in data["preview"]["blast_radius"]
+```
 
+Scaling to the count it already has is a no-op that says so, and makes no API call at all.
+That matters more than it looks: an idempotent tool that quietly re-patches on every call
+generates a rollout event every time a model retries.
 
-# ============ MUTATING TOOLS (approval required) ============
+## 6. Rollback: what goes back, and what does not
 
-@mcp.tool(
-    annotations={
-        "destructiveHint": True,
-        "readOnlyHint": False,
-        "idempotentHint": False,
-    }
-)
-async def restart_pod(pod_name: str, namespace: str = "default") -> str:
-    """
-    Restart a pod by deleting it. The controller will recreate it.
+This is the section the previous edition of this post got wrong, and the failure mode is
+specific enough to be worth naming.
 
-    ⚠️ Destructive: terminates the pod and loses in-memory state.
+A bad deploy usually changes several things at once. A new image, a new environment variable,
+a lower memory limit. The previous edition's rollback built a patch containing only the
+container names and images:
 
-    Args:
-        pod_name: Exact pod name (e.g., "checkout-7d8f9-abc12").
-        namespace: Kubernetes namespace (default: "default").
-    """
-    try:
-        result = await k8s.delete_pod(pod_name, namespace)
-        return format_restart_result(result)
-    except RuntimeError as e:
-        return f"❌ Error: {e}"
+```python
+# the previous edition. This is not a rollback.
+patch_body = {"spec": {"template": {"spec": {"containers": [
+    {"name": c.name, "image": c.image} for c in target_rs.spec.template.spec.containers
+]}}}}
+```
 
+That puts the old image back and leaves everything else exactly where the bad deploy left it.
+The pod comes up on the old code with the new, broken configuration, the tool reports success,
+and the incident continues with everyone believing it is over. There is no error anywhere.
 
-@mcp.tool(
-    annotations={
-        "destructiveHint": True,
-        "readOnlyHint": False,
-        "idempotentHint": True,
-    }
-)
-async def scale_deployment(
-    deployment_name: str,
-    replicas: int,
-    namespace: str = "default",
-) -> str:
-    """
-    Scale a deployment to the specified replica count.
+![A diagram in two columns under a single deployment object. The left column, headed restored, lists what replacing the whole pod template puts back: container images for every container and init container, command and arguments and environment variables, resource requests and limits, all three kinds of probe, volumes and mounts and security context and service account, the template's own labels and annotations, and everything else under spec dot template. The right column, headed not restored, lists what a rollback deliberately leaves alone: spec dot replicas, which lives outside the pod template, deployment-level fields such as the rollout strategy and minimum ready seconds, labels and annotations on the deployment object itself, and every object the template merely references, including config maps, secrets, persistent volume claims, services, and any horizontal pod autoscaler. A footer notes that both lists are returned in every rollback result, so the scope travels with the answer rather than living only in documentation.](diagrams/02-rollback-scope.svg)
+*A rollback restores a pod template. Most of what a bad deploy touches is not in the pod template.*
 
-    ⚠️ Scaling down terminates pods. Scaling to 0 stops all instances.
+**The fix is to replace the whole template, with a JSON Patch.** JSON is JavaScript Object
+Notation, and a JSON Patch is a list of operations applied to a document. This is what
+`kubectl rollout undo` does:
 
-    Args:
-        deployment_name: Name of the deployment.
-        replicas: Desired replica count (0-50).
-        namespace: Kubernetes namespace (default: "default").
-    """
-    if replicas < 0:
-        return "❌ Replica count cannot be negative."
-    if replicas > 50:
-        return "❌ Replica count capped at 50. Scale manually for higher."
-    try:
-        result = await k8s.scale_deployment(deployment_name, replicas, namespace)
-        return format_scale_result(result)
-    except RuntimeError as e:
-        return f"❌ Error: {e}"
+```python
+    patch = [{"op": "replace", "path": "/spec/template", "value": template}]
 
-
-@mcp.tool(
-    annotations={
-        "destructiveHint": True,
-        "readOnlyHint": False,
-        "idempotentHint": False,
-    }
-)
-async def rollback_deployment(
-    deployment_name: str,
-    namespace: str = "default",
-    revision: int | None = None,
-) -> str:
-    """
-    Roll back a deployment to a previous revision.
-
-    ⚠️ Replaces current pods with a previous version.
-
-    Args:
-        deployment_name: Name of the deployment.
-        namespace: Kubernetes namespace (default: "default").
-        revision: Specific revision number. Omit for previous revision.
-    """
-    try:
-        result = await k8s.rollback_deployment(deployment_name, namespace, revision)
-        return format_rollback_result(result)
-    except RuntimeError as e:
-        return f"❌ Error: {e}"
-
-
-@mcp.tool(annotations={"readOnlyHint": True, "destructiveHint": False})
-async def get_deployment_history(
-    deployment_name: str,
-    namespace: str = "default",
-) -> str:
-    """
-    Show revision history for a deployment.
-    Use before rollback to choose the right revision.
-
-    Args:
-        deployment_name: Name of the deployment.
-        namespace: Kubernetes namespace (default: "default").
-    """
-    try:
-        history = await k8s.get_deployment_history(deployment_name, namespace)
-        return format_deployment_history(history)
-    except RuntimeError as e:
-        return f"❌ Error: {e}"
-
-
-# ============ RESOURCE ============
-
-@mcp.resource("k8s://cluster-overview")
-async def cluster_overview() -> str:
-    """Pods and deployments in the default namespace."""
-    try:
-        pods = await k8s.list_pods("default")
-        deployments = await k8s.list_deployments("default")
-        output = "# Cluster Overview (default namespace)\n\n"
-        output += "## Pods\n\n" + format_pod_list(pods)
-        output += "\n\n## Deployments\n\n" + format_deployment_list(deployments)
-        return output
-    except RuntimeError as e:
-        return f"Error loading cluster overview: {e}"
-
-
-# ============ PROMPT ============
-
-@mcp.prompt(title="Diagnose Crash Loop")
-async def diagnose_crashloop(namespace: str = "default") -> str:
-    """Find crashing pods, fetch logs, and request diagnosis."""
-    try:
-        pods = await k8s.list_pods(namespace)
-    except RuntimeError as e:
-        return f"Could not list pods: {e}"
-
-    crashing = [p for p in pods if p["restarts"] > 3 or p["status"] != "Running"]
-    if not crashing:
-        return f"All pods in '{namespace}' appear healthy."
-
-    context = f"# Crash Loop Diagnosis — {namespace}\n\n"
-    context += f"**{len(crashing)} unhealthy pod(s).**\n\n"
-
-    for pod in crashing[:5]:
-        context += f"---\n## Pod: {pod['name']}\n"
-        context += f"- Status: {pod['status']}, Restarts: {pod['restarts']}\n\n"
-        try:
-            logs = await k8s.get_pod_logs(pod["name"], namespace, tail_lines=30, previous=True)
-            context += f"### Previous Logs\n```\n{logs}\n```\n\n"
-        except RuntimeError:
-            context += "*(No previous logs)*\n\n"
-        try:
-            logs = await k8s.get_pod_logs(pod["name"], namespace, tail_lines=30)
-            context += f"### Current Logs\n```\n{logs}\n```\n\n"
-        except RuntimeError:
-            pass
-
-    context += (
-        "---\n\nAnalyze these pods:\n"
-        "1. Root cause of each crash?\n"
-        "2. Fix action for each?\n"
-        "3. Any cross-pod patterns?"
+    await call(
+        conn.apps_v1.patch_namespaced_deployment,
+        name=deployment_name,
+        namespace=namespace,
+        body=patch,
+        _content_type="application/json-patch+json",
     )
-    return context
-
-
-# ============ ENTRY POINT ============
-
-if __name__ == "__main__":
-    mcp.run(transport="stdio")
 ```
 
----
+**A strategic merge patch is the wrong tool here, and the reason is subtle.** Strategic merge
+is what the Kubernetes API uses by default for a deployment patch, and it merges lists by
+their key rather than replacing them. A container's `env` list is keyed by `name`. So an
+environment variable that exists in the current template and does *not* exist in the target
+would be merged rather than removed, and it would survive the rollback. "Put it back the way
+it was" needs a replace of the whole subtree, and the content type is how you ask for one.
 
-## 6. RBAC: Principle of Least Privilege
+Here is the patch this server actually sent, captured from a run against the test fixture:
 
-In production, the MCP server should use a dedicated ServiceAccount with limited permissions instead of your personal kubeconfig.
-
-### Create a ServiceAccount
-
-```yaml
-# k8s-rbac.yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: mcp-k8s-agent
-  namespace: default
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: mcp-k8s-agent-role
-rules:
-  # Read operations (Blog 7)
-  - apiGroups: [""]
-    resources: ["pods", "pods/log", "events"]
-    verbs: ["get", "list", "watch"]
-  - apiGroups: ["apps"]
-    resources: ["deployments", "replicasets"]
-    verbs: ["get", "list", "watch"]
-  # Write operations (Blog 8)
-  - apiGroups: [""]
-    resources: ["pods"]
-    verbs: ["delete"]  # For restart_pod
-  - apiGroups: ["apps"]
-    resources: ["deployments", "deployments/scale"]
-    verbs: ["patch", "update"]  # For scale and rollback
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: mcp-k8s-agent-binding
-subjects:
-  - kind: ServiceAccount
-    name: mcp-k8s-agent
-    namespace: default
-roleRef:
-  kind: ClusterRole
-  name: mcp-k8s-agent-role
-  apiGroup: rbac.authorization.k8s.io
+```json
+[
+  {
+    "op": "replace",
+    "path": "/spec/template",
+    "value": {
+      "metadata": {
+        "labels": { "app": "checkout" },
+        "annotations": {
+          "kubernetes.io/change-cause": "rollback to revision 2 via k8s-responder: paged at 02:00"
+        }
+      },
+      "spec": {
+        "containers": [
+          {
+            "name": "app",
+            "image": "registry.example.com/app:1.3.0",
+            "env": [ { "name": "DB_HOST", "value": "db-primary" } ],
+            "resources": {
+              "limits": { "memory": "512Mi" },
+              "requests": { "memory": "256Mi" }
+            }
+          }
+        ]
+      }
+    }
+  }
+]
 ```
+
+The fixture's current revision has `FEATURE_NEW_CART=true` and a 256Mi memory limit. In the
+patch both are gone: the environment variable is absent, not merged, and the limit is back at
+512Mi. That is asserted directly:
+
+```python
+    env = {e["name"]: e.get("value") for e in container["env"]}
+    assert env == {"DB_HOST": "db-primary"}
+    assert "FEATURE_NEW_CART" not in env
+    assert container["resources"]["limits"]["memory"] == "512Mi"
+```
+
+**Two details in that patch that are easy to miss.** The `pod-template-hash` label is stripped
+before the template is sent. That label is computed and applied by the Deployment controller
+and it identifies the ReplicaSet a template belongs to, so copying it from an old ReplicaSet
+into the Deployment's template would be claiming to be that ReplicaSet. `kubectl rollout undo`
+strips it for the same reason. And a `kubernetes.io/change-cause` annotation is added, which is
+the one field this tool writes rather than restores, so `kubectl rollout history` later shows
+why the template changed and what reason the operator typed.
+
+**What a rollback does not restore is returned with every result.** Not in the documentation,
+in the payload:
+
+```json
+"not_restored": [
+  "spec.replicas: the replica count lives outside the pod template and is left exactly where it is, including if something scaled it during the incident",
+  "deployment-level fields such as spec.strategy, minReadySeconds, progressDeadlineSeconds, and revisionHistoryLimit",
+  "labels and annotations on the Deployment object itself",
+  "objects the template only references: ConfigMaps, Secrets, PersistentVolumeClaims, Services, Ingresses, and any HorizontalPodAutoscaler",
+  "anything changed outside this Deployment, which includes most of what a bad deploy actually touches"
+]
+```
+
+plus a warning naming the actual number: `spec.replicas was left at 3. A rollback does not
+restore the replica count.` A caller who does not know that closes the incident too early. A
+caller who is told it in the result cannot.
+
+That last list item deserves emphasis. A rollback is a Deployment-scoped operation. If the bad
+deploy also changed a ConfigMap, rotated a Secret, or applied a database migration, rolling
+the Deployment back fixes none of it, and may make things worse by putting old code in front
+of a new schema.
+
+## 7. The ReplicaSet ownership trap
+
+To roll back you need the previous revision, and the previous revision is a ReplicaSet. The
+obvious way to find one is the deployment's own label selector:
+
+```python
+    result = await call(
+        conn.apps_v1.list_namespaced_replica_set,
+        namespace=namespace,
+        label_selector=label_selector,
+    )
+```
+
+**A label selector is not an ownership test.** That call returns every ReplicaSet in the
+namespace whose labels match, and two deployments routinely select the same labels: that is
+exactly what a canary or a blue/green deployment looks like. Sort the results by revision and
+"the previous revision" can be a pod template belonging to a different deployment. Rolling
+back to it is not a rollback, it is a cross-deployment overwrite that reports success.
+
+The test fixture contains that situation on purpose. Alongside `checkout` at revision 3 there
+is a `checkout-canary` deployment that selects the same `app=checkout` labels, and its
+ReplicaSets sit in the list at revision 2 and revision 9. The revision-2 one is first in the
+list, which is precisely the slot a label-only lookup would pick as "the previous revision" of
+`checkout`.
+
+The fix is the controller owner reference, which Kubernetes sets on every ReplicaSet the
+Deployment controller creates:
+
+```python
+    for rs in replica_sets:
+        for ref in (rs.metadata.owner_references or []):
+            if not getattr(ref, "controller", False):
+                continue
+            if ref.kind != "Deployment":
+                continue
+            if uid and getattr(ref, "uid", None):
+                if ref.uid == uid:
+                    owned.append(rs)
+                    break
+```
+
+Matching on `uid` rather than `name` matters because a uid is unique across deletions and
+recreations, and a name is not. Delete a deployment and recreate it with the same name and the
+old ReplicaSets can linger.
+
+This is not a theoretical concern, and the suite proves it. Replacing `owned_replica_sets()`
+with a pass-through, which is what "filtering by label only" amounts to, turns four tests red:
+
+```
+FAILED tests/test_server.py::test_rollout_history_only_lists_replicasets_this_deployment_owns
+FAILED tests/test_server.py::test_rollback_picks_the_owned_previous_revision
+FAILED tests/test_server.py::test_rolling_back_to_another_deployments_revision_is_refused
+FAILED tests/test_server.py::test_rollback_replaces_the_whole_pod_template
+4 failed, 74 passed in 1.80s
+```
+
+and the second of those failures says exactly what went wrong:
+
+```
+>       assert data["restored_images"] == ["registry.example.com/app:1.3.0"]
+E       AssertionError: assert ['registry.ex...canary:9.9.9'] == ['registry.ex...om/app:1.3.0']
+E         At index 0 diff: 'registry.example.com/canary:9.9.9' != 'registry.example.com/app:1.3.0'
+```
+
+The rollback of `checkout` has restored the canary's image, `applied` is `true`, and nothing
+raised. That is the shape of the bug: it does not fail, it succeeds at the wrong thing.
+
+With the filter in place, `get_rollout_history` for `checkout` returns exactly its own three
+revisions, and asking to roll back to revision 9, which exists in the namespace and belongs to
+somebody else, is refused with the available list:
+
+```
+Refused. Revision 9 is not in the history of 'checkout'. Available revisions: 3, 2, 1.
+```
+
+## 8. Blast-radius limits, checked before anyone is asked
+
+Some changes should never reach a human at all. Asking somebody to approve a scale to 500
+replicas wastes their attention and, worse, trains them to click through prompts.
+
+![A two-lane diagram comparing where a limit can be enforced. The upper lane, marked wrong, puts the check inside the tool body: the model proposes an out-of-bounds change, a human is shown an approval prompt for it, the human approves, and only then does the tool refuse, so a person was asked to authorize something the server was never going to do. The lower lane, marked correct, puts the check inside the resolver, which runs before the elicitation is rendered: the guard raises, the call fails immediately, and no question is ever shown. Below the lanes, a table lists the three guards this server applies, the maximum replica count of twenty, the set of protected namespaces closed to writes, and the log line and byte ceilings, each with the environment variable and command-line flag that changes it, and a note that reads are never restricted because refusing to restart a pod in kube-system is not a reason to refuse to look at one.](diagrams/03-blast-radius.svg)
+*A guard inside the tool body runs after the human. A guard inside the resolver runs instead of asking.*
+
+The guards live in the resolver, which the SDK runs before it renders the question:
+
+```python
+def confirm_scale(
+    deployment_name: str, replicas: int, namespace: str
+) -> Elicit[Approval]:
+    guard_namespace(namespace)
+    guard_replicas(replicas)
+    return Elicit(
+        preview_scale(deployment_name, replicas, namespace).as_question(), Approval
+    )
+```
+
+A resolver that raises fails the call without ever producing an elicitation. The test asserts
+all three consequences at once: the call errors, the question list is empty, and the cluster
+was never touched.
+
+```python
+async def test_scaling_past_the_maximum_is_refused_without_asking_anyone(fake):
+    seen: list[str] = []
+    async with answering("accept", APPROVE, seen=seen) as c:
+        result = await c.call_tool(
+            "scale_deployment", {"deployment_name": "checkout", "replicas": 500}
+        )
+
+    assert result.is_error
+    assert "maximum is 20" in result.content[0].text
+    assert seen == []
+    assert fake.recorder.names() == []
+```
+
+`seen == []` is the line that matters. The client in that test is one whose user always
+approves, and it never got the chance.
+
+The message a refusal produces is written for a model to act on, not for a log:
+
+```
+Refusing to scale to 500. The configured maximum is 20. A larger change than this
+should be made deliberately, by a human, with capacity in mind. Set
+K8S_RESPONDER_MAX_REPLICAS to raise it.
+```
+
+The protected-namespace guard is the same shape and the same placement:
+
+```
+Refusing to change anything in namespace 'kube-system'. Protected namespaces are:
+kube-node-lease, kube-public, kube-system. Reading these namespaces is still
+allowed. Set K8S_RESPONDER_PROTECTED_NAMESPACES to change the list.
+```
+
+Note the second sentence. **Reads are never restricted.** Refusing to restart a pod in
+`kube-system` is not a reason to refuse to look at one, and there is a test that keeps the
+read path open.
+
+**These guards are convenience, not security.** They are a local policy in a process the model
+is talking to, and a bug in this file removes them. The control that actually matters is
+role-based access control (RBAC): the service account the server runs under. Grant `delete` on
+`pods` and `patch` on `deployments` and `deployments/scale` in the namespaces you intend to
+remediate, and nowhere else. If the server cannot reach a namespace, no bug in this code can
+put it there. [Post 19](../19-security/index.md) is the general argument.
+
+## 9. Long rollouts, and what "done" means
+
+A rollback returns in milliseconds. The rollout it starts takes as long as the deployment's
+strategy and the pods' readiness probes say it takes, which can be minutes.
+
+This server does not wait. `patch_namespaced_deployment` returns as soon as the API server has
+accepted the new spec, and the tool verifies what it can verify at that moment, which is that
+the object reads back with the template it just wrote. It then says so plainly:
+
+> Kubernetes now rolls the pods according to the deployment's strategy; call `list_pods` and
+> `list_deployments` to watch it finish.
+
+`list_deployments` from [Post 15](../15-devops-responder/index.md) is the tool that answers
+"is it finished", by marking a deployment `degraded` when fewer replicas are ready than
+desired. Polling it is a two-line loop for the model and costs one API call per check.
+
+The alternative is the tasks extension, `io.modelcontextprotocol/tasks`, covered in
+[Post 09](../09-tasks/index.md), which turns "hold the connection open and hope" into an
+explicit pollable lifecycle. It is the right answer when the *server* is doing long work and
+holds state the client cannot see. It is a poor fit here, because the server is not doing the
+work: Kubernetes is, and its progress is already readable through an ordinary tool by anyone
+with `get` on deployments. Wrapping a poll the client can do itself in a task adds a
+lifecycle to manage and takes nothing away.
+
+The honest caveat is that "verified" here means the spec was accepted, not that the fix
+worked. A rollback to a revision whose image also fails to pull will report a successful
+rollback and leave you exactly as broken. Verification of *effect* needs the reading tools and
+a wait, and no tool call can substitute for that.
+
+## 10. Running it
 
 ```bash
-kubectl apply -f k8s-rbac.yaml
+cd code/15-devops-responder && PYTHONPATH=src pytest tests -q
+```
+```
+........................................................................ [ 92%]
+......                                                                   [100%]
+78 passed in 1.34s
 ```
 
-**Key RBAC principles:**
+Seventy-eight tests for both posts, in under two seconds, with no cluster. The elicitation
+loop is exercised in full, because the human is an injectable callback:
 
-| Principle | Implementation |
-|-----------|----------------|
-| Minimal verbs | Only `get`, `list`, `delete`, `patch` — no `create` for arbitrary resources |
-| No secrets access | The role cannot read Secrets or ConfigMaps |
-| No cluster-admin | Only specific resource types are authorized |
-| Namespace scoping | Consider using `Role` instead of `ClusterRole` for namespace isolation |
+```python
+def answering(action: str, content: dict | None = None, seen: list | None = None):
+    """A client whose user always answers the approval prompt the same way."""
+
+    async def callback(context, params):
+        if seen is not None:
+            seen.append(params.message)
+        return ElicitResult(action=action, content=content)
+
+    return Client(mcp, elicitation_callback=callback)
+```
+
+One test worth stealing outright is parameterized over every writing tool, so a fourth one
+added next year cannot skip the gate:
+
+```python
+@pytest.mark.parametrize("tool_name", sorted(WRITE_TOOLS))
+async def test_every_write_tool_requires_an_answer_before_it_acts(tool_name, fake):
+    ...
+    async with answering("decline") as c:
+        result = await c.call_tool(tool_name, arguments)
+
+    assert result.structured_content["applied"] is False
+    assert fake.deleted == []
+    assert fake.patches == []
+```
+
+Two operational notes for a real deployment. Passing an `elicitation_callback` is what
+declares the capability, and without it the server returns `-32021`
+(`MISSING_REQUIRED_CLIENT_CAPABILITY`) before it ever asks, which gets reported to you as "the
+tool is broken". And `requestState` is sealed by the SDK under a process-local ephemeral key by
+default, which is correct for stdio and wrong for more than one worker: pass
+`RequestStateSecurity(keys=[...])` with at least 32 bytes per key. [Post 08](../08-elicitation-and-mrtr/index.md)
+covers both.
+
+## 11. When not to build this
+
+**When the same fix is always right.** If a pod always needs restarting under condition X,
+that is a controller, a liveness probe, or a `restartPolicy`, and it should run without a
+human and without a model. Automation that needs an approval every time is automation you
+have not finished.
+
+**When nobody will read the question.** A person who is asked to confirm something at the end
+of a long agent turn will approve it. Elicitation is a consent mechanism only when the
+question is rare, specific, and expected. Three tools is a deliberate number.
+
+**When the blast radius is not describable.** Every preview in this file fits in seven short
+fields. A change that cannot be summarized that way is a change nobody can meaningfully
+approve, and shipping a prompt for it converts a considered decision into a reflex.
 
 ---
 
-## 7. Testing the Write Tools
+## Common pitfalls
 
-### Setup: Create Test Deployments
-
-```bash
-# Create a healthy deployment with 3 replicas
-kubectl create deployment web-app --image=nginx:1.24 --replicas=3
-
-# Wait for pods
-kubectl get pods -w
-```
-
-### Test 1: Restart a Pod
-
-> "One of the web-app pods seems stuck. Can you restart it?"
-
-Claude will:
-1. Call `list_pods` to find the pod name
-2. Call `restart_pod("web-app-xxx-yyy")` with the exact name
-3. Host shows approval dialog → you click Allow
-4. Pod is deleted → Kubernetes creates a replacement
-
-### Test 2: Scale Up
-
-> "We're expecting high traffic. Scale web-app to 5 replicas."
-
-Claude calls `scale_deployment("web-app", 5)`. After approval, you'll see:
-
-```
-✅ Deployment Scaled Up
-
-- Deployment: web-app
-- Previous replicas: 3
-- New replicas: 5
-
-Pods will reach the desired count shortly. Use list_pods to verify.
-```
-
-### Test 3: Rollback
-
-```bash
-# First, update the image to simulate a bad deploy
-kubectl set image deployment/web-app nginx=nginx:1.25
-kubectl set image deployment/web-app nginx=nginx:nonexistent
-```
-
-> "The web-app deployment is failing after the last update. Show me the history and roll back."
-
-Claude will:
-1. Call `get_deployment_history("web-app")` — shows revisions
-2. Call `rollback_deployment("web-app")` — rolls back to previous
-3. After approval, pods roll out the working image
-
-### Clean Up
-
-```bash
-kubectl delete deployment web-app
-```
+- **Adding an `approved: bool` parameter.** It lands in the published input schema, so the
+  model fills it in. Use a resolved parameter, and assert on the exact property set the tool
+  publishes rather than on the absence of one name.
+- **Believing `destructiveHint` triggers a prompt.** It is a hint, the specification tells
+  clients to treat annotations from untrusted servers as untrustworthy, and a host may prompt
+  on everything or on nothing. What stops the change is that the server does not act without
+  an answer.
+- **Putting a live reading in the approval message.** The recorded answer is pinned to a
+  digest of the rendered question and the resolver re-runs every round, so "scaling from 3 to
+  5" makes the call loop until it hits the round limit. Build the message from the arguments
+  and nothing else, and test that the same arguments render the same string.
+- **Rolling back only the container images.** The bad deploy also changed an environment
+  variable and a memory limit, and a merge patch keeps both. Replace `/spec/template` with a
+  JSON Patch `replace`, because strategic merge merges lists by key and a removed environment
+  variable will survive.
+- **Finding the previous revision by label selector.** Two deployments in one namespace
+  routinely select the same labels, which is what a canary is. Filter ReplicaSets by
+  controller owner reference `uid`, or you will roll one workload back onto another's pod
+  template and report success.
+- **Copying `pod-template-hash` into the restored template.** That label belongs to the
+  ReplicaSet the Deployment controller computed it for. Strip it, exactly as
+  `kubectl rollout undo` does.
+- **Deleting a pod with no controller and calling it a restart.** Nothing recreates it. That
+  is a removal, it is strictly more destructive than what the human approved, and the tool
+  should refuse rather than silently do it.
+- **Reporting success from the API's acknowledgement.** An accepted delete means marked for
+  deletion, and an accepted scale can be overridden by a HorizontalPodAutoscaler seconds
+  later. Read the object back, report the observed value next to the requested one, and warn
+  when they differ.
+- **Treating the guards as security.** They live in the same process as the bug you have not
+  found yet. RBAC on the service account is the control; the guards only stop an obvious
+  mistake before a human is bothered with it.
 
 ---
 
-## 8. Error Handling Philosophy
+## Further reading
 
-Our tools follow a consistent pattern for errors:
+- Specification, *"Multi Round-Trip Requests"*, revision 2026-07-28. The four steps, the
+  `input_required` result, and the rule that the retry carries a different JSON-RPC id.
+  <https://modelcontextprotocol.io/specification/draft/basic/patterns/mrtr>
+- Specification, *"Elicitation"*, revision 2026-07-28. Form-mode schema limits, and the three
+  actions this server branches on.
+  <https://modelcontextprotocol.io/specification/draft/client/elicitation>
+- Specification, *"Tools"*, revision 2026-07-28. The `ToolAnnotations` note quoted in
+  section 2. <https://modelcontextprotocol.io/specification/draft/server/tools>
+- Kubernetes documentation, *"Rolling Back a Deployment"*. What `kubectl rollout undo` does,
+  and why revisions are ReplicaSets.
+  <https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-back-a-deployment>
+- Kubernetes documentation, *"Owners and Dependents"*. Controller owner references, and why
+  they are the authoritative link a label selector is not.
+  <https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/>
+- Model Context Protocol, *"Tool annotations are not enforcement"* (2026).
+  <https://blog.modelcontextprotocol.io/posts/2026-03-16-tool-annotations/>
 
-| Error Type | How We Handle It | Example |
-|-----------|------------------|---------|
-| Not found (404) | Clear message | "Pod 'xyz' not found in namespace 'default'" |
-| Permission denied (403) | Explain RBAC | "K8s API error: 403 Forbidden" |
-| Invalid input | Validate early | "Replica count cannot be negative" |
-| API failure | Wrap in ❌ message | "❌ Error: Failed to delete pod" |
-
-The LLM receives clean error messages it can explain to the user instead of raw stack traces.
-
----
-
-## Key Takeaways
-
-```
- ✅ Human approval for all mutations via destructiveHint annotation
- ✅ Graceful error handling — tools return clean messages, never crash
- ✅ Input validation before K8s API calls
- ✅ RBAC for least privilege access
- ✅ Restart = delete + controller recreates
- ✅ Scale and rollback with safety bounds
- ✅ Deployment history for informed rollback decisions
-```
+Full citations in [REFERENCES.md](../../REFERENCES.md).
 
 ---
 
-## What's Next?
+## What to read next
 
-We've covered two domains: databases (Blogs 5-6) and infrastructure (Blogs 7-8). Now let's tackle something different—and introduce one of MCP's most powerful features.
-
-In **Blog 9: Deep Research Browser – Part 1**, we'll build an MCP server that:
-- Browses the web headlessly with Playwright
-- Extracts content from JavaScript-heavy pages
-- Takes screenshots
-- Prepares web content for LLM consumption
-
-And in Blog 10, we'll introduce **MCP Sampling**—where the *server* asks the *LLM* for help.
-
----
-
-## Quick Reference
-
-### New Tools (Blog 8)
-
-| Tool | Annotations | Description |
-|------|-------------|-------------|
-| `restart_pod` | `destructiveHint: true` | Delete pod for controller to recreate |
-| `scale_deployment` | `destructiveHint: true`, `idempotentHint: true` | Change replica count |
-| `rollback_deployment` | `destructiveHint: true` | Roll back to previous revision |
-| `get_deployment_history` | `readOnlyHint: true` | View revision history |
-
-### RBAC Permissions Required
-
-```yaml
-# Read
-pods, pods/log, events: get, list, watch
-deployments, replicasets: get, list, watch
-
-# Write
-pods: delete
-deployments, deployments/scale: patch, update
-```
-
----
-
-| [← Blog 7: DevOps First Responder Part 1](../blog-7/blog.md) | [Blog 9: Deep Research Browser Part 1 →](../blog-9/blog.md) |
-|:---|---:|
+- **[Post 17 — Project 3 · A deep research browser](../17-research-browser/index.md)**: the
+  next project, where the hard problem stops being permission and becomes throwing away the
+  ninety-five percent of a page that would waste the model's context.
+- **[Post 15 — Project 2 · A DevOps first responder](../15-devops-responder/index.md)**: the
+  reading half of this server, and the diagnosis that decides which of these three tools is
+  the right one.
+- **[Post 08 — Elicitation and MRTR: asking the user mid-call](../08-elicitation-and-mrtr/index.md)**:
+  the mechanism underneath every approval here, message by message.

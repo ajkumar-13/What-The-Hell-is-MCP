@@ -1,0 +1,158 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Propose, guard, approve, apply: the path a cluster change takes</title>
+  <desc id="d">A four-stage flow runs left to right. The first stage is on the client side of the protocol boundary: the model proposes a change by calling a tool with arguments, and the approval parameter is not among them because it is stripped from the published schema, so a model cannot grant its own permission. The second stage is the guard, a resolver that runs before anything is rendered: it checks the target namespace and the requested replica count, and either passes the change onward or fails the call outright. The third stage is the approval exchange: the preview, built only from the tool's arguments, becomes the elicitation message, the server answers with an input required result and the original request ends, the client puts the question to a person, and then retries the same call with a new request id and the answer attached. The fourth stage applies the change, reads the object back to compare requested against observed, and returns a result carrying the same preview object that appeared in the question. A branch drops out of the guard stage into a band along the bottom showing what an out-of-bounds change produces: a refusal message, no question shown to anyone, and no API call made.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .client{fill:var(--mcp-primary);stroke:var(--mcp-ink);stroke-width:1;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .refuse{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+    .bound{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;stroke-dasharray:4 4;}
+    .tick{stroke:var(--mcp-success);stroke-width:1.5;fill:none;stroke-linecap:round;}
+    .cross{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;stroke-linecap:round;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arx" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-alert)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="36" y="34">Propose, guard, approve, apply</text>
+  <text class="small" x="36" y="56">The guard runs before the question is rendered, so nobody is asked to approve a change the server was always going to refuse.</text>
+
+  <!-- ================= 1. PROPOSE ================= -->
+  <rect class="zone" x="36" y="84" width="196" height="300" rx="10"/>
+  <rect class="client" x="50" y="98" width="24" height="20" rx="5"/>
+  <text class="onfill" x="62" y="113" text-anchor="middle">1</text>
+  <text class="head" x="84" y="113">Propose</text>
+  <line class="rule" x1="50" y1="130" x2="218" y2="130"/>
+
+  <text class="small" x="50" y="152">The model picks a tool</text>
+  <text class="small" x="50" y="168">and fills in arguments.</text>
+
+  <rect class="chip" x="50" y="180" width="168" height="58" rx="6"/>
+  <text class="mono" x="60" y="198">scale_deployment</text>
+  <text class="mono" x="60" y="214">deployment: checkout</text>
+  <text class="mono" x="60" y="230">replicas: 500</text>
+
+  <text class="label" x="50" y="262">approval is not here</text>
+  <text class="small" x="50" y="280">Resolve() strips it from</text>
+  <text class="small" x="50" y="296">the published schema, so</text>
+  <text class="small" x="50" y="312">the model has no field in</text>
+  <text class="small" x="50" y="328">which to grant its own.</text>
+
+  <text class="tiny" x="50" y="356">A test asserts the exact</text>
+  <text class="tiny" x="50" y="372">property set, not an absence.</text>
+
+  <line class="bound" x1="246" y1="80" x2="246" y2="388"/>
+  <text class="tiny" x="246" y="400" text-anchor="middle">protocol boundary</text>
+
+  <path class="flow" d="M234,210 L256,210" marker-end="url(#ar)"/>
+
+  <!-- ================= 2. GUARD ================= -->
+  <rect class="zone" x="260" y="84" width="180" height="300" rx="10"/>
+  <rect class="server" x="274" y="98" width="24" height="20" rx="5"/>
+  <text class="onfill" x="286" y="113" text-anchor="middle">2</text>
+  <text class="head" x="308" y="113">Guard</text>
+  <line class="rule" x1="274" y1="130" x2="426" y2="130"/>
+
+  <text class="small" x="274" y="152">The resolver runs</text>
+  <text class="small" x="274" y="168">before anything is</text>
+  <text class="small" x="274" y="184">shown to anyone.</text>
+
+  <rect class="chip" x="274" y="198" width="152" height="42" rx="6"/>
+  <text class="mono" x="284" y="216">guard_namespace()</text>
+  <text class="mono" x="284" y="232">guard_replicas()</text>
+
+  <path class="tick" d="M275,258 l4,4.5 l8,-10"/>
+  <text class="small" x="296" y="266">pass: ask a human</text>
+  <path class="cross" d="M274,288 l9,9 M283,288 l-9,9"/>
+  <text class="small" x="296" y="298">raise: end the call</text>
+
+  <text class="tiny" x="274" y="330">A resolver that raises</text>
+  <text class="tiny" x="274" y="346">fails the tool call without</text>
+  <text class="tiny" x="274" y="362">rendering an elicitation.</text>
+
+  <path class="flow" d="M442,210 L464,210" marker-end="url(#ar)"/>
+  <path class="refuse" d="M350,386 L350,416" marker-end="url(#arx)"/>
+
+  <!-- ================= 3. APPROVE ================= -->
+  <rect class="zone" x="468" y="84" width="228" height="300" rx="10"/>
+  <rect class="server" x="482" y="98" width="24" height="20" rx="5"/>
+  <text class="onfill" x="494" y="113" text-anchor="middle">3</text>
+  <text class="head" x="516" y="113">Approve</text>
+  <line class="rule" x1="482" y1="130" x2="682" y2="130"/>
+
+  <text class="small" x="482" y="152">The preview, built only from</text>
+  <text class="small" x="482" y="168">the arguments, becomes the</text>
+  <text class="small" x="482" y="184">elicitation message.</text>
+
+  <rect class="chip" x="482" y="196" width="200" height="58" rx="6"/>
+  <text class="mono" x="492" y="214">resultType:</text>
+  <text class="mono" x="492" y="230">  "input_required"</text>
+  <text class="mono" x="492" y="246">inputRequests, requestState</text>
+
+  <text class="small" x="482" y="276">The original request ends</text>
+  <text class="small" x="482" y="292">here. The server holds nothing.</text>
+
+  <text class="small" x="482" y="318">The client asks the person,</text>
+  <text class="small" x="482" y="334">then retries the same call</text>
+  <text class="small" x="482" y="350">with a new id and the answer.</text>
+
+  <text class="tiny" x="482" y="372">Same arguments, same question, every round.</text>
+
+  <path class="flow" d="M698,210 L720,210" marker-end="url(#ar)"/>
+
+  <!-- ================= 4. APPLY ================= -->
+  <rect class="zone" x="724" y="84" width="200" height="300" rx="10"/>
+  <rect class="server" x="738" y="98" width="24" height="20" rx="5"/>
+  <text class="onfill" x="750" y="113" text-anchor="middle">4</text>
+  <text class="head" x="772" y="113">Apply, verify</text>
+  <line class="rule" x1="738" y1="130" x2="910" y2="130"/>
+
+  <rect class="chip" x="738" y="142" width="172" height="24" rx="5"/>
+  <text class="mono" x="748" y="158">PATCH .../scale</text>
+
+  <text class="small" x="738" y="188">Then read the object back.</text>
+  <text class="small" x="738" y="204">An accepted patch is not a</text>
+  <text class="small" x="738" y="220">finished change.</text>
+
+  <rect class="chip" x="738" y="234" width="172" height="58" rx="6"/>
+  <text class="mono" x="748" y="252">previous_replicas: 3</text>
+  <text class="mono" x="748" y="268">requested_replicas: 5</text>
+  <text class="mono" x="748" y="284">observed_replicas: 5</text>
+
+  <path class="tick" d="M739,308 l4,4.5 l8,-10"/>
+  <text class="small" x="760" y="316">the result carries the</text>
+  <text class="small" x="760" y="332">same preview object that</text>
+  <text class="small" x="760" y="348">appeared in the question</text>
+  <text class="tiny" x="738" y="372">so approved and reported cannot drift</text>
+
+  <!-- ================= REFUSAL BAND ================= -->
+  <rect class="box" x="260" y="418" width="664" height="88" rx="10"/>
+  <path class="cross" d="M278,442 l9,9 M287,442 l-9,9"/>
+  <text class="label" x="302" y="444">Out of bounds: no question is ever shown</text>
+  <text class="mono" x="302" y="466">Refusing to scale to 500. The configured maximum is 20.</text>
+  <text class="small" x="302" y="486">Stages 3 and 4 never run. The test's user always approves, and asserts it never got the chance:</text>
+  <text class="mono" x="302" y="502">assert seen == []   and   assert fake.recorder.names() == []</text>
+</svg>
