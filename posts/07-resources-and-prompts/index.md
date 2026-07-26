@@ -279,7 +279,7 @@ specification requires servers to validate all resource URIs, and to sanitize fi
 prevent directory traversal when serving `file://` resources, and an allowlist is the only
 version of that which is easy to review.
 
-![Three resources/read requests entering from the left and travelling through a matcher stage and an allowlist gate before reaching the handler; the first passes both, the second is stopped at the gate with error -32602, and the third never matches the template at all and is rejected one stage earlier.](diagrams/02-uri-template.svg)
+![Three resources/read requests entering from the left and traveling through a matcher stage and an allowlist gate before reaching the handler; the first passes both, the second is stopped at the gate with error -32602, and the third never matches the template at all and is rejected one stage earlier.](diagrams/02-uri-template.svg)
 *Two rejections, two different stages. Only one of them is a defense you wrote.*
 
 Now the part worth slowing down for. Two hostile-looking reads fail, and they fail for
@@ -750,7 +750,7 @@ schema, not a preference:
 | Read with | `tools/call` | `resources/read` | `prompts/get` |
 | Addressed by | name | URI | name |
 | Arguments | JSON Schema, any type | URI template variables | named, strings only |
-| Result carries `ttlMs` and `cacheScope` | no | **yes, required** | no |
+| Is the read itself cacheable | no, `tools/call` | **yes**, `resources/read` | no, `prompts/get` |
 | Per-item change notification | no | **yes**, `resourceSubscriptions` | no |
 | Argument auto-completion | no | **yes**, `ref/resource` | **yes**, `ref/prompt` |
 | Paginated list method | yes | yes | yes |
@@ -816,11 +816,10 @@ for word to resource and prompt descriptions.
 - **Waiting for notifications that were never requested.** There is no broadcast. A server
   sends `notifications/resources/updated` only to clients that opened a `subscriptions/listen`
   stream naming that URI in `resourceSubscriptions`, and `resources/subscribe` no longer exists.
-- **Passing a number as a prompt argument.** Prompt arguments are `string`-valued on the wire,
-  full stop. Parse inside the handler, and say so in the argument's description.
-- **Returning an empty `contents` array for a resource that is not there.** It is explicitly
-  forbidden because it is ambiguous. Raise `ResourceNotFoundError` and let the client see
-  `-32602`.
+- **Two conformance slips nothing will catch for you.** Prompt arguments are `string`-valued on
+  the wire, full stop, so parse inside the handler and say so in the argument's description.
+  And never answer a missing resource with an empty `contents` array: it is explicitly
+  forbidden as ambiguous. Raise `ResourceNotFoundError` and let the client see `-32602`.
 
 ---
 

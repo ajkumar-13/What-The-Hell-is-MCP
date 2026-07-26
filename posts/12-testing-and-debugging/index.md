@@ -656,8 +656,9 @@ a shared interpreter.
 
 Include Windows in the matrix even if you do not use it. Path separators, console encodings,
 and process teardown all differ there, and a server that only ever ran on Linux will meet a
-Windows user eventually. The `PYTHONPATH` separator in this post's own commands is a semicolon
-for exactly that reason.
+Windows user eventually. A tool description containing a character your console cannot encode
+is a `UnicodeEncodeError` that takes the whole host down, and it is the sort of thing only a
+second operating system tells you about.
 
 **Regenerate the numbers you quote.** Anything a document claims about your server should be
 produced by a script rather than typed by a person. This repository's version is
@@ -684,8 +685,9 @@ wrong.
 
 ## 11. The five failures that account for most bug reports
 
-Every one of these is a defect this series actually shipped and fixed. They are ordered by how
-long each takes to find, shortest first.
+Every one of these is a defect this series actually shipped and fixed. They follow the order
+of the post: the transport, the schema, the result, the round trip, and finally your own test
+suite.
 
 **1. A `print()` under stdio.** Standard output is the protocol channel, and the server must
 not write anything to it that is not a valid MCP message. One `print()` in a tool body puts a
@@ -798,6 +800,7 @@ Full citations in [REFERENCES.md](../../REFERENCES.md).
   first project, where the tests in this post become the security tests that decide whether a
   model may touch a production database.
 - **[Post 11 — Building a host: the tool loop, many servers, and permissions](../11-building-a-host/index.md)**:
-  the permission gate whose tests section 5 borrows from, and the loop the client suite drives.
+  the host whose suite supplies the `flatten` helper and the `open_connection` wrapper this
+  post leans on, and the permission gate those sixty-eight tests exercise.
 - **[Post 06 — Tools in depth: schemas, structured output, and annotations](../06-tools-in-depth/index.md)**:
   the silent `outputSchema: null` failure that motivates half the assertions here.
