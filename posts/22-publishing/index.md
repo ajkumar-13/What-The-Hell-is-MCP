@@ -4,7 +4,7 @@
 >
 > **After reading this you will be able to:**
 > - Write a `server.json` that validates against the current schema and matches your package metadata.
-> - Prove you own a namespace, by GitHub identity, DNS record, or a file on your own domain.
+> - Prove you own a namespace, by GitHub identity, a Domain Name System record, or a file on your own domain.
 > - Automate publishing from continuous integration using GitHub OpenID Connect, with no stored secret.
 > - Say precisely what the registry promises a consumer, which is much less than people assume.
 
@@ -24,7 +24,7 @@ Everything up to here in the series ended the same way: clone the repository, ru
 | Remote server | Their host connects to a Uniform Resource Locator (URL) | You |
 | MCPB bundle | Double-clicks a `.mcpb` file | A GitHub or GitLab release |
 
-The MCP Registry sits across the middle two and the last one, and the most useful thing to understand about it early is what it is not. From its own about page: "The MCP Registry only hosts metadata, not artifacts." Your code still lives on PyPI, npm, a container registry, or a release page. The registry is an index that says "this name maps to that package, and this person proved they own both".
+The MCP Registry sits across the middle two and the last one, and the most useful thing to understand about it early is what it is not. From its own quickstart: "The MCP Registry only hosts metadata, not artifacts." Your code still lives on PyPI, npm, a container registry, or a release page. The registry is an index that says "this name maps to that package, and this person proved they own both".
 
 The second surprise is who it is for: "The MCP Registry is intended to be consumed primarily by downstream aggregators, such as MCP server marketplaces. … The MCP Registry is **not** intended to be directly consumed by host applications." You are publishing to a wholesale index, not to a shop front.
 
@@ -36,7 +36,7 @@ Two caveats, and neither is small.
 
 > The MCP Registry is currently in preview. Breaking changes or data resets may occur before general availability.
 
-"Data resets" means what it says. The application programming interface has been frozen at **v0.1 since 2025-10-24**, which is a stability commitment for integrators, and the README frames it as exactly that: "For the next month or more, the API will remain stable with no breaking changes, allowing integrators to confidently implement support." The freeze is about the shape of the interface, not a promise that your entry survives.
+"Data resets" means what it says. The application programming interface (API) has been frozen at **v0.1 since 2025-10-24**, which is a stability commitment for integrators, and the README frames it as exactly that: "For the next month or more, the API will remain stable with no breaking changes, allowing integrators to confidently implement support." The freeze is about the shape of the interface, not a promise that your entry survives.
 
 **The moderation caveat is the headline.** The moderation policy opens cheerfully and then says the important part:
 
@@ -135,7 +135,7 @@ There is a **second, separate proof** that catches people out. Owning the namesp
 | npm | `"mcpName": "io.github.user/x"` in `package.json` |
 | PyPI | `<!-- mcp-name: io.github.user/x -->` in the README |
 | NuGet | the same comment in the README |
-| OCI image | `LABEL io.modelcontextprotocol.server.name="…"` |
+| Open Container Initiative image | `LABEL io.modelcontextprotocol.server.name="…"` |
 | MCPB | the URL must contain the string `mcp`, and `fileSha256` is required |
 
 For a Python package that marker is an HTML comment in the README, which PyPI renders invisibly and the registry reads off the project page. It is already in [code/05-first-server/README.md](../../code/05-first-server/README.md), on the second line, and if it is missing the publish fails with "Registry validation failed for package".
@@ -195,7 +195,7 @@ Metadata is immutable per version. You publish a new version; you never edit an 
 
 ## 6. Automating it, with no stored secret
 
-The interesting part of the CI story is that there is nothing to store. GitHub Actions can mint an OpenID Connect token for a job, and the registry validates it directly. The workflow needs one permission:
+The interesting part of the continuous integration story is that there is nothing to store. GitHub Actions can mint an OpenID Connect (OIDC) token for a job, and the registry validates it directly. The workflow needs one permission:
 
 ```yaml
 permissions:

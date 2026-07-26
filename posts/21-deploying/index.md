@@ -35,7 +35,7 @@ Mcp-Method: tools/call
 Mcp-Name: get_weather
 ```
 
-`Mcp-Method` mirrors `method`, and `Mcp-Name` mirrors `params.name` or `params.uri`. Both are required for compliance, and a server that processes the body **MUST** reject requests where the header and the body disagree, with `400 Bad Request` and JSON-RPC error `-32020` (`HeaderMismatch`). That rule exists precisely because a balancer routing on the header and a server executing on the body are two sources of truth, and disagreement between them is a vulnerability.
+`Mcp-Method` mirrors `method` and is required on all requests. `Mcp-Name` mirrors `params.name` or `params.uri` and is required on `tools/call`, `resources/read` and `prompts/get`. Both are **REQUIRED** for compliance where they apply, and a server that processes the body **MUST** reject requests where the header and the body disagree, with `400 Bad Request` and JSON-RPC error `-32020` (`HeaderMismatch`). That rule exists precisely because a balancer routing on the header and a server executing on the body are two sources of truth, and disagreement between them is a vulnerability.
 
 ## 2. Containerizing, configuration, and secrets
 
@@ -46,7 +46,7 @@ The build is two stages. Stage one owns `uv` and the toolchain and resolves from
 ```dockerfile
 FROM python:3.12-slim-bookworm AS build
 COPY --from=ghcr.io/astral-sh/uv:0.11.7 /uv /usr/local/bin/uv
-WORKDIR /src
+WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project --no-editable
 COPY README.md ./
@@ -57,13 +57,13 @@ FROM python:3.12-slim-bookworm
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PATH="/app/.venv/bin:$PATH"
 RUN useradd --system --no-create-home --shell /usr/sbin/nologin --uid 10001 mcp
 WORKDIR /app
-COPY --from=build --chown=mcp:mcp /src/.venv /app/.venv
+COPY --from=build --chown=mcp:mcp /app/.venv /app/.venv
 USER 10001
 EXPOSE 8000
 CMD ["python", "-m", "system_info", "--http", "--host", "0.0.0.0", "--port", "8000"]
 ```
 
-Four decisions in there are worth naming.
+Five decisions in there are worth naming.
 
 **The base image is pinned to a Debian release**, not to the floating `python:3.12-slim` tag. The stronger form is a digest, and you can produce one rather than invent one: `docker image inspect python:3.12-slim-bookworm --format '{{index .RepoDigests 0}}'`. Paste the result after `FROM`.
 
@@ -72,6 +72,8 @@ Four decisions in there are worth naming.
 **The user has a fixed numeric id.** `USER 10001` rather than `USER mcp`, so an orchestrator enforcing a run-as-non-root policy can check it without reading `/etc/passwd` inside the image.
 
 **`PYTHONUNBUFFERED=1` is not cosmetic.** Diagnostics go to standard error, and a buffered stream loses the last few lines of a crashing process, which are the ones you wanted.
+
+**Both stages use `/app`.** A virtual environment records its own absolute path, so copying `/src/.venv` into `/app/.venv` in the runtime stage would leave every script in `.venv/bin` with a shebang pointing at a directory that no longer exists. Building at the final path costs nothing and removes the whole class of problem.
 
 Configuration is the boring part and it should stay boring. Read it from the environment at startup, fail loudly if something required is missing, and never read it again. Secrets are the part people get wrong: put the *path* to a secret in the environment and the secret itself in a mounted file. `docker inspect` prints a container's environment, orchestrators log it, and every child process inherits it. A file has an owner and a mode.
 
@@ -93,7 +95,7 @@ Old clients will still knock. The specification says what to do with each of the
 | `Last-Event-ID` | Ignore it; streams are not resumable |
 | HTTP `GET` or `DELETE` to the MCP endpoint | Respond `405 Method Not Allowed` |
 
-The last one is real, not theoretical: a plain `GET` against the containerized server returns `405`, which is exactly what the specification asks for.
+The last one is real, not theoretical: a plain `GET` against this project's server returns `405`, which is exactly what the specification asks for.
 
 One consequence of dropping resumability lands on the client and is easy to forget when you are sizing timeouts. There is no redelivery any more: "A broken response stream loses the in-flight request; clients **MUST** re-issue it as a new request with a new request ID." Idempotency is therefore your problem, not the transport's. A tool that charges a card should take a caller-supplied key, because the client is allowed to send the same call twice after a dropped connection.
 

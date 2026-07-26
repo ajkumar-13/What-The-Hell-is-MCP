@@ -24,7 +24,10 @@ ENV UV_COMPILE_BYTECODE=1 \
     UV_LINK_MODE=copy \
     UV_PYTHON_DOWNLOADS=never
 
-WORKDIR /src
+# /app in BOTH stages, on purpose. A virtual environment records its own
+# absolute path, so copying it to a different directory in the runtime stage
+# would break every console script in .venv/bin. Same path, no breakage.
+WORKDIR /app
 
 # Dependencies first, in their own layer. Editing a tool body then rebuilds one
 # layer instead of re-resolving the dependency tree.
@@ -50,7 +53,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 RUN useradd --system --no-create-home --shell /usr/sbin/nologin --uid 10001 mcp
 
 WORKDIR /app
-COPY --from=build --chown=mcp:mcp /src/.venv /app/.venv
+COPY --from=build --chown=mcp:mcp /app/.venv /app/.venv
 
 USER 10001
 EXPOSE 8000
