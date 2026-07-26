@@ -341,8 +341,8 @@ name is not guaranteed unique across servers and must not be used as a disambigu
 
 This is the section the post is for.
 
-A `tools/call` has exactly two successful outcomes on the wire and one unsuccessful one, and
-the trap is that two of the three are failures while only one of them looks like a failure.
+A `tools/call` comes back in one of three shapes. Two of the three are failures, and only one
+of those two looks like one.
 
 ```json
 { "resultType": "complete", "content": [...], "isError": false }
@@ -763,12 +763,12 @@ optional, and it will find dialect you invented without noticing.
 - **Reading `.text` off every content block.** The union has five members and four of them have
   no `text` attribute. Images, audio, resource links, and embedded resources vanish silently,
   and so does `structuredContent`, which is a separate field entirely.
-- **Hand-rolling `__aenter__` and `__aexit__` onto `self`.** The client owns an `anyio` task
-  group that must be exited by the task that entered it, and a `close()` that unwinds in order
-  leaks the transport whenever the session exit raises. Use `AsyncExitStack`, or `async with`.
-- **Catching a specific exception type around a client block.** The task group re-raises
-  wrapped in an `ExceptionGroup`, sometimes nested twice. `except ConnectionError` never fires
-  and neither does `pytest.raises(ConnectionError)`. Flatten the group and check the members.
+- **Forgetting that the client owns a task group.** It shows up twice. A hand-rolled
+  `__aenter__` and `__aexit__` stored on `self` gets a cancel-scope error and leaks the
+  transport whenever the session exit raises first, so use `AsyncExitStack` or `async with`.
+  And the group re-raises escaping exceptions wrapped in an `ExceptionGroup`, sometimes nested
+  twice, so `except ConnectionError` never fires and neither does
+  `pytest.raises(ConnectionError)`. Flatten the group and check the members.
 - **Calling bare `input()` inside a coroutine.** It stalls the event loop for the whole time the
   user is reading. Every other in-flight call stops, and configured read timeouts fire against
   a loop that is not running. `asyncio.to_thread(input, prompt)` is the whole fix.

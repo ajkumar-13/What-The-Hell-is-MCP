@@ -776,19 +776,17 @@ cd code/10-mcp-client && PYTHONPATH="src;../05-first-server/src" pytest tests -q
 - **Letting an annotation make the decision.** `readOnlyHint` is a claim by the party you are
   containing. It may satisfy a host policy and it may never be one. Turn the policy off and the
   same annotation must buy nothing, which is a test you can write today.
-- **Trusting `readOnlyHint` on a tool that also says `destructiveHint`.** Nothing stops a server
-  from claiming both. Check destructive first, so the contradiction resolves into a prompt
-  rather than into an auto-approval.
-- **Treating "no annotations" as safe.** Absence of a claim is not a claim. The specification's
-  own defaults make an undeclared tool destructive and open-world, so prompt for it.
+- **Reading a contradictory or absent annotation charitably.** Nothing stops a server from
+  claiming both `readOnlyHint` and `destructiveHint`, so check destructive first and let the
+  contradiction resolve into a prompt. And absence of a claim is not a claim of safety: the
+  specification's own defaults make an undeclared tool destructive and open-world.
 - **Remembering "allow always" for a destructive tool.** Approving one deletion is a decision;
   approving every future deletion from one dialog is an accident. Make denials stick and make
   destructive approvals expire, and write down the asymmetry so a reviewer can see it.
-- **Prefixing colliding names with a slash.** A slash is outside the character set a tool name
-  is allowed to use. Use a dot, qualify both sides rather than one, and keep the qualified form
-  resolvable even after the collision goes away.
-- **Prefixing with the server's self-reported name.** It is not guaranteed unique across
-  servers. Use the key from your own configuration file, which you control.
+- **Building the prefix wrong, in either of the two ways.** A slash is outside the character
+  set a tool name may use, so the separator is a dot; and the server's self-reported name is
+  not guaranteed unique across servers, so the prefix comes from the key in your own
+  configuration file. Qualify both sides, and keep the qualified form resolvable afterwards.
 - **Sending the namespaced name on the wire.** The server has never heard of `files.search`.
   Publish the qualified name to the model, send the bare name in `params.name`.
 - **Dropping the result of a denied or unknown call.** Every requested call needs a result, in

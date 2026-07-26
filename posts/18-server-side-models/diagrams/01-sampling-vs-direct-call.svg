@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Sampling through the host against a direct provider call, with the billing boundary marked</title>
+  <desc id="d">Two panels for the same need: a server that wants a model of its own. On the left is the old answer, sampling. The server sent a request up through the client to the host, which owned the model, and the billing boundary drawn around the host shows who paid. Both legs of that path are struck through, because revision 2026-07-28 has no server-to-client request channel to carry them and the feature is deprecated. On the right is the replacement. The client still calls the server, but the server now reaches a model provider directly over HTTPS with its own key, and the billing boundary has moved to enclose the server and the provider together. A table underneath answers the three questions the move changes: who pays, who consented, and who answers for the prompt. Only the first two move.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:15px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .bad{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:11px;fill:var(--mcp-alert);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .client{fill:var(--mcp-primary);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .gone{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;stroke-dasharray:5 4;}
+    .cross{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;stroke-linecap:round;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+    .bound{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;stroke-dasharray:5 4;}
+    .chipbg{fill:var(--mcp-surface);}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arx" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-alert)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="32" y="34">When the server needs a model of its own</text>
+  <text class="small" x="32" y="54">The mechanism changed, and so did the answer to three questions that are not about mechanism at all.</text>
+
+  <!-- ================= LEFT PANEL ================= -->
+  <rect class="zone" x="32" y="70" width="438" height="334" rx="10"/>
+  <text class="head" x="52" y="98">Then: sampling, through the host</text>
+  <text class="small" x="52" y="116">Deprecated in revision 2026-07-28 by SEP-2577</text>
+  <line class="rule" x1="52" y1="126" x2="450" y2="126"/>
+
+  <rect class="bound" x="88" y="145" width="326" height="60" rx="8"/>
+  <rect class="chipbg" x="96" y="136" width="112" height="18"/>
+  <text class="tiny" x="102" y="149">billing boundary</text>
+
+  <rect class="client" x="104" y="160" width="294" height="36" rx="6"/>
+  <text class="onfill" x="251" y="183" text-anchor="middle">host, and the model it owns</text>
+
+  <rect class="client" x="104" y="228" width="294" height="36" rx="6"/>
+  <text class="onfill" x="251" y="251" text-anchor="middle">client</text>
+
+  <rect class="server" x="104" y="296" width="294" height="36" rx="6"/>
+  <text class="onfill" x="251" y="319" text-anchor="middle">server</text>
+
+  <path class="gone" d="M251,296 L251,268" marker-end="url(#arx)"/>
+  <path class="gone" d="M251,228 L251,200" marker-end="url(#arx)"/>
+  <path class="cross" d="M244,275 l14,14 M258,275 l-14,14"/>
+  <path class="cross" d="M244,207 l14,14 M258,207 l-14,14"/>
+
+  <text class="mono" x="272" y="286">sampling/createMessage</text>
+  <text class="bad" x="272" y="218">no back channel to carry it</text>
+
+  <text class="small" x="52" y="358">The RPC survives only as a CreateMessageRequest inside</text>
+  <text class="small" x="52" y="374">MRTR inputRequests, and the feature it belongs to is</text>
+  <text class="small" x="52" y="390">deprecated, with earliest removal on or after 2027-07-28.</text>
+
+  <!-- ================= RIGHT PANEL ================= -->
+  <rect class="zone" x="490" y="70" width="438" height="334" rx="10"/>
+  <text class="head" x="510" y="98">Now: the server calls a provider</text>
+  <text class="small" x="510" y="116">Revision 2026-07-28, with the operator's own key</text>
+  <line class="rule" x1="510" y1="126" x2="908" y2="126"/>
+
+  <rect class="client" x="562" y="132" width="294" height="36" rx="6"/>
+  <text class="onfill" x="709" y="155" text-anchor="middle">host, and the model it owns</text>
+
+  <rect class="client" x="562" y="196" width="294" height="36" rx="6"/>
+  <text class="onfill" x="709" y="219" text-anchor="middle">client</text>
+
+  <rect class="bound" x="546" y="277" width="326" height="119" rx="8"/>
+  <rect class="chipbg" x="554" y="268" width="112" height="18"/>
+  <text class="tiny" x="560" y="281">billing boundary</text>
+
+  <rect class="server" x="562" y="292" width="294" height="36" rx="6"/>
+  <text class="onfill" x="709" y="315" text-anchor="middle">server</text>
+
+  <rect class="box" x="562" y="344" width="294" height="44" rx="6"/>
+  <text class="label" x="709" y="364" text-anchor="middle">model provider API</text>
+  <text class="small" x="709" y="380" text-anchor="middle">reached over HTTPS with the operator's key</text>
+
+  <path class="flow" d="M709,168 L709,192" marker-end="url(#ar)"/>
+  <path class="flow" d="M709,232 L709,288" marker-end="url(#ar)"/>
+  <path class="flow" d="M709,328 L709,340" marker-end="url(#ar)"/>
+  <text class="mono" x="722" y="254">tools/call</text>
+
+  <!-- ================= SHARED TABLE ================= -->
+  <line class="rule" x1="32" y1="418" x2="928" y2="418"/>
+  <text class="label" x="330" y="438">Then, with sampling</text>
+  <text class="label" x="640" y="438">Now, calling a provider</text>
+  <line class="rule" x1="32" y1="446" x2="928" y2="446"/>
+
+  <text class="small" x="40" y="466">Who pays for the tokens</text>
+  <text class="mono" x="330" y="466">the host</text>
+  <text class="mono" x="640" y="466">the server operator</text>
+  <line class="rule" x1="32" y1="474" x2="928" y2="474"/>
+
+  <text class="small" x="40" y="494">Who consented to the prompt</text>
+  <text class="mono" x="330" y="494">the user, at the host's prompt</text>
+  <text class="mono" x="640" y="494">the operator, at deploy time</text>
+  <line class="rule" x1="32" y1="502" x2="928" y2="502"/>
+
+  <text class="small" x="40" y="522">Who answers for the prompt</text>
+  <text class="mono" x="330" y="522">the server author</text>
+  <text class="mono" x="640" y="522">the server author, unchanged</text>
+</svg>

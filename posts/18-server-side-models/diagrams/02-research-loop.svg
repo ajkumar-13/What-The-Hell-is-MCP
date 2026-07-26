@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="t d">
+  <title id="t">The multi-page research loop, its budget gate, and every way it can stop</title>
+  <desc id="d">A call to research_urls first removes duplicate URLs while keeping the caller's order, then enters a loop drawn as a dashed container. Every pass through the loop starts at a budget gate that checks the pages visited against the page limit and the words read against the word limit; failing either check leaves the loop with a message naming which limit was hit and how many sources went unvisited. Inside the loop a page is loaded, summarized, and recorded as a source together with its citations, and a page that will not load is written to a failures list rather than ending the pass. Five labelled exits on the right cover the two budget stops, the recorded failure, the ordinary completion, and the case where no source could be read at all. All of them converge on one report whose stopped_because field says which one happened.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:19px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .monobig{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:12px;fill:var(--mcp-ink);}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .gate{fill:var(--mcp-neutral-1);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .loopbox{fill:none;stroke:var(--mcp-ink-muted);stroke-width:1;stroke-dasharray:5 4;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="800" height="600"/>
+  <text class="title" x="32" y="32">Many pages, one budget, one report</text>
+  <text class="small" x="32" y="52">Every exit from the loop is named in the result, so "it finished" and "it ran out" are told apart.</text>
+
+  <!-- entry -->
+  <rect class="server" x="76" y="70" width="370" height="36" rx="6"/>
+  <text class="onfill" x="261" y="93" text-anchor="middle">research_urls(topic, urls, max_pages, max_words)</text>
+  <path class="flow" d="M261,106 L261,126" marker-end="url(#ar)"/>
+
+  <rect class="box" x="76" y="128" width="370" height="34" rx="6"/>
+  <text class="small" x="261" y="149" text-anchor="middle">dedupe, keeping the caller's order</text>
+  <path class="flow" d="M261,162 L261,206" marker-end="url(#ar)"/>
+
+  <!-- loop container -->
+  <rect class="loopbox" x="40" y="182" width="430" height="318" rx="10"/>
+  <text class="tiny" x="50" y="198">for each URL</text>
+
+  <rect class="gate" x="76" y="208" width="370" height="46" rx="6"/>
+  <text class="label" x="261" y="228" text-anchor="middle">budget gate</text>
+  <text class="mono" x="261" y="245" text-anchor="middle">pages &lt; max_pages   and   words &lt; max_words</text>
+
+  <path class="flow" d="M261,254 L261,280" marker-end="url(#ar)"/>
+
+  <rect class="box" x="76" y="282" width="370" height="42" rx="6"/>
+  <text class="monobig" x="261" y="302" text-anchor="middle">load_page(url)</text>
+  <text class="small" x="261" y="317" text-anchor="middle">cache, then browser, then extract</text>
+
+  <path class="flow" d="M261,324 L261,348" marker-end="url(#ar)"/>
+
+  <rect class="box" x="76" y="350" width="370" height="42" rx="6"/>
+  <text class="monobig" x="261" y="370" text-anchor="middle">summarize(text, summarizer=...)</text>
+  <text class="small" x="261" y="385" text-anchor="middle">whichever one actually ran is recorded</text>
+
+  <path class="flow" d="M261,392 L261,416" marker-end="url(#ar)"/>
+
+  <rect class="box" x="76" y="418" width="370" height="42" rx="6"/>
+  <text class="label" x="261" y="437" text-anchor="middle">record the source, add its citations</text>
+  <text class="small" x="261" y="453" text-anchor="middle">a claim with no source URL raises instead</text>
+
+  <!-- loop back rail -->
+  <path class="flow" d="M76,439 L58,439 L58,231 L72,231" marker-end="url(#ar)"/>
+  <text class="tiny" x="76" y="478">back to the gate for the next URL</text>
+
+  <!-- ============ exits ============ -->
+  <text class="tiny" x="490" y="186">how the pass ends</text>
+
+  <rect class="chip" x="490" y="194" width="240" height="36" rx="5"/>
+  <text class="mono" x="498" y="210">budget: page limit reached (2),</text>
+  <text class="small" x="498" y="224">1 source(s) not visited</text>
+
+  <rect class="chip" x="490" y="238" width="240" height="36" rx="5"/>
+  <text class="mono" x="498" y="254">budget: word limit reached (500),</text>
+  <text class="small" x="498" y="268">2 source(s) not visited</text>
+
+  <rect class="chip" x="490" y="286" width="240" height="36" rx="5"/>
+  <text class="mono" x="498" y="302">failures[], and keep going</text>
+  <text class="small" x="498" y="316">one dead link does not end the pass</text>
+
+  <rect class="chip" x="490" y="330" width="240" height="36" rx="5"/>
+  <text class="mono" x="498" y="346">completed: visited every source</text>
+  <text class="small" x="498" y="360">the loop ran out of URLs, not budget</text>
+
+  <rect class="chip" x="490" y="374" width="240" height="36" rx="5"/>
+  <text class="mono" x="498" y="390">stopped: no source could be read</text>
+  <text class="small" x="498" y="404">every candidate failed to load</text>
+
+  <!-- exit arrows -->
+  <path class="thin" d="M446,222 L468,222 L468,212 L484,212" marker-end="url(#arm)"/>
+  <path class="thin" d="M446,242 L468,242 L468,256 L484,256" marker-end="url(#arm)"/>
+  <path class="thin" d="M446,304 L484,304" marker-end="url(#arm)"/>
+  <path class="thin" d="M470,348 L484,348" marker-end="url(#arm)"/>
+  <path class="thin" d="M470,392 L484,392" marker-end="url(#arm)"/>
+
+  <!-- collector rail into the report -->
+  <path class="thin" d="M730,212 L752,212 L752,514" />
+  <path class="thin" d="M730,256 L752,256"/>
+  <path class="thin" d="M730,304 L752,304"/>
+  <path class="thin" d="M730,348 L752,348"/>
+  <path class="thin" d="M730,392 L752,392"/>
+  <path class="thin" d="M752,514 L700,514" marker-end="url(#arm)"/>
+
+  <path class="flow" d="M261,500 L261,514" marker-end="url(#ar)"/>
+
+  <!-- report -->
+  <rect class="box" x="40" y="516" width="656" height="56" rx="8"/>
+  <text class="label" x="56" y="538">ResearchReport</text>
+  <text class="mono" x="56" y="558">stopped_because, sources[], citations[], failures[], words_read, words_returned</text>
+</svg>

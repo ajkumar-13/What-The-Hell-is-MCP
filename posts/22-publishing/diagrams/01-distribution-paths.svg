@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Four routes from one repository to a server running for a user</title>
+  <desc id="d">One repository on the left feeds four horizontal routes. Route one goes through a package registry such as PyPI and then an MCP Registry entry described by server.json, and ends with the user's host resolving and running the package with uvx. Route two goes through a deployment you operate and a registry entry carrying a remote URL, and ends with the host simply connecting over HTTP with nothing installed. Route three goes through a GitHub release asset with an .mcpb extension and an optional registry entry carrying a SHA-256 hash, and ends with the user double-clicking to install. Route four is the baseline: a git clone and a hand-edited configuration file, which works and reaches nobody. A strip along the bottom repeats the three caveats that apply to every route through the registry: it is in preview rather than generally available, consumers should assume minimal-to-no moderation, and nothing can be unpublished.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:10px;fill:var(--mcp-ink-muted);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .client{fill:var(--mcp-primary);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .onfillmono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:10px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="30">Four routes out, and what the registry actually knows</text>
+  <text class="small" x="40" y="50">The registry hosts metadata, never artifacts. Your code stays where you already put it.</text>
+
+  <!-- repository -->
+  <rect class="box" x="40" y="104" width="140" height="310" rx="8"/>
+  <text class="label" x="110" y="248" text-anchor="middle">Your repository</text>
+  <text class="tiny" x="110" y="268" text-anchor="middle">one server, four exits</text>
+
+  <line class="rule" x1="196" y1="88" x2="920" y2="88"/>
+
+  <!-- route 1 -->
+  <path class="flow" d="M180,124 L192,124"/>
+  <circle class="chip" cx="204" cy="124" r="10"/>
+  <text class="label" x="204" y="128" text-anchor="middle">1</text>
+  <rect class="box" x="218" y="104" width="196" height="40" rx="6"/>
+  <text class="label" x="230" y="122">PyPI, npm, or an image</text>
+  <text class="mono" x="230" y="137">the artifact itself</text>
+  <path class="flow" d="M418,124 L444,124" marker-end="url(#ar)"/>
+  <rect class="box" x="448" y="104" width="196" height="40" rx="6"/>
+  <text class="label" x="460" y="122">MCP Registry entry</text>
+  <text class="mono" x="460" y="137">server.json: name, packages[]</text>
+  <path class="flow" d="M648,124 L674,124" marker-end="url(#ar)"/>
+  <rect class="client" x="678" y="104" width="242" height="40" rx="6"/>
+  <text class="onfill" x="690" y="122">Host resolves and runs it</text>
+  <text class="onfillmono" x="690" y="137">uvx mcp-system-info</text>
+  <text class="tiny" x="218" y="164">Two ownership proofs are needed: the namespace, and the package the entry points at.</text>
+
+  <!-- route 2 -->
+  <path class="flow" d="M180,214 L192,214"/>
+  <circle class="chip" cx="204" cy="214" r="10"/>
+  <text class="label" x="204" y="218" text-anchor="middle">2</text>
+  <rect class="server" x="218" y="194" width="196" height="40" rx="6"/>
+  <text class="onfill" x="230" y="212">Your deployment</text>
+  <text class="onfillmono" x="230" y="227">https://mcp.example.com/mcp</text>
+  <path class="flow" d="M418,214 L444,214" marker-end="url(#ar)"/>
+  <rect class="box" x="448" y="194" width="196" height="40" rx="6"/>
+  <text class="label" x="460" y="212">MCP Registry entry</text>
+  <text class="mono" x="460" y="227">server.json: remotes[].url</text>
+  <path class="flow" d="M648,214 L674,214" marker-end="url(#ar)"/>
+  <rect class="client" x="678" y="194" width="242" height="40" rx="6"/>
+  <text class="onfill" x="690" y="212">Host connects over HTTP</text>
+  <text class="onfillmono" x="690" y="227">nothing installed locally</text>
+  <text class="tiny" x="218" y="254">This is the route post 21 deployed. The URL must be publicly reachable.</text>
+
+  <!-- route 3 -->
+  <path class="flow" d="M180,304 L192,304"/>
+  <circle class="chip" cx="204" cy="304" r="10"/>
+  <text class="label" x="204" y="308" text-anchor="middle">3</text>
+  <rect class="box" x="218" y="284" width="196" height="40" rx="6"/>
+  <text class="label" x="230" y="302">A release asset</text>
+  <text class="mono" x="230" y="317">system-info.mcpb</text>
+  <path class="flow" d="M418,304 L444,304" marker-end="url(#ar)"/>
+  <rect class="box" x="448" y="284" width="196" height="40" rx="6"/>
+  <text class="label" x="460" y="302">Registry entry, optional</text>
+  <text class="mono" x="460" y="317">registryType: mcpb + fileSha256</text>
+  <path class="flow" d="M648,304 L674,304" marker-end="url(#ar)"/>
+  <rect class="client" x="678" y="284" width="242" height="40" rx="6"/>
+  <text class="onfill" x="690" y="302">User double-clicks it</text>
+  <text class="onfillmono" x="690" y="317">installer asks for user_config</text>
+  <text class="tiny" x="218" y="344">Hosting is restricted to github.com and gitlab.com releases. The client checks the hash; the registry does not.</text>
+
+  <!-- route 4 -->
+  <path class="flow-thin" d="M180,394 L192,394"/>
+  <circle class="chip" cx="204" cy="394" r="10"/>
+  <text class="label" x="204" y="398" text-anchor="middle">4</text>
+  <rect class="chip" x="218" y="374" width="196" height="40" rx="6"/>
+  <text class="label" x="230" y="392">git clone</text>
+  <text class="mono" x="230" y="407">plus uv sync, by hand</text>
+  <path class="flow-thin" d="M418,394 L444,394" marker-end="url(#ar)"/>
+  <rect class="chip" x="448" y="374" width="196" height="40" rx="6"/>
+  <text class="label" x="460" y="392">A hand-edited config file</text>
+  <text class="mono" x="460" y="407">an absolute path on one machine</text>
+  <path class="flow-thin" d="M648,394 L674,394" marker-end="url(#ar)"/>
+  <rect class="chip" x="678" y="374" width="242" height="40" rx="6"/>
+  <text class="label" x="690" y="392">It runs, for one person</text>
+  <text class="mono" x="690" y="407">the baseline this post argues with</text>
+
+  <!-- caveat strip -->
+  <rect class="zone" x="40" y="436" width="880" height="76" rx="9"/>
+  <text class="label" x="56" y="456">Three caveats that apply to every route through the registry</text>
+  <text class="small" x="56" y="476">Preview, not generally available: "Breaking changes or data resets may occur before general availability."</text>
+  <text class="small" x="56" y="494">Consumers "should assume minimal-to-no moderation". And there is no unpublish, only a status you can change.</text>
+</svg>

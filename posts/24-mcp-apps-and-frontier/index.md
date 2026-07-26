@@ -454,11 +454,12 @@ what the protocol does not yet answer.
 **No tool-definition pinning.** Nothing in 2026-07-28 lets a client record what a tool's
 description and schema were yesterday and refuse to run a changed one today. A server can
 therefore ship benign tools, wait to be approved, and change the descriptions afterward, which
-is the attack usually called a rug pull. Hosts mitigate it locally, some by hashing definitions
-and re-prompting on change, but that is a host feature and not a protocol guarantee, so it
-varies by host and no server can rely on it. A proposal to standardize pinning exists and, at
-the time of writing, has not attracted a sponsor, which under the SEP process means it is not
-moving.
+is the attack usually called a rug pull. A host can defend itself locally, by hashing each tool
+definition it has approved and re-prompting when the hash changes, but that is a host feature
+rather than a protocol guarantee: it varies by host, no server can rely on it, and nothing in
+`tools/list` helps. A proposal to standardize pinning exists and, at the time of writing, has
+not attracted a sponsor, which under the SEP process means it is not moving. Check its status
+before you plan around it.
 
 **No identity.** MCP has authorization ([Post 20](../20-authorization/index.md)): a server can be
 an OAuth 2.1 resource server and validate a token for an audience that is itself. What it does

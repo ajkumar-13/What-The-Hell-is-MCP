@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 600" role="img" aria-labelledby="t d">
+  <title id="t">One claim traced back to the sentence, the page, and the URL it came from</title>
+  <desc id="d">Three panels read left to right. The first is a page as the extractor left it: its URL, its title, and its text, with one sentence outlined to mark the sentence the summarizer chose. The second is the only way a claim can enter a report, a log whose add method checks that the claim is not empty, that the URL is not empty, and whether the claim appears verbatim in the source text; a branch below it shows that an empty URL raises rather than being filtered out later, so nothing is appended. The third is the resulting citation as it appears in the report, carrying the claim, the URL, the title, and the verbatim flag. A return path along the bottom shows that any claim in the finished report can be walked back to the sentence it came from.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:19px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .ink{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .keep{fill:none;stroke:var(--mcp-success);stroke-width:1.5;}
+    .reject{fill:var(--mcp-surface);stroke:var(--mcp-alert);stroke-width:1.5;}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .trace{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;stroke-dasharray:5 4;}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+    .tick{stroke:var(--mcp-success);stroke-width:1.5;fill:none;stroke-linecap:round;}
+    .cross{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;stroke-linecap:round;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="800" height="600"/>
+  <text class="title" x="32" y="32">Where a claim comes from</text>
+  <text class="small" x="32" y="52">Provenance enforced by the type rather than promised in a docstring.</text>
+
+  <!-- ============ 1. the page ============ -->
+  <text class="label" x="32" y="84">1. The page, as extracted</text>
+  <rect class="box" x="32" y="96" width="268" height="204" rx="6"/>
+  <text class="mono" x="44" y="118">https://example.com/news/</text>
+  <text class="mono" x="44" y="133">portability-consultation</text>
+  <text class="ink" x="44" y="154">Regulator opens consultation on</text>
+  <text class="ink" x="44" y="168">data portability rules</text>
+  <line class="rule" x1="44" y1="180" x2="288" y2="180"/>
+  <text class="tiny" x="44" y="196">extraction.text, 134 words</text>
+  <text class="small" x="44" y="216">Regulator opens consultation on data</text>
+  <text class="small" x="44" y="230">portability rules</text>
+  <rect class="keep" x="40" y="238" width="252" height="42" rx="4"/>
+  <text class="small" x="48" y="256">The regulator has opened a twelve-week</text>
+  <text class="small" x="48" y="270">consultation on how data portability ...</text>
+  <text class="tiny" x="44" y="294">outlined: the sentence the summarizer chose</text>
+
+  <path class="flow" d="M300,163 L320,163" marker-end="url(#ar)"/>
+
+  <!-- ============ 2. the log ============ -->
+  <text class="label" x="326" y="84">2. CitationLog.add</text>
+  <rect class="box" x="326" y="96" width="144" height="134" rx="6"/>
+  <path class="tick" d="M340,122 l4,5 l9,-11"/>
+  <text class="small" x="360" y="126">claim not empty</text>
+  <path class="tick" d="M340,152 l4,5 l9,-11"/>
+  <text class="small" x="360" y="156">url not empty</text>
+  <path class="tick" d="M340,182 l4,5 l9,-11"/>
+  <text class="small" x="360" y="186">verbatim checked</text>
+  <line class="rule" x1="340" y1="198" x2="458" y2="198"/>
+  <text class="mono" x="340" y="216">returns Citation</text>
+
+  <path class="flow" d="M398,230 L398,266" marker-end="url(#ar)"/>
+  <text class="tiny" x="406" y="252">url is blank</text>
+
+  <rect class="reject" x="326" y="268" width="144" height="76" rx="6"/>
+  <path class="cross" d="M340,286 l10,10 M350,286 l-10,10"/>
+  <text class="mono" x="360" y="296">url = ""</text>
+  <text class="small" x="340" y="318">MissingSourceError</text>
+  <text class="small" x="340" y="334">nothing is appended</text>
+
+  <path class="flow" d="M470,163 L490,163" marker-end="url(#ar)"/>
+
+  <!-- ============ 3. the citation ============ -->
+  <text class="label" x="496" y="84">3. The citation in the report</text>
+  <rect class="box" x="496" y="96" width="272" height="204" rx="6"/>
+  <text class="mono" x="508" y="120">{</text>
+  <text class="mono" x="508" y="138">  "claim": "The regulator has</text>
+  <text class="mono" x="508" y="154">    opened a twelve-week</text>
+  <text class="mono" x="508" y="170">    consultation ...",</text>
+  <text class="mono" x="508" y="192">  "url": "https://example.com/</text>
+  <text class="mono" x="508" y="208">    news/portability-...",</text>
+  <text class="mono" x="508" y="230">  "title": "Regulator opens</text>
+  <text class="mono" x="508" y="246">    consultation on ...",</text>
+  <text class="mono" x="508" y="268">  "verbatim": true</text>
+  <text class="mono" x="508" y="288">}</text>
+
+  <!-- ============ trace back ============ -->
+  <path class="trace" d="M632,300 L632,430 L166,430 L166,306" marker-end="url(#arm)"/>
+  <text class="small" x="300" y="422">walk any claim back to the sentence, the page, and the URL</text>
+
+  <line class="rule" x1="32" y1="460" x2="768" y2="460"/>
+  <text class="small" x="32" y="482">The report is assembled only from the citation log, and the log refuses a claim that carries no source.</text>
+  <text class="small" x="32" y="500">There is no code path by which an unattributed claim reaches the caller, because there is nothing to filter.</text>
+  <text class="small" x="32" y="518">A model's paraphrase is still cited. It is simply recorded with verbatim set to false, and is not quotable.</text>
+</svg>

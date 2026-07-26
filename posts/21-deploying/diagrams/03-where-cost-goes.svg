@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Four places an MCP deployment spends money, and the lever the server author holds over each</title>
+  <desc id="d">A banner across the top states that nothing here is drawn to scale and that no proportions are claimed. Below it, four equal-width cards sit along an arrow running from the host end of the request to the backend end. The first two cards are on the host side and both concern model tokens: tool descriptions, which are sent to the model on every turn whether the tool is used or not, and tool results, which are billed at whatever size the server returned and again on every later turn they remain in context. The third card is the server's own compute, which is mostly idle waiting on other people's networks. The fourth is the backend and egress beyond the server. Each card names what drives that cost and what the server author can actually change. A panel at the foot says the only true ranking is a measured one, and describes how to get it by placing the host's token counts next to the span durations from the trace.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:11px;fill:var(--mcp-ink-muted);}
+    .cardtitle{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .banner{fill:var(--mcp-neutral-1);stroke:var(--mcp-ink-muted);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .client{fill:var(--mcp-primary);stroke:var(--mcp-ink);stroke-width:1;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1;}
+    .other{fill:var(--mcp-neutral-2);stroke:var(--mcp-ink);stroke-width:1;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:11px;fill:var(--mcp-on-fill);}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="30">Where the money goes, and what you can actually move</text>
+
+  <rect class="banner" x="40" y="44" width="880" height="30" rx="7"/>
+  <text class="small" x="56" y="64">Not to scale. No proportions are claimed here, because they depend entirely on the workload.</text>
+
+  <path class="flow-thin" d="M40,100 L920,100" marker-end="url(#arm)"/>
+  <text class="head" x="40" y="92">at the host, where the model reads</text>
+  <text class="head" x="920" y="92" text-anchor="end">out past your server</text>
+
+  <!-- card 1 -->
+  <rect class="box" x="40" y="118" width="196" height="272" rx="8"/>
+  <rect class="client" x="54" y="130" width="72" height="18" rx="5"/>
+  <text class="onfill" x="90" y="143" text-anchor="middle">host side</text>
+  <text class="cardtitle" x="54" y="174">Tool descriptions</text>
+  <line class="rule" x1="54" y1="186" x2="222" y2="186"/>
+  <text class="head" x="54" y="204">Driven by</text>
+  <text class="tiny" x="54" y="222">the whole catalog is sent</text>
+  <text class="tiny" x="54" y="238">to the model on every turn,</text>
+  <text class="tiny" x="54" y="254">whether it is used or not</text>
+  <line class="rule" x1="54" y1="272" x2="222" y2="272"/>
+  <text class="head" x="54" y="290">Your lever</text>
+  <text class="tiny" x="54" y="308">write shorter descriptions</text>
+  <text class="tiny" x="54" y="324">publish fewer tools</text>
+  <text class="tiny" x="54" y="340">keep the order stable, so</text>
+  <text class="tiny" x="54" y="356">prompt caching can hit</text>
+  <text class="tiny" x="54" y="378">see post 06</text>
+
+  <!-- card 2 -->
+  <rect class="box" x="268" y="118" width="196" height="272" rx="8"/>
+  <rect class="client" x="282" y="130" width="72" height="18" rx="5"/>
+  <text class="onfill" x="318" y="143" text-anchor="middle">host side</text>
+  <text class="cardtitle" x="282" y="174">Tool results</text>
+  <line class="rule" x1="282" y1="186" x2="450" y2="186"/>
+  <text class="head" x="282" y="204">Driven by</text>
+  <text class="tiny" x="282" y="222">what you return is billed</text>
+  <text class="tiny" x="282" y="238">at its full size, and again</text>
+  <text class="tiny" x="282" y="254">on every later turn it</text>
+  <text class="tiny" x="282" y="270">stays in context</text>
+  <line class="rule" x1="282" y1="284" x2="450" y2="284"/>
+  <text class="head" x="282" y="302">Your lever</text>
+  <text class="tiny" x="282" y="320">summarize on the server</text>
+  <text class="tiny" x="282" y="336">return a resource link</text>
+  <text class="tiny" x="282" y="352">rather than the blob</text>
+  <text class="tiny" x="282" y="378">see post 17</text>
+
+  <!-- card 3 -->
+  <rect class="box" x="496" y="118" width="196" height="272" rx="8"/>
+  <rect class="server" x="510" y="130" width="72" height="18" rx="5"/>
+  <text class="onfill" x="546" y="143" text-anchor="middle">your side</text>
+  <text class="cardtitle" x="510" y="174">Your compute</text>
+  <line class="rule" x1="510" y1="186" x2="678" y2="186"/>
+  <text class="head" x="510" y="204">Driven by</text>
+  <text class="tiny" x="510" y="222">mostly waiting on someone</text>
+  <text class="tiny" x="510" y="238">else's network, rarely on</text>
+  <text class="tiny" x="510" y="254">processing anything</text>
+  <line class="rule" x1="510" y1="272" x2="678" y2="272"/>
+  <text class="head" x="510" y="290">Your lever</text>
+  <text class="tiny" x="510" y="308">size for concurrency</text>
+  <text class="tiny" x="510" y="324">set a memory limit</text>
+  <text class="tiny" x="510" y="340">more small replicas beats</text>
+  <text class="tiny" x="510" y="356">one large one</text>
+  <text class="tiny" x="510" y="378">usually the smallest line</text>
+
+  <!-- card 4 -->
+  <rect class="box" x="724" y="118" width="196" height="272" rx="8"/>
+  <rect class="other" x="738" y="130" width="80" height="18" rx="5"/>
+  <text class="tiny" x="778" y="143" text-anchor="middle">beyond you</text>
+  <text class="cardtitle" x="738" y="174">Backend and egress</text>
+  <line class="rule" x1="738" y1="186" x2="906" y2="186"/>
+  <text class="head" x="738" y="204">Driven by</text>
+  <text class="tiny" x="738" y="222">the queries and API calls</text>
+  <text class="tiny" x="738" y="238">your tools make, plus the</text>
+  <text class="tiny" x="738" y="254">bytes leaving the network</text>
+  <line class="rule" x1="738" y1="272" x2="906" y2="272"/>
+  <text class="head" x="738" y="290">Your lever</text>
+  <text class="tiny" x="738" y="308">ttlMs and cacheScope, on</text>
+  <text class="tiny" x="738" y="324">the six cacheable methods</text>
+  <text class="tiny" x="738" y="340">paginate, do not dump</text>
+  <text class="tiny" x="738" y="378">see post 07</text>
+
+  <!-- footer -->
+  <rect class="zone" x="40" y="410" width="880" height="90" rx="9"/>
+  <text class="label" x="56" y="432">The only ranking that is true is the one you measured</text>
+  <text class="small" x="56" y="454">Take the token counts your host already reports and put them next to the span durations from the trace in section 7.</text>
+  <text class="small" x="56" y="472">One day of that beats any figure quoted from somebody else's deployment, including this one.</text>
+  <text class="tiny" x="56" y="490">A number without a workload attached to it is not a number.</text>
+</svg>

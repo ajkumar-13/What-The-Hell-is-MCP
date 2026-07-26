@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">A deployment topology for a stateless MCP server, with the session store struck out</title>
+  <desc id="d">Four columns. On the left, three different hosts, each containing its own MCP client. In the second column, an ingress that terminates TLS, validates the Origin header and rate limits on the Mcp-Method and Mcp-Name headers, feeding a plain round-robin load balancer beneath it. Below the balancer sits a box for a session store and sticky routing, drawn crossed out, with a note listing the three things that no longer exist: the session identifier, the initialize handshake, and any in-flight state that outlives a request. In the third column, three identical replicas of the same container image, each reachable by any request. In the fourth, a shared backend and an observability sink that both receive traffic from all three replicas over one bus. A strip along the bottom summarizes the three properties that make this work.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink-muted);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .client{fill:var(--mcp-primary);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .gone{fill:var(--mcp-neutral-1);stroke:var(--mcp-ink-subtle);stroke-width:1;stroke-dasharray:5 4;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-on-fill);}
+    .onfillsmall{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+    .cross{stroke:var(--mcp-alert);stroke-width:1.5;fill:none;stroke-linecap:round;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="30">Nothing to pin, so nothing to configure</text>
+  <text class="small" x="40" y="50">Every request carries its own protocol version and capabilities, so any replica can answer any request.</text>
+
+  <text class="head" x="40" y="84">Hosts</text>
+  <text class="head" x="240" y="84">Edge</text>
+  <text class="head" x="470" y="84">Replicas, all identical</text>
+  <text class="head" x="700" y="84">Shared</text>
+
+  <!-- hosts -->
+  <rect class="client" x="40" y="92" width="160" height="56" rx="7"/>
+  <text class="onfill" x="120" y="116" text-anchor="middle">Desktop host</text>
+  <text class="onfillsmall" x="120" y="134" text-anchor="middle">one client</text>
+  <rect class="client" x="40" y="164" width="160" height="56" rx="7"/>
+  <text class="onfill" x="120" y="188" text-anchor="middle">Editor host</text>
+  <text class="onfillsmall" x="120" y="206" text-anchor="middle">one client</text>
+  <rect class="client" x="40" y="236" width="160" height="56" rx="7"/>
+  <text class="onfill" x="120" y="260" text-anchor="middle">Your own CLI</text>
+  <text class="onfillsmall" x="120" y="278" text-anchor="middle">one client</text>
+
+  <path class="flow" d="M200,120 L236,120" marker-end="url(#ar)"/>
+  <path class="flow" d="M200,192 L214,192 L214,150 L236,150" marker-end="url(#ar)"/>
+  <path class="flow" d="M200,264 L214,264 L214,180 L236,180" marker-end="url(#ar)"/>
+
+  <!-- edge -->
+  <rect class="box" x="240" y="92" width="180" height="112" rx="7"/>
+  <text class="label" x="256" y="112">Ingress</text>
+  <text class="small" x="256" y="132">terminate TLS</text>
+  <text class="small" x="256" y="150">validate Origin</text>
+  <text class="small" x="256" y="168">rate limit, reading</text>
+  <text class="mono" x="256" y="186">Mcp-Method / Mcp-Name</text>
+
+  <path class="flow" d="M330,204 L330,220" marker-end="url(#ar)"/>
+  <rect class="box" x="240" y="224" width="180" height="52" rx="7"/>
+  <text class="label" x="330" y="246" text-anchor="middle">Round-robin</text>
+  <text class="tiny" x="330" y="264" text-anchor="middle">no body parsing, no affinity</text>
+
+  <rect class="gone" x="240" y="300" width="180" height="76" rx="7"/>
+  <text class="small" x="330" y="322" text-anchor="middle">session store</text>
+  <text class="small" x="330" y="340" text-anchor="middle">sticky routing</text>
+  <text class="mono" x="330" y="358" text-anchor="middle">Mcp-Session-Id</text>
+  <path class="cross" d="M252,308 L408,368"/>
+  <path class="cross" d="M408,308 L252,368"/>
+
+  <!-- replicas -->
+  <rect class="server" x="470" y="92" width="180" height="56" rx="7"/>
+  <text class="onfill" x="560" y="116" text-anchor="middle">replica 1</text>
+  <text class="onfillsmall" x="560" y="134" text-anchor="middle">same image, same config</text>
+  <rect class="server" x="470" y="164" width="180" height="56" rx="7"/>
+  <text class="onfill" x="560" y="188" text-anchor="middle">replica 2</text>
+  <text class="onfillsmall" x="560" y="206" text-anchor="middle">same image, same config</text>
+  <rect class="server" x="470" y="236" width="180" height="56" rx="7"/>
+  <text class="onfill" x="560" y="260" text-anchor="middle">replica 3</text>
+  <text class="onfillsmall" x="560" y="278" text-anchor="middle">same image, same config</text>
+
+  <path class="flow" d="M420,250 L444,250 L444,120 L466,120" marker-end="url(#ar)"/>
+  <path class="flow" d="M444,250 L444,192 L466,192" marker-end="url(#ar)"/>
+  <path class="flow" d="M444,250 L466,250 L466,264" marker-end="url(#ar)"/>
+
+  <!-- shared -->
+  <path class="flow-thin" d="M650,120 L676,120"/>
+  <path class="flow-thin" d="M650,192 L676,192"/>
+  <path class="flow-thin" d="M650,264 L676,264"/>
+  <path class="flow-thin" d="M676,120 L676,264"/>
+  <path class="flow-thin" d="M676,140 L696,140" marker-end="url(#arm)"/>
+  <path class="flow-thin" d="M676,240 L696,240" marker-end="url(#arm)"/>
+
+  <rect class="box" x="700" y="110" width="220" height="60" rx="7"/>
+  <text class="label" x="716" y="132">Backend</text>
+  <text class="tiny" x="716" y="152">the only thing with state in it</text>
+
+  <rect class="box" x="700" y="210" width="220" height="60" rx="7"/>
+  <text class="label" x="716" y="232">Observability sink</text>
+  <text class="tiny" x="716" y="252">stderr lines, and spans over OTLP</text>
+
+  <!-- summary strip -->
+  <rect class="zone" x="40" y="398" width="880" height="70" rx="9"/>
+  <text class="label" x="56" y="420">Why the crossed-out box can go</text>
+  <text class="small" x="56" y="440">No Mcp-Session-Id (SEP-2567). No initialize handshake (SEP-2575). No in-flight state across a round trip (SEP-2322).</text>
+  <text class="small" x="56" y="458">Routing-relevant fields are mirrored into headers (SEP-2243), so the balancer never has to open the body.</text>
+
+  <text class="tiny" x="40" y="500">The backend is still stateful, and that is fine. The protocol stopped adding a second, separate kind of state on top of it.</text>
+  <text class="tiny" x="40" y="518">Scale by adding replicas: docker compose up --scale system-info=3, with nothing else to change.</text>
+</svg>

@@ -11,7 +11,7 @@
 > - Write a correct configuration for Claude Desktop, Claude Code, Cursor, VS Code, Gemini CLI, and Zed.
 > - Design a server that loses presentation, never capability, on a host that supports only tools.
 > - Serve the same server locally over stdio and remotely over Streamable HTTP from one process.
-> - Diagnose the five failures that account for most "it will not connect" reports.
+> - Diagnose the failures that account for most "it will not connect" reports.
 
 ![One server box in the center. Six host boxes around it, each labelled with its configuration file name and the top-level JSON key it expects: mcpServers for Claude Desktop, Claude Code, Cursor and Gemini CLI, servers for VS Code, and context_servers for Zed. A seventh box, a Python client, has no configuration file at all.](diagrams/01-one-server-five-hosts.svg)
 *The wire protocol is identical down every one of these arrows. The file at the top of each box is not.*

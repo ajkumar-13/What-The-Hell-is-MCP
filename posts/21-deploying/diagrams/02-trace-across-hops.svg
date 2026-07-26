@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">One trace across four hops, carried in the _meta block rather than an HTTP header</title>
+  <desc id="d">A four-lane span waterfall. The widest bar is the host's span, covering the whole turn. Nested inside it is the client's span, then the MCP server's span, then a short span for the backend call the server makes. Beside the waterfall, a JSON callout shows the request _meta block carrying traceparent, tracestate and baggage next to the two required protocol keys. Below, the traceparent value is broken into its four parts: a version, a thirty-two character trace identifier that is identical in every span, a sixteen character parent span identifier that changes at every hop, and a sampled flag. A panel at the foot notes that these three keys are the only reserved metadata keys in the protocol without a reverse-domain prefix, that the exception exists to match existing OpenTelemetry conventions, and that carrying them in the message body rather than a header is what makes them work on the stdio transport too.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink-muted);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .monobig{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:13px;fill:var(--mcp-ink);}
+    .monomute{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .client{fill:var(--mcp-primary);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .neutralbar{fill:var(--mcp-neutral-2);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="30">One trace identifier, four spans, no HTTP header involved</text>
+  <text class="small" x="40" y="50">traceparent, tracestate and baggage ride in _meta, so a stdio server can join the same trace.</text>
+
+  <text class="head" x="40" y="90">Spans, nested</text>
+  <line class="rule" x1="40" y1="98" x2="528" y2="98"/>
+
+  <!-- lane 1 -->
+  <text class="label" x="40" y="122">host</text>
+  <text class="monomute" x="40" y="138">span 4bf9…</text>
+  <rect class="client" x="176" y="108" width="352" height="26" rx="5"/>
+  <text class="onfill" x="352" y="126" text-anchor="middle">the whole conversation turn</text>
+
+  <!-- lane 2 -->
+  <text class="label" x="40" y="170">client</text>
+  <text class="monomute" x="40" y="186">span 00f0…</text>
+  <rect class="client" x="200" y="156" width="304" height="26" rx="5"/>
+  <text class="onfill" x="352" y="174" text-anchor="middle">tools/call get_weather</text>
+
+  <!-- lane 3 -->
+  <text class="label" x="40" y="218">MCP server</text>
+  <text class="monomute" x="40" y="234">span b7ad…</text>
+  <rect class="server" x="230" y="204" width="248" height="26" rx="5"/>
+  <text class="onfill" x="354" y="222" text-anchor="middle">your tool body</text>
+
+  <!-- lane 4 -->
+  <text class="label" x="40" y="266">backend</text>
+  <text class="monomute" x="40" y="282">span 1c93…</text>
+  <rect class="neutralbar" x="290" y="252" width="132" height="26" rx="5"/>
+  <text class="mono" x="356" y="270" text-anchor="middle">SELECT ...</text>
+
+  <line class="rule" x1="176" y1="292" x2="528" y2="292"/>
+  <text class="tiny" x="176" y="306">time, left to right</text>
+
+  <!-- JSON card -->
+  <rect class="box" x="556" y="96" width="372" height="192" rx="7"/>
+  <text class="head" x="572" y="116">the request that carried it</text>
+  <text class="mono" x="572" y="138">"params": {</text>
+  <text class="mono" x="572" y="156">  "_meta": {</text>
+  <text class="mono" x="572" y="174">    "io.modelcontextprotocol/protocolVersion": "…",</text>
+  <text class="mono" x="572" y="192">    "io.modelcontextprotocol/clientCapabilities": {},</text>
+  <text class="mono" x="572" y="214">    "traceparent": "00-0af765…319c-00f067…02b7-01",</text>
+  <text class="mono" x="572" y="232">    "tracestate":  "congo=t61rcWkgMzE",</text>
+  <text class="mono" x="572" y="250">    "baggage":     "userId=alice"</text>
+  <text class="mono" x="572" y="268">  }</text>
+  <path class="flow-thin" d="M536,180 L552,180" marker-end="url(#arm)"/>
+
+  <!-- breakdown -->
+  <rect class="zone" x="40" y="316" width="888" height="100" rx="9"/>
+  <text class="head" x="56" y="336">traceparent, part by part</text>
+  <text class="monobig" x="56" y="358">00-0af7651916cd43dd8448eb211c80319c-00f067aa0ba902b7-01</text>
+  <text class="mono" x="56" y="380">0af7651916cd43dd8448eb211c80319c</text>
+  <text class="small" x="308" y="380">the trace id, byte for byte identical in all four spans above</text>
+  <text class="mono" x="56" y="400">00f067aa0ba902b7</text>
+  <text class="small" x="308" y="400">the parent span id, different at every hop; 00 is the version and 01 the sampled flag</text>
+
+  <!-- notes -->
+  <rect class="zone" x="40" y="428" width="888" height="76" rx="9"/>
+  <text class="label" x="56" y="448">Why these three keys have no prefix</text>
+  <text class="small" x="56" y="468">Every other reserved key is a reverse-domain name. These are the documented exception, kept unprefixed "to maintain</text>
+  <text class="small" x="56" y="486">compatibility with existing implementations and OpenTelemetry semantic conventions for MCP". Do not add one.</text>
+
+  <text class="tiny" x="40" y="524">Both are optional. If no traceparent arrives, start a root span rather than dropping the request.</text>
+</svg>

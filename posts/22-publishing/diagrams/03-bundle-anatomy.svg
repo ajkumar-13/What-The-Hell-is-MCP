@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">Inside a .mcpb bundle: the archive, the appended signature, the manifest, and one unresolved version</title>
+  <desc id="d">Four panels. Top left lists the contents of the bundle, which is an ordinary ZIP archive: manifest.json at the root and the only required file, a server directory holding whatever the entry_point names, an optional icon, and anything else the server needs. Bottom left shows the optional signature, which is appended after the archive rather than stored inside it: the original ZIP content unmodified, then a marker reading MCPB_SIG_V1, a four-byte little-endian length prefix, a DER-encoded PKCS number seven SignedData structure, and a closing MCPB_SIG_END marker. Top right lists the manifest's required fields and the required fields of its server object, and names the four permitted server types. Bottom right tabulates five primary sources that disagree about the default value of manifest_version, giving three different answers, and concludes that the field should always be written explicitly.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .monomute{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .warnbox{fill:var(--mcp-surface);stroke:var(--mcp-warn);stroke-width:1.5;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-on-fill);}
+    .rule{stroke:var(--mcp-border);stroke-width:0.75;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="30">What is actually inside a .mcpb file</text>
+  <text class="small" x="40" y="50">A ZIP with a manifest, plus an optional signature appended after the archive rather than stored inside it.</text>
+
+  <!-- archive -->
+  <rect class="box" x="40" y="76" width="420" height="196" rx="8"/>
+  <rect class="server" x="56" y="88" width="140" height="20" rx="5"/>
+  <text class="onfill" x="126" y="103" text-anchor="middle">the archive</text>
+  <text class="mono" x="56" y="132">system-info.mcpb</text>
+  <text class="tiny" x="220" y="132">an ordinary ZIP</text>
+  <line class="rule" x1="56" y1="142" x2="444" y2="142"/>
+  <text class="mono" x="66" y="162">manifest.json</text>
+  <text class="tiny" x="220" y="162">required, and the only required file</text>
+  <text class="mono" x="66" y="184">server/index.js</text>
+  <text class="tiny" x="220" y="184">whatever entry_point names</text>
+  <text class="mono" x="66" y="206">icon.png</text>
+  <text class="tiny" x="220" y="206">512x512 recommended, at the root</text>
+  <text class="mono" x="66" y="228">...</text>
+  <text class="tiny" x="220" y="228">everything else the server needs</text>
+  <text class="tiny" x="56" y="256">Pack excludes .git, node_modules caches, lockfiles and .env.*.local by default.</text>
+
+  <!-- signature -->
+  <rect class="box" x="40" y="288" width="420" height="196" rx="8"/>
+  <rect class="chip" x="56" y="300" width="176" height="20" rx="5"/>
+  <text class="tiny" x="144" y="315" text-anchor="middle">the signature, if signed</text>
+  <text class="mono" x="56" y="344">[ original ZIP content, unmodified ]</text>
+  <text class="mono" x="56" y="366">MCPB_SIG_V1</text>
+  <text class="mono" x="56" y="388">[ 4-byte little-endian length prefix ]</text>
+  <text class="mono" x="56" y="410">[ DER-encoded PKCS #7 SignedData ]</text>
+  <text class="mono" x="56" y="432">MCPB_SIG_END</text>
+  <line class="rule" x1="56" y1="446" x2="444" y2="446"/>
+  <text class="tiny" x="56" y="464">Detached: the archive is never rewritten, so unpacking works either way.</text>
+  <text class="tiny" x="56" y="478">verify reports signed, self-signed, or unsigned. What a host does with that is undocumented.</text>
+
+  <!-- manifest fields -->
+  <rect class="box" x="490" y="76" width="430" height="196" rx="8"/>
+  <text class="head" x="506" y="100">manifest.json, the required parts</text>
+  <line class="rule" x1="506" y1="110" x2="904" y2="110"/>
+  <text class="mono" x="506" y="132">name  version  description  author  server</text>
+  <text class="tiny" x="506" y="150">five required top-level fields</text>
+  <text class="mono" x="506" y="176">server: { type, entry_point, mcp_config }</text>
+  <text class="tiny" x="506" y="194">all three required, on every server type</text>
+  <text class="mono" x="506" y="220">type: python | node | binary | uv</text>
+  <text class="tiny" x="506" y="238">uv arrived in schema 0.4</text>
+  <text class="tiny" x="506" y="260">dxt_version is still accepted as an alias. The .dxt extension is not.</text>
+
+  <!-- conflict -->
+  <rect class="warnbox" x="490" y="288" width="430" height="196" rx="8"/>
+  <text class="head" x="506" y="312">manifest_version: five sources, three answers</text>
+  <line class="rule" x1="506" y1="322" x2="904" y2="322"/>
+  <text class="monomute" x="506" y="342">LATEST_MANIFEST_VERSION   (main)</text>
+  <text class="mono" x="864" y="342">0.4</text>
+  <text class="monomute" x="506" y="362">DEFAULT_MANIFEST_VERSION  (main)</text>
+  <text class="mono" x="864" y="362">0.3</text>
+  <text class="monomute" x="506" y="382">DEFAULT_MANIFEST_VERSION  (v2.1.2, npm)</text>
+  <text class="mono" x="864" y="382">0.2</text>
+  <text class="monomute" x="506" y="402">MANIFEST.md header</text>
+  <text class="mono" x="864" y="402">0.3</text>
+  <text class="monomute" x="506" y="422">mcpb-manifest-latest.schema.json</text>
+  <text class="mono" x="864" y="422">0.3</text>
+  <line class="rule" x1="506" y1="436" x2="904" y2="436"/>
+  <text class="small" x="506" y="456">Validation accepts 0.1 through 0.4, so the safe move is</text>
+  <text class="small" x="506" y="474">to write the field yourself and never rely on the default.</text>
+
+  <text class="tiny" x="40" y="512">Latest published release is v2.1.2 (2025-12-04). Anything read from main, including clean and unpack, is not on npm.</text>
+</svg>

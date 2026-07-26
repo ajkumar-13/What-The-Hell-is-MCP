@@ -8,8 +8,8 @@
 > - Validate an inbound token, including the audience check, and answer `401` and `403` the way clients expect.
 > - Explain the mix-up attack and the confused deputy to whoever reviews your design.
 
-![Three vertical lifelines. On the left, a client. In the middle, highlighted, the MCP server acting as an OAuth 2.1 resource server. On the right, an authorization server. Seven numbered messages run between them: an unauthenticated request that is refused with 401 and a WWW-Authenticate challenge, a fetch of the protected resource metadata document, a fetch of the authorization server's own metadata, a browser authorization step carrying PKCE and a resource parameter, a redirect back carrying a code and an issuer, a token exchange, and finally the same MCP request repeated with a bearer token and answered with 200. A call-out marks the only three messages the MCP server is involved in, and notes that it never issues a token.](diagrams/01-three-party-flow.svg)
-*The MCP server appears in three of the seven messages, and issues nothing.*
+![Three vertical lifelines. On the left, a client. In the middle, highlighted, the MCP server acting as an OAuth 2.1 resource server. On the right, an authorization server. Seven numbered exchanges run between them: an unauthenticated request, a refusal with 401 and a WWW-Authenticate challenge, a fetch of the protected resource metadata document, a fetch of the authorization server's own metadata, a browser authorization step carrying Proof Key for Code Exchange (PKCE) parameters and returning a code and an issuer, a token exchange, and finally the same MCP request repeated with a bearer token and answered with 200. A call-out marks the four exchanges the MCP server is involved in, and notes that it never issues a token.](diagrams/01-three-party-flow.svg)
+*The MCP server appears in four of the seven exchanges, and issues nothing.*
 
 ---
 
@@ -59,19 +59,19 @@ There are more normative statements in the authorization pages than anyone wants
 
 **Validate the audience.** "MCP servers **MUST** validate that access tokens were issued specifically for them as the intended audience." And, in the security considerations: servers "**MUST** only accept tokens specifically intended for themselves and **MUST** reject tokens that do not include them in the audience claim or otherwise verify that they are the intended recipient of the token."
 
-**Never forward the client's token.** "If the MCP server makes requests to upstream APIs, it may act as an OAuth client to them. The access token used at the upstream API is a separate token, issued by the upstream authorization server. The MCP server **MUST NOT** pass through the token it received from the MCP client."
+**Never forward the client's token.** Where your server calls an upstream application programming interface (API), the specification is explicit: "If the MCP server makes requests to upstream APIs, it may act as an OAuth client to them. The access token used at the upstream API is a separate token, issued by the upstream authorization server. The MCP server **MUST NOT** pass through the token it received from the MCP client."
 
 **Check every request, and do not use a session as the check.** "MCP servers that implement authorization **MUST** verify all inbound requests. MCP Servers **MUST NOT** use sessions for authentication."
 
 That last pair deserves a note. Revision 2026-07-28 removed protocol sessions outright, along with `Mcp-Session-Id` and the `initialize` handshake (SEP-2567 and SEP-2575), so there is no protocol session left to misuse. The rule now bites on sessions you invent yourself: a cookie your reverse proxy sets after the first authorized call, an in-memory map from connection to user, a cache keyed on client address. Every request carries its own token, so validate that token, every time.
 
-And two rules that are easy to get right and expensive to get wrong. Tokens travel in the `Authorization` header: "Access tokens **MUST NOT** be included in the URI query string." Separately, from the transports page, a server "**MUST** validate the `Origin` header on all incoming connections to prevent DNS rebinding attacks", and where `Origin` is present and invalid, "servers **MUST** respond `403 Forbidden`". [Post 21](../21-deploying/index.md) shows a measured case where that protection is silently off.
+And two rules that are easy to get right and expensive to get wrong. Tokens travel in the `Authorization` header: "Access tokens **MUST NOT** be included in the URI query string." Separately, from the transports page, a server "**MUST** validate the `Origin` header on all incoming connections to prevent DNS rebinding attacks", where DNS is the Domain Name System, and where `Origin` is present and invalid, "servers **MUST** respond `403 Forbidden`". [Post 21](../21-deploying/index.md) shows a measured case where that protection is silently off.
 
 ## 4. Protected resource metadata, and the chain it starts
 
 Picture the chain before the fields. A client that knows nothing but your endpoint asks four questions in order: where do I authenticate, what does that authorization server support, how do I identify myself to it, and what token do I end up with.
 
-![A left-to-right chain of four steps with the exact URL at each hop. Step one, an unauthenticated POST to the MCP endpoint returns 401 with a WWW-Authenticate header whose resource_metadata parameter is a URL. Step two, a GET of that URL returns the protected resource metadata JSON document, whose fields resource, authorization_servers, scopes_supported and bearer_methods_supported are each labelled with what the client does with them. Step three shows the fallback path used when no header is present, probing the well-known URI with the resource path inserted and then the well-known URI at the root. Step four shows the client building the authorization server metadata URL and probing OAuth 2.0 metadata before OpenID Connect discovery.](diagrams/02-metadata-discovery.svg)
+![A left-to-right chain of four steps with the exact Uniform Resource Locator (URL) at each hop. Step one, an unauthenticated POST to the MCP endpoint returns 401 with a WWW-Authenticate header whose resource_metadata parameter is a URL. Step two, a GET of that URL returns the protected resource metadata document, whose fields resource, authorization_servers, scopes_supported and bearer_methods_supported are each labelled with what the client does with them. Step three shows the fallback path used when no header is present, probing the well-known URI with the resource path inserted and then the well-known URI at the root. Step four shows the client building the authorization server metadata URL and probing OAuth 2.0 metadata before OpenID Connect discovery.](diagrams/02-metadata-discovery.svg)
 *Two ways in, one document, and a fallback the client is required to try.*
 
 The wire format first. An unauthenticated request to a protected server produces this, which is a real response from the demonstration server described in section 9:
@@ -97,7 +97,7 @@ The client reads `resource_metadata`, fetches it, and gets the document RFC 9728
 
 Four fields, four jobs. `resource` is the canonical identifier of *you*, and it is the value the client will put in the `resource` parameter of its authorization and token requests so that the token it receives is audienced at you. `authorization_servers` names who can issue tokens you will accept. `scopes_supported` is your published minimum, not your full catalog. `bearer_methods_supported` says the token arrives in a header.
 
-Note the well-known path. RFC 9728 inserts the well-known segment between the host and the resource path, so a server at `https://example.com/public/mcp` publishes at `https://example.com/.well-known/oauth-protected-resource/public/mcp`. A server at the root publishes at `https://example.com/.well-known/oauth-protected-resource`. Those are different Uniform Resource Locators (URLs) and a client that cannot find the header falls back to probing them in that order. On the demonstration server, the path-inserted URL returns `200` and the root URL returns `404`, which is correct and is also the single most common "why can my client not discover my server" cause.
+Note the well-known path. RFC 9728 inserts the well-known segment between the host and the resource path, so a server at `https://example.com/public/mcp` publishes at `https://example.com/.well-known/oauth-protected-resource/public/mcp`. A server at the root publishes at `https://example.com/.well-known/oauth-protected-resource`. Those are different URLs, and a client that cannot find the header falls back to probing them in that order. On the demonstration server, the path-inserted URL returns `200` and the root URL returns `404`, which is correct and is also the single most common "why can my client not discover my server" cause.
 
 ## 5. Validating the token, including the check everyone skips
 
@@ -260,7 +260,7 @@ Authorization: Bearer good-token   200
 
 Four assertions, and they cover the shape of everything in this post: the challenge is present and points somewhere real, an unknown token is refused, a valid token with thin scopes gets `403` rather than `401`, and a good token gets through. Add a fifth for the audience: hand your verifier a token whose `aud` names a different service and assert `401`. That test is the one that fails on a server nobody has audited.
 
-Two things this level of testing cannot see, and you should check by hand once. The metadata document is served at the path-inserted well-known URL and not at the root, so fetch both and confirm which returns `200`. And nothing here proves the `Origin` check is armed; section 3 of [post 21](../21-deploying/index.md) has a measured case where it is not.
+Two things this level of testing cannot see, and you should check by hand once. The metadata document is served at the path-inserted well-known URL and not at the root, so fetch both and confirm which returns `200`. And nothing here proves the `Origin` check is armed; section 4 of [post 21](../21-deploying/index.md) has a measured case where it is not.
 
 ---
 

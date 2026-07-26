@@ -100,5 +100,5 @@ and the call would never converge.
 ## Test suite
 
 ```
-19 passed in 6.75s
+19 passed in 5.16s
 ```

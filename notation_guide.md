@@ -62,7 +62,7 @@ is not guaranteed unique and must not be used as the disambiguation key.
 | Reserved `_meta` key | code span, full reverse-DNS | `io.modelcontextprotocol/protocolVersion` |
 | Extension id | code span, full reverse-DNS | `io.modelcontextprotocol/tasks` |
 | Python symbol | code span | `MCPServer`, `@server.tool()` |
-| File path | link if it exists in the repo, else code span | [code/05-postgres-analyst/](code/05-postgres-analyst/) |
+| File path | link if it exists in the repo, else code span | [code/13-postgres-analyst/](code/13-postgres-analyst/) |
 | Error code | code span with the name | `-32602` (`Invalid params`) |
 
 Field names are **camelCase on the wire** and **snake_case in Python**. When a post shows

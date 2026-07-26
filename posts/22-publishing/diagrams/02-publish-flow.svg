@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" role="img" aria-labelledby="t d">
+  <title id="t">The publish flow, its two independent ownership proofs, and the same flow inside CI</title>
+  <desc id="d">A five-step command sequence runs across the top: init, validate, login, publish, status. An arrow drops from the publish step into a panel showing the two proofs the registry checks at that moment, which are independent of each other. The first is namespace ownership, proved by a GitHub login, a DNS TXT record, or a file served from your own domain. The second is package ownership, proved by a marker placed inside the published package itself, which differs per package type: a comment in the README for PyPI and NuGet, an mcpName property for npm, an image label for OCI, and a required SHA-256 hash for an MCPB bundle. Below that, a second panel shows the same flow running in continuous integration, where an OIDC login replaces the interactive device code, the workflow needs only the id-token write permission and no stored secret, and the audience claim is derived from the registry URL rather than configured.</desc>
+
+  <style><![CDATA[
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFDF9;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    .bg{fill:var(--mcp-bg);}
+    .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
+    .head{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:12px;fill:var(--mcp-ink-muted);}
+    .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-ink);}
+    .small{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:12px;fill:var(--mcp-ink-muted);}
+    .tiny{font-family:Inter,system-ui,sans-serif;font-weight:400;font-size:11px;fill:var(--mcp-ink-subtle);}
+    .mono{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink);}
+    .monomute{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:11px;fill:var(--mcp-ink-muted);}
+    .zone{fill:var(--mcp-surface);stroke:var(--mcp-border);stroke-width:1;}
+    .box{fill:var(--mcp-surface);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .chip{fill:var(--mcp-neutral-1);stroke:var(--mcp-border);stroke-width:1;}
+    .server{fill:var(--mcp-accent);stroke:var(--mcp-ink);stroke-width:1.5;}
+    .onfill{font-family:"JetBrains Mono",ui-monospace,Menlo,monospace;font-weight:400;font-size:13px;fill:var(--mcp-on-fill);}
+    .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
+    .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
+  ]]></style>
+
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink)"/>
+    </marker>
+    <marker id="arm" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="var(--mcp-ink-muted)"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="960" height="540"/>
+  <text class="title" x="40" y="30">Five commands, and the two proofs behind the fourth</text>
+  <text class="small" x="40" y="50">Publish the package first and the registry entry second. The registry checks that the artifact already exists.</text>
+
+  <text class="head" x="56" y="88">By hand</text>
+
+  <rect class="box" x="56" y="98" width="136" height="42" rx="7"/>
+  <text class="mono" x="124" y="124" text-anchor="middle">init</text>
+  <path class="flow" d="M196,119 L230,119" marker-end="url(#ar)"/>
+
+  <rect class="box" x="234" y="98" width="136" height="42" rx="7"/>
+  <text class="mono" x="302" y="124" text-anchor="middle">validate</text>
+  <path class="flow" d="M374,119 L408,119" marker-end="url(#ar)"/>
+
+  <rect class="box" x="412" y="98" width="136" height="42" rx="7"/>
+  <text class="mono" x="480" y="124" text-anchor="middle">login</text>
+  <path class="flow" d="M552,119 L586,119" marker-end="url(#ar)"/>
+
+  <rect class="server" x="590" y="98" width="136" height="42" rx="7"/>
+  <text class="onfill" x="658" y="124" text-anchor="middle">publish</text>
+  <path class="flow" d="M730,119 L764,119" marker-end="url(#ar)"/>
+
+  <rect class="box" x="768" y="98" width="136" height="42" rx="7"/>
+  <text class="mono" x="836" y="124" text-anchor="middle">status</text>
+  <text class="tiny" x="768" y="158">the only lever you have afterwards</text>
+
+  <path class="flow-thin" d="M658,142 L658,180" marker-end="url(#arm)"/>
+  <text class="tiny" x="668" y="166">both proofs are checked at this moment</text>
+
+  <!-- gates -->
+  <rect class="zone" x="40" y="186" width="880" height="146" rx="9"/>
+  <text class="label" x="56" y="208">Two proofs, independent of each other</text>
+
+  <rect class="box" x="60" y="220" width="404" height="98" rx="7"/>
+  <text class="label" x="74" y="240">1. You own the namespace</text>
+  <text class="monomute" x="74" y="260">login github            io.github.&lt;you&gt;/*</text>
+  <text class="monomute" x="74" y="278">login dns   TXT  "v=MCPv1; k=ed25519; p=..."</text>
+  <text class="monomute" x="74" y="296">login http  /.well-known/mcp-registry-auth</text>
+  <text class="tiny" x="74" y="312">Ed25519 keys are 64 hex characters; ECDSA P-384 keys are 96.</text>
+
+  <rect class="box" x="496" y="220" width="404" height="98" rx="7"/>
+  <text class="label" x="510" y="240">2. You own the package it points at</text>
+  <text class="monomute" x="510" y="260">pypi   &lt;!-- mcp-name: io.github.you/x --&gt;  in README</text>
+  <text class="monomute" x="510" y="278">npm    "mcpName": "io.github.you/x"  in package.json</text>
+  <text class="monomute" x="510" y="296">oci    LABEL io.modelcontextprotocol.server.name=...</text>
+  <text class="tiny" x="510" y="312">Missing this one fails with "Registry validation failed for package".</text>
+
+  <!-- CI -->
+  <text class="head" x="56" y="360">The same flow in continuous integration, with nothing stored</text>
+
+  <rect class="box" x="56" y="370" width="420" height="112" rx="7"/>
+  <text class="mono" x="72" y="392">permissions:</text>
+  <text class="mono" x="72" y="410">  id-token: write     # this is the whole secret story</text>
+  <text class="mono" x="72" y="428">  contents: read</text>
+  <text class="mono" x="72" y="452">- run: ./mcp-publisher login github-oidc</text>
+  <text class="tiny" x="72" y="472">Interactive device code replaced by a token GitHub mints for the job.</text>
+
+  <rect class="box" x="500" y="370" width="404" height="112" rx="7"/>
+  <text class="label" x="514" y="392">Two things to know</text>
+  <text class="small" x="514" y="412">OIDC grants the repository owner's namespace,</text>
+  <text class="small" x="514" y="430">not the pushing user's.</text>
+  <text class="small" x="514" y="452">The aud claim is derived from --registry, so an old</text>
+  <text class="small" x="514" y="470">publisher fails with "invalid audience". Upgrade it.</text>
+
+  <text class="tiny" x="40" y="510">Bump the top-level version and packages[].version together, or the registry advertises a release that does not exist yet.</text>
+</svg>
