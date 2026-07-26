@@ -16,7 +16,7 @@
 > - Report progress from a slow tool today, using a method that actually ships.
 
 ![A state machine. A tools/call returns a result tagged resultType task, creating the task in a working state. Working and input_required sit inside a dashed non-terminal box, with the server moving one way and tasks/update moving the other. Three arrows leave the box to completed, failed, and cancelled.](diagrams/01-task-state-machine.svg)
-*Five states, and exactly one of the transitions is driven by the client.*
+*Five states. The client drives only two of these arrows, and one of those two is a request rather than a command.*
 
 ---
 
@@ -119,10 +119,10 @@ going to pick a side that the sources have not picked.
 
 ## 2. What a task is for, and the thing that is not a task
 
-Here is a tool from
-[code/05-first-server/](../../code/05-first-server/src/system_info/progress.py) that cannot
-be made fast, because being slow is the point of it. It samples central processing unit (CPU)
-usage once a second for up to thirty seconds:
+Here is a tool that cannot be made fast, because being slow is the point of it. The complete
+file is
+[code/05-first-server/src/system_info/progress.py](../../code/05-first-server/src/system_info/progress.py),
+and it samples central processing unit (CPU) usage once a second for up to thirty seconds:
 
 ```python
 @mcp.tool(title="Watch CPU over time", annotations=ToolAnnotations(read_only_hint=True, ...))
@@ -154,10 +154,10 @@ has an opinion about how long a Hypertext Transfer Protocol (HTTP) request may l
 **Progress reporting and tasks are different mechanisms, and only one of them works
 everywhere today.** The `ctx.report_progress` call above is core protocol. When the client
 puts a `progressToken` in the request's `_meta`, the server may emit `notifications/progress`
-on that request's response stream, and `watch_cpu` does. That is a real API in
-`mcp` 2.0.0b2, it needs no extension, and the tool above is registered and published like
-any other: `verify/RESULTS.md` lists `watch_cpu` with one input property and an output
-schema, alongside the rest of the server's tools.
+on that request's response stream, and `watch_cpu` does. That is a real method on `Context`
+in `mcp` 2.0.0b2, it needs no extension, and the tool above is registered and published like
+any other: [verify/RESULTS.md](../../verify/RESULTS.md) lists `watch_cpu` with one input
+property and an output schema, alongside the rest of the server's tools.
 
 What progress reporting does **not** do is change the shape of the exchange. The request is
 still open. The connection is still held. You are still one timeout away from losing the
@@ -330,7 +330,7 @@ Five statuses, and the hero diagram at the top of this post is the whole machine
 | `input_required` | The server needs client input. `tasks/get` carries `inputRequests`; the client answers with `tasks/update`. |
 | `completed` | Finished successfully. `result` holds the final output. |
 | `failed` | A JSON-RPC error occurred during execution. `error` holds it. |
-| `cancelled` | Cancelled before completion. |
+| `cancelled` | Canceled before completion. |
 
 `working` and `input_required` alternate freely. `completed`, `failed`, and `cancelled` are
 terminal and immutable. The `Task` object itself is small:
@@ -432,9 +432,9 @@ export interface SubscriptionsListenRequest extends Request {
 The server acknowledges with the subset it agreed to, in a
 `notifications/subscriptions/acknowledged` message. Each `notifications/tasks` payload carries
 a complete task, identical to what `tasks/get` would have returned at that moment, so there
-is no follow-up round trip. Clients **may** keep polling as well, and should be prepared to,
-since the subscription is a stream and streams end. The notification was called
-`notifications/tasks/status` in 2025-11-25.
+is no follow-up round trip. Clients **may** keep polling as well and need not, though a
+stream ends, so a client that listens and never polls should have a fallback. The
+notification was called `notifications/tasks/status` in 2025-11-25.
 
 ## 7. `tasks/update` and `tasks/cancel`
 

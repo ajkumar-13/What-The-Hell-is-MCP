@@ -200,8 +200,8 @@ any other unexpected argument. If a static resource needs to log, report progres
 a notification, it cannot, and the work belongs somewhere that can.
 
 Two error rules close the section, and one of them changed in this revision. A resource that
-does not exist is `-32602` (`Invalid params`), not the `-32002` older code and older tutorials
-use; clients **should** still accept `-32002` for compatibility. And servers **must not**
+does not exist is `-32602` (`Invalid params`), not `-32002`, which is what older code and
+older tutorials use; clients **should** still accept `-32002` for compatibility. And servers **must not**
 return an empty `contents` array for a missing resource, because "an empty array is ambiguous:
 it could mean the resource exists but has no content, or that it doesn't exist at all". In the
 Python SDK, raising `ResourceNotFoundError` from
@@ -287,8 +287,8 @@ completely different reasons. Both strings and both messages come from
 [verify/RESULTS.md](../../verify/RESULTS.md):
 
 ```
-system://disk/etc                  -> Unknown disk 'etc'. Known disks: root.
-system://disk/../../etc/passwd     -> Unknown resource: system://disk/../../etc/passwd
+system://disk/etc               -> MCPError: Unknown disk 'etc'. Known disks: root.
+system://disk/../../etc/passwd  -> MCPError: Unknown resource: system://disk/../../etc/passwd
 ```
 
 The first read **matched the template**. `{disk}` bound to `"etc"`, the SDK called
@@ -463,11 +463,11 @@ and its `notifications` field reflects the subset it agreed to honor, with unsup
 omitted. Clients **should** compare that against what they asked for.
 
 **The subscription id is the request id.** Every notification on the stream carries
-`_meta["io.modelcontextprotocol/subscriptionId"]`, and its value is the `id` of the
-`subscriptions/listen` request that opened the stream. That is the `id` field of JSON-RPC,
-Remote Procedure Call over JavaScript Object Notation, which is the envelope every MCP
-message travels in. On standard input and output, where
-every subscription shares one channel, that field is the only way to demultiplex.
+`_meta["io.modelcontextprotocol/subscriptionId"]`, and its value is the JSON-RPC `id` of the
+`subscriptions/listen` request that opened the stream. JSON-RPC, Remote Procedure Call over
+JavaScript Object Notation, is the envelope every MCP message travels in. On standard input
+and output, where every subscription shares one channel, that field is the only way to
+demultiplex.
 
 **Ending it is explicit.** The client closes the stream, or the server sends the ordinary
 JSON-RPC response to the long-lived request as a graceful end, or the transport dies. A server
@@ -615,7 +615,7 @@ export interface PromptArgument extends BaseMetadata {
 }
 ```
 
-Fetching one is `prompts/get` with a name and arguments, and the result is a list of messages:
+Fetching one is `prompts/get` with a name and arguments:
 
 ```json
 {
@@ -629,7 +629,22 @@ Fetching one is `prompts/get` with a name and arguments, and the result is a lis
 }
 ```
 
-Two constraints in that snippet are the ones that catch people.
+and the result is typed:
+
+```typescript
+export interface GetPromptResult extends Result {
+  description?: string;
+  messages: PromptMessage[];
+}
+export interface PromptMessage { role: Role; content: ContentBlock; }
+export type Role = "user" | "assistant";
+```
+
+`Role` has two values. **There is no system role in an MCP prompt.** Framing that you would
+put in a system message belongs in the text of the first user message, or in the server's tool
+and resource descriptions, and the host decides what to do with it.
+
+Two more constraints are the ones that catch people.
 
 **Prompt arguments are strings, and only strings.** The wire type is
 `arguments?: { [key: string]: string }`. There is no schema, no integers, no booleans, no

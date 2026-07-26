@@ -47,9 +47,9 @@
   <path class="lifeline" d="M695,126 L695,660"/>
 
   <!-- the open stream marker -->
-  <path class="stream" d="M700,340 L700,650"/>
-  <text class="small" x="708" y="356">the stream</text>
-  <text class="small" x="708" y="372">stays open</text>
+  <path class="stream" d="M700,336 L700,650"/>
+  <text class="small" x="708" y="396">the stream</text>
+  <text class="small" x="708" y="412">stays open</text>
 
   <!-- ============ 1. listen ============ -->
   <text class="small" x="32" y="152">An ordinary POST over</text>
@@ -70,11 +70,11 @@
   <text class="monos" x="344" y="292">    "system://processes/top" ] }</text>
 
   <!-- ============ 2. acknowledged ============ -->
-  <text class="small" x="32" y="330">This one is first, always.</text>
+  <text class="small" x="32" y="330">This one comes first.</text>
   <text class="small" x="32" y="346">The server must not send</text>
-  <text class="small" x="32" y="362">any notification before it,</text>
-  <text class="small" x="32" y="378">and it echoes the subset</text>
-  <text class="small" x="32" y="394">it agreed to honor.</text>
+  <text class="small" x="32" y="362">anything before it, and</text>
+  <text class="small" x="32" y="378">it echoes the subset it</text>
+  <text class="small" x="32" y="394">agreed to honor.</text>
   <circle class="numbg" cx="718" cy="346" r="10"/>
   <text class="num" x="718" y="350" text-anchor="middle">2</text>
   <path class="flow" d="M695,346 L295,346" marker-end="url(#ar)"/>
@@ -83,15 +83,15 @@
   <rect class="chip" x="330" y="358" width="336" height="68" rx="8"/>
   <text class="monos" x="344" y="380">"_meta": { "io.modelcontextprotocol/</text>
   <text class="monos" x="344" y="398">             subscriptionId": 1 }</text>
-  <text class="small" x="344" y="418">The id of the listen request that opened the stream.</text>
+  <text class="small" x="344" y="418">The id of the request that opened the stream.</text>
 
   <!-- ============ 3. something changes ============ -->
-  <rect class="box" x="716" y="446" width="212" height="70" rx="8"/>
+  <rect class="box" x="716" y="446" width="212" height="96" rx="8"/>
   <text class="label" x="730" y="468">Something changes</text>
   <text class="small" x="730" y="486">A tool ends a process, so</text>
   <text class="small" x="730" y="502">the top-ten table is stale.</text>
-  <path class="thin" d="M716,481 L700,481" marker-end="url(#arT)"/>
-  <text class="monos" x="730" y="536">ctx.notify_resource_updated</text>
+  <text class="monos" x="730" y="528">ctx.notify_resource_updated</text>
+  <path class="thin" d="M716,494 L700,494" marker-end="url(#arT)"/>
 
   <!-- ============ 4. update ============ -->
   <text class="small" x="32" y="562">Only the types the filter</text>

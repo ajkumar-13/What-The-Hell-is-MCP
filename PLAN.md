@@ -127,10 +127,18 @@ what-the-hell-is-mcp/
 │   ├── 17-research-browser/           # Project 3 (posts 17 and 18)
 │   └── 23-knowledge-base/             # Project 4 (post 23)
 │
-└── templates/
-    ├── post-template.md
-    └── diagram-style-guide.md
+├── templates/
+│   ├── post-template.md
+│   └── diagram-style-guide.md
+│
+└── verify/
+    ├── capture.py                     # regenerates every measured value the posts quote
+    └── RESULTS.md                     # its output, committed, diffed against the posts
 ```
+
+**Ground truth before prose.** No number appears in a post unless `verify/capture.py` can
+produce it again. Schemas, elicitation outcomes, error messages, and the test count all come
+from there. If a post and `verify/RESULTS.md` disagree, the post is wrong.
 
 **Naming rule:** `posts/NN-kebab-case-slug/`. `NN` is a stable two-digit number. The slug
 never changes after publishing, for URL stability. `frontmatter.yaml` is a **sidecar**:

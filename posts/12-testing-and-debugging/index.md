@@ -64,8 +64,8 @@ this level structurally not see".
 | **2. In-memory protocol** | `Client(server_object)` | published schemas, annotations, `isError`, structured content, resource Uniform Resource Identifier (URI) matching, the multi-round trip, capability errors | the transport, stdout corruption, packaging, host configuration |
 | **3. Live host** | the real server process in a real host | stdout corruption, the launch command, the config file, packaging, what a model actually does with your descriptions | nothing much, but it is manual, slow, and not deterministic |
 
-Level 2 is the one that is usually missing, and it is also the cheapest surprise in this
-series. Here are two runs of the same project, split by level. The knowledge-base project in
+Level 2 is the one that is usually missing, and it is also cheaper than almost anyone expects.
+Here are two runs of the same project, split by level. The knowledge-base project in
 [code/23-knowledge-base/](../../code/23-knowledge-base/) keeps its retrieval layer free of
 any SDK import, so `test_index.py` is pure level 1 and `test_server.py` is pure level 2:
 
@@ -77,9 +77,9 @@ $ pytest tests/test_server.py -q
 28 passed in 1.47s
 ```
 
-Twenty-eight full protocol round trips cost the same as twenty-three function calls. There is
-no process to start and nothing to wait for, so the protocol layer adds almost nothing to the
-clock. Whatever you believed testing MCP would cost, this is the real number.
+Twenty-eight protocol tests cost the same as twenty-three plain function tests. There is no
+process to start and nothing to wait for, so the protocol layer adds almost nothing to the
+clock. Whatever you assumed testing MCP would cost, this is the real number.
 
 Level 3 does not disappear. It catches a specific and nasty class of bug that levels 1 and 2
 cannot reach by construction, because both of them run inside one process and the bug is
@@ -93,7 +93,8 @@ Wire format first, since that is the order that lets you debug.
 
 A `tools/call` is one JSON-RPC request with a `name`, an `arguments` object, and a mandatory
 `_meta` block. Revision 2026-07-28 has no `initialize` handshake and no session, so every
-request carries its own protocol version and its own declared capabilities:
+request carries its own protocol version and its own declared capabilities. This is the
+shape:
 
 ```json
 {
@@ -112,8 +113,8 @@ request carries its own protocol version and its own declared capabilities:
 }
 ```
 
-`Client(server_object)` produces exactly that message and hands it to the server's request
-handler. What it skips is only the framing and the pipe. The software development kit (SDK)
+`Client(server_object)` builds exactly that request and hands it to the server's request
+handler. What it skips is the serialization and the pipe. The software development kit (SDK)
 dispatches on the shape of the argument you pass: an `MCPServer` or a low-level `Server`
 becomes an in-process pair of direct dispatchers, a string becomes a Streamable Hypertext
 Transfer Protocol (HTTP) client, and anything else is treated as a transport. The negotiated
@@ -143,7 +144,7 @@ testpaths = ["tests"]
 ```
 
 `asyncio_mode = "auto"` is what lets a bare `async def test_...` run without a decorator on
-every function. With that in place a complete protocol test is four lines:
+every function. With that in place a complete protocol test is a handful of lines:
 
 ```python
 async def test_system_snapshot_is_structured():
@@ -178,7 +179,7 @@ cd code/10-mcp-client && PYTHONPATH="src;../05-first-server/src" pytest tests -q
 68 passed in 6.58s
 ```
 
-Sixty-eight of those are the client and host project in
+The sixty-eight are the client and host project in
 [code/10-mcp-client/](../../code/10-mcp-client/), and most of them drive the real
 system-information server in memory. Note the second `PYTHONPATH` entry: the client suite
 imports the server package directly, because the honest way to test a client is against a
@@ -187,12 +188,12 @@ server you did not write for the occasion.
 The nineteen take six seconds, which looks slow next to the knowledge-base numbers above
 until you notice `watch_cpu`, a tool that samples the processor once a second for two
 seconds. That is the tool's own work, not the protocol's. Time in an in-memory suite is
-always your code.
+always your own code.
 
 ## 4. Two rules that make async tests work
 
-These two cost more time than everything else in this post. Neither is documented anywhere
-you would look, and both produce error messages that point at the wrong thing.
+These two will cost you more time than anything else in this post. Neither is documented
+anywhere you would look, and both produce error messages that point at the wrong thing.
 
 ### Do not hand the client over from a yield fixture
 
@@ -304,8 +305,10 @@ A test that calls a tool and checks the answer proves the function works. It doe
 the model can find the tool, fill it in, or read what comes back. Those live in the published
 surface, and the published surface deserves its own tests.
 
-Four of them earn their place in every server. All four are from
-[tests/test_server.py](../../code/05-first-server/tests/test_server.py).
+Four of them earn their place in every server. The first three are from the
+system-information server's
+[tests/test_server.py](../../code/05-first-server/tests/test_server.py), and the fourth is
+from the knowledge-base project.
 
 **Every tool publishes an output schema.** This one exists because of the silent failure in
 [Post 06](../06-tools-in-depth/index.md): a return class with no class-body annotations
@@ -412,7 +415,7 @@ def answering(action: str, content: dict | None = None, seen: list | None = None
     return Client(mcp, elicitation_callback=callback)
 ```
 
-Four tests then cover the four outcomes, each in three lines:
+Four tests then cover the four outcomes, each only a few lines long:
 
 ```python
 async def test_declining_does_not_terminate():
@@ -479,11 +482,11 @@ At some point the tests pass and the host still misbehaves, and you need to look
 messages. Two things make that quicker: knowing which fields to read in order, and knowing
 that a failure can hide in a response that looks entirely successful.
 
-![A sequence diagram with a client lifeline on the left and a server lifeline on the right. A tools/call request travels left to right with its mirrored headers and its params and metadata fields called out. Three possible responses travel back: a successful result carrying isError false, a successful result carrying isError true which is a tool that ran and failed, and a JSON-RPC error object with a numeric code and no result member. Callouts mark the second and third as the two places a failure hides.](diagrams/02-annotated-wire-trace.svg)
+![A client box on the left sends one tools/call request to a server box on the right. The full request is printed below with its mirrored headers and its params and metadata fields, and four numbered annotations name the checks to make, in order. Below that, three possible responses sit side by side: a successful result carrying isError false, a successful result carrying isError true which is a tool that ran and failed and which nothing raises on, and a JSON-RPC error object with a numeric code and no result member. The second and third are the two places a failure hides.](diagrams/02-annotated-wire-trace.svg)
 *One request, three responses. Two of them are failures and only one of them looks like one.*
 
-**On the request, read these four in this order.** The example is the spec's own annotated
-trace for a `tools/call`.
+**On the request, read these four in this order.** The example is the specification's own
+annotated trace for a `tools/call`.
 
 ```http
 POST /mcp HTTP/1.1
@@ -612,7 +615,8 @@ The conformance suite at <https://github.com/modelcontextprotocol/conformance> i
 independent half. It is maintained alongside the specification and drives an implementation
 through the behaviors the specification requires, which is the only way to find out that you
 have quietly invented a dialect. If you are writing a client or a host, it matters more than
-anything in this post: a server has one job and a client has to be right about all of them.
+anything in this post. A server has to be right about its own primitives; a client has to be
+right about everything every server it meets might do.
 
 Treat it as a release gate rather than a per-commit check. It moves with the specification,
 and a revision bump will change what it expects.
@@ -622,8 +626,8 @@ and a revision bump will change what it expects.
 Two habits, both cheap.
 
 **Run the suites on every push.** Level 1 and level 2 need no services, no containers, and no
-network, which is the practical payoff of the in-memory pattern. The workflow is the two
-commands from section 3 with a Python matrix around them:
+network, which is the practical payoff of the in-memory pattern. A workflow for a repository
+laid out like this one is the commands from section 3 with a matrix around them:
 
 ```yaml
 # .github/workflows/test.yml
@@ -636,14 +640,19 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         python: ["3.10", "3.13"]
+        project: [05-first-server, 23-knowledge-base]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: uv sync --extra dev
-        working-directory: code/05-first-server
+      - run: uv sync --extra dev --python ${{ matrix.python }}
+        working-directory: code/${{ matrix.project }}
       - run: uv run pytest -q
-        working-directory: code/05-first-server
+        working-directory: code/${{ matrix.project }}
 ```
+
+`uv sync` installs each project into its own environment, so `uv run pytest` needs no
+`PYTHONPATH` at all; the explicit variable in section 3 is only there because those runs used
+a shared interpreter.
 
 Include Windows in the matrix even if you do not use it. Path separators, console encodings,
 and process teardown all differ there, and a server that only ever ran on Linux will meet a
