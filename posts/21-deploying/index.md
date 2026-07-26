@@ -8,7 +8,7 @@
 > - Propagate an OpenTelemetry trace across the host, your server, and your backend using `_meta`.
 > - Set `ttlMs` and `cacheScope` on list results without leaking one user's catalog to another.
 
-![A deployment topology. On the left, three different hosts each holding their own MCP client. In the middle, one box that terminates TLS, validates the Origin header, and rate limits, feeding a plain round-robin load balancer. On the right, three identical replicas of the same server container, each with an arrow to a shared backend database and an arrow to an observability collector. Between the balancer and the replicas, a struck-through box labelled session store carries a note that there is nothing to store: no session identifier, no handshake, and no in-flight state that survives a request.](diagrams/01-deployment-topology.svg)
+![A deployment topology. On the left, three different hosts each holding their own MCP client. In the middle, one box that terminates Transport Layer Security (TLS), validates the Origin header, and rate limits, feeding a plain round-robin load balancer. On the right, three identical replicas of the same server container, each with an arrow to a shared backend database and an arrow to an observability collector. Between the balancer and the replicas, a struck-through box labelled session store carries a note that there is nothing to store: no session identifier, no handshake, and no in-flight state that survives a request.](diagrams/01-deployment-topology.svg)
 *The struck-through box is the whole story: the thing that used to make this hard is gone.*
 
 ---
@@ -101,7 +101,7 @@ Two more knobs for whoever owns the proxy. Servers **SHOULD** send `X-Accel-Buff
 
 ## 4. Two edge cases measured while writing this
 
-**The trailing slash costs a round trip, or breaks the client.** The endpoint is `/mcp`. Add a slash and the Python software development kit's (SDK's) Starlette router redirects rather than serves. Measured against this series' own server on `mcp==2.0.0b2`:
+**The trailing slash costs a round trip, or breaks the client.** The endpoint is `/mcp`. Add a slash and the Python software development kit (SDK) redirects rather than serves, because its router treats the two paths as different routes. Measured against this series' own server on `mcp==2.0.0b2`:
 
 ```
 POST /mcp    ->  200 OK
@@ -111,7 +111,7 @@ POST /mcp/   ->  307 Temporary Redirect
 
 Clients that follow redirects pay an extra round trip on every single request. Clients that do not follow redirects on a `POST`, which is a defensible default because redirecting a body is historically messy, simply fail. And notice the `Location`: it is `http`, not `https`. Behind a terminator that does not rewrite it, a redirect chain can walk a client off TLS. Publish the path without the slash, and if you control the ingress, rewrite `/mcp/` to `/mcp` there rather than shipping the redirect.
 
-**Binding to `0.0.0.0` silently turns off `Origin` validation.** The transports page is unambiguous: servers "**MUST** validate the `Origin` header on all incoming connections to prevent DNS rebinding attacks", and where `Origin` is present and invalid, "servers **MUST** respond `403 Forbidden`". The Python SDK auto-arms that protection only when the bind address is `127.0.0.1`, `localhost` or `::1`; otherwise the middleware is constructed with protection disabled, and the source comment says why: "for backwards compatibility". A container has to bind `0.0.0.0`.
+**Binding to `0.0.0.0` silently turns off `Origin` validation.** The transports page is unambiguous: servers "**MUST** validate the `Origin` header on all incoming connections to prevent DNS rebinding attacks", where DNS is the Domain Name System, and where `Origin` is present and invalid, "servers **MUST** respond `403 Forbidden`". The Python SDK auto-arms that protection only when the bind address is `127.0.0.1`, `localhost` or `::1`; otherwise the middleware is constructed with protection disabled, and the source comment says why: "for backwards compatibility". A container has to bind `0.0.0.0`.
 
 Same request, same `Origin: https://evil.example` header, `mcp==2.0.0b2`:
 
