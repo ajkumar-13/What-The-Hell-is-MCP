@@ -15,8 +15,9 @@
 > - Predict what a host does when two of your servers export the same tool name.
 > - Explain why consent belongs in the host while validation belongs in your server.
 
-![One host containing three clients, each with a single arrow to its own server, and each server reaching a different backing system.](diagrams/01-host-clients-servers.svg)
-*One host, three clients, three servers, and one connection per client.*
+![One host containing three clients labeled A, B and C, each with a single arrow crossing the protocol boundary to its own server, and each server reaching a different backing system outside MCP.](diagrams/01-host-clients-servers.svg)
+*One host, three clients, three servers, and one connection per client. The same three
+servers run through the rest of this post.*
 
 ---
 
@@ -38,13 +39,15 @@ either side of that boundary, and about being pedantic with their names. The ped
 for itself twice: once when you are debugging, and once when you get to the security
 model, which is built entirely on the distinction.
 
-No code here. This is the mental-model post. The messages arrive in
+No server code here. This is the mental-model post, and the one configuration file it shows
+is there to be counted rather than run. The messages arrive in
 [Post 03](../03-wire-protocol/index.md).
 
 ## 2. The host owns the model, the conversation, and consent
 
 The host is the application a person actually uses. Claude Desktop, Claude Code, Cursor,
-VS Code, Zed, and the small command-line tool you will write in Post 11 are all hosts.
+VS Code, Zed, and the small command-line tool you will write in
+[Post 11](../11-building-a-host/index.md) are all hosts.
 
 The specification gives the host process a short and blunt job description: it creates and
 manages client instances, controls their connection permissions and lifecycle, enforces
@@ -77,7 +80,8 @@ directions.
 
 A client owns four small things:
 
-1. **A transport.** The pipes of a process the host spawned, or a single HTTP endpoint.
+1. **A transport.** The pipes of a process the host spawned, or a single HyperText Transfer
+   Protocol (HTTP) endpoint.
 2. **Request correlation.** Matching each response to the request id that asked for it.
    Client A's request id `5` has nothing to do with Client B's request id `5`.
 3. **Per-request metadata.** It attaches the protocol revision it speaks and the
@@ -93,12 +97,31 @@ you are asking a question about the host.
 Here is the test that settles it every time. **Count the servers in your configuration.
 That is how many clients you have. There is still exactly one host.**
 
+Configuration is where that count is easiest to see. [Post 01](../01-what-is-mcp/index.md)
+section 3 added a single entry to a host's file. Three entries look like this:
+
+```json
+{
+  "mcpServers": {
+    "files": { "command": "uvx", "args": ["..."] },
+    "docs":  { "command": "uvx", "args": ["..."] },
+    "db":    { "command": "uvx", "args": ["..."] }
+  }
+}
+```
+
+Three keys, so three clients, and one host reading the file. Those are the three
+connections in the diagram at the top of this post, and they run through the rest of it.
+Keep the keys themselves in mind: they are the local identifiers this host chose for these
+connections, they are yours to rename, and section 6 is about the one job they do that
+nothing else can.
+
 One honest note, so the vocabulary does not ambush you elsewhere. The wider ecosystem uses
 "MCP client" loosely to mean "an application that supports MCP", and the community pages
 that compare Claude Desktop against Cursor against VS Code are usually titled something
 like *clients*. Those pages are comparing hosts. This series uses the three words exactly
 as [notation_guide.md](../../notation_guide.md) defines them, and you will not write a
-client by hand until Post 10.
+client by hand until [Post 10](../10-mcp-client/index.md).
 
 ## 4. The server is your code
 
@@ -107,10 +130,11 @@ here to learn to build, and it is the simplest of the three roles by design: the
 specification's first principle is that servers should be extremely easy to build, with
 the host carrying the orchestration.
 
-A server holds the things nobody else should hold. The database password. The scoped API
-token. The path to the directory it is allowed to read. It can be a local process the host
-spawned on your laptop, or a web service on the other side of the internet, and the
-protocol treats those two the same way. Only the transport differs, which is Post 04.
+A server holds the things nobody else should hold. The database password. The scoped
+application programming interface (API) token. The path to the directory it is allowed to
+read. It can be a local process the host spawned on your laptop, or a web service on the
+other side of the internet, and the protocol treats those two the same way. Only the
+transport differs, which is [Post 04](../04-transports/index.md).
 
 The important property of a server is how little it can see. On any given request, a
 server gets a method name, some arguments, and per-request metadata. It does not get the
@@ -124,12 +148,14 @@ why your server cannot be the place where consent is decided. Section 8 returns 
 
 ## 5. One catalog, built from every connection
 
-Suppose a host has three servers configured. How does the model know which one to use?
+Go back to those three servers. When you ask a question, how does the model know which one
+of them to use?
 
 It does not, and it never finds out.
 
-![A lookup table mapping the tool name the model sees to a client and a server, beside three server cards showing the raw names each server exposes.](diagrams/02-capability-catalog.svg)
-*The host merges every server's list into one name-to-connection map, and resolves collisions on the way in.*
+![A lookup table mapping each name the model sees to a client, a server, and the name that actually goes out on the wire, beside three server cards showing the raw names each server exposes. Two rows are tinted, because two servers both export a tool called search.](diagrams/02-capability-catalog.svg)
+*The host merges every server's list into one name-to-connection map, and resolves
+collisions on the way in. Only the contested name changes; the wire name never does.*
 
 Each client asks its own server what it has, using the list methods: `tools/list`,
 `resources/list`, `prompts/list`. A client may first call `server/discover` to find out
@@ -139,18 +165,24 @@ be asked for them. Servers must implement `server/discover`; clients are free to
 The host then merges the answers into a single **capability catalog**: one flat map from a
 display name to the connection that can serve it.
 
-| Name the model sees | Client | Resolves to |
-|---|---|---|
-| `files.read_file` | A | files server |
-| `files.search` | A | files server |
-| `docs.search` | B | docs server |
-| `docs.fetch_page` | B | docs server |
-| `db.run_query` | C | db server |
+| Name the model sees | Client | Resolves to | Name sent on the wire |
+|---|---|---|---|
+| `read_file` | A | files server | `read_file` |
+| `files.search` | A | files server | `search` |
+| `docs.search` | B | docs server | `search` |
+| `fetch_page` | B | docs server | `fetch_page` |
+| `run_query` | C | db server | `run_query` |
+
+Three of those five rows came through untouched, because their names were already unique
+across every connected server. The other two did not: the files server and the docs server
+both export a tool called `search`, so the host qualified both of them. Section 6 is about
+those two rows.
 
 What the model is offered is the left column, plus each tool's description and input
 schema. It picks a name. The host looks that name up, finds the client, strips off
-anything it added, and has that one client send `tools/call` with the server's own tool
-name. The routing is a dictionary lookup, and it happens entirely in the host.
+anything it added, and has that one client send `tools/call` with the name in the right
+column, which is the only name that server has ever heard of. The routing is a dictionary
+lookup, and it happens entirely in the host.
 
 Two consequences follow immediately, and both matter to you as a server author.
 
@@ -160,12 +192,18 @@ that got the call. If a call landed on the wrong server, the host routed it ther
 
 **Your tool description is competing.** Your `search_docs` sits in one flat list next to
 every tool from every other connected server, and the model chooses between them on
-description text alone. Post 06 is about writing descriptions that win that comparison
-honestly.
+description text alone. [Post 06](../06-tools-in-depth/index.md) is about writing
+descriptions that win that comparison honestly.
 
-One detail worth carrying forward: since revision 2026-07-28 the list results must not
-vary from one connection to the next, which is what finally makes them cacheable. Every
-list result now carries a freshness hint, `ttlMs`, alongside a `cacheScope`.
+One detail worth carrying forward: since revision 2026-07-28 a list result must not vary as
+a side effect of earlier requests on the same connection, so a `connect_database` tool that
+makes `query` appear in a later `tools/list` is no longer conformant. Filtering by the
+caller's credentials is still fine; filtering by history is not.
+
+Caching is a separate mechanism rather than a consequence of that rule. Every complete list
+result carries a freshness hint, `ttlMs`, alongside a sharing hint, `cacheScope`. Both are
+required by SEP-2549, and both are covered in
+[Post 07](../07-resources-and-prompts/index.md).
 
 ## 6. Name collisions, and the three strategies
 
@@ -181,36 +219,47 @@ in your own configuration file, because you control it and it is unique on your 
 
 Hosts pick one of three strategies:
 
-1. **Prefix.** Rewrite every name as `<connection>.<tool>` in the catalog and strip the
-   prefix again before sending the call. Both tools stay reachable. This is the strategy
-   the specification points at, and the one a careful host uses.
+1. **Qualify.** Rewrite the contested name as `<connection>.<tool>` in the catalog and
+   strip the prefix again before sending the call. Both tools stay reachable. This is the
+   strategy the specification points at, and the one a careful host uses. Note that it
+   renames **both** sides rather than only the second one to arrive, so the server that
+   happened to be listed first does not quietly keep the plain name.
 2. **Shadow.** First one wins, or last one wins, usually by the order servers appear in
    the configuration file. One of the two tools silently disappears from the catalog. It
    is not in the list the model sees, so it is never called, and nothing logs an error.
 3. **Refuse.** Drop the duplicate, or refuse to load the second server, and say so.
    Noisiest, and therefore the kindest.
 
-You cannot control which one a host picks, and the same server will meet all three. So:
+Some hosts skip the comparison and qualify every name up front, contested or not. That is
+also defensible, and a little louder, but it costs the model the plain names it may have
+seen during training or in an earlier turn.
+
+You cannot control which one a host picks, and a server used widely enough will meet all
+three. So:
 
 - Do not name a tool `search`, `query`, `get`, `run`, or `list`. Name it `search_docs`.
   Generic names are the ones that collide.
-- Tool names should be between 1 and 128 characters, and the specification's allowed
-  character set is ASCII letters, digits, underscore, hyphen and dot. A prefix separator
-  has to come from that set; a slash does not. Model providers then apply their own naming
-  rules on top, which may be stricter and may not allow the same characters, so a long
-  prefix plus a long tool name can be rejected before it ever reaches the model.
+- Tool names should be between 1 and 128 characters, drawn from American Standard Code for
+  Information Interchange (ASCII) letters, digits, underscore, hyphen and dot. Every one of
+  those naming rules is a *should* rather than a *must*, so you will meet names that break
+  them. A separator still has to come from that set, and a slash is not in it, which is why
+  the qualified form is `files.search` and never `files/search`. Model providers then apply
+  their own rules on top, and some narrow the set further, to letters, digits, underscore
+  and hyphen with no dot at all.
 - Assume shadowing is possible, and that you will not be told. If a user reports that your
   tool "does nothing", ask what else they have configured.
 
-Collision handling from the host's side is Post 11. Collision handling as a deliberate
-attack, where a malicious server picks a name in order to shadow a trusted one, is Post 19.
+Collision handling from the host's side is [Post 11](../11-building-a-host/index.md), which
+builds the qualifying catalog and tests it. Collision handling as a deliberate attack, where
+a malicious server picks a name in order to shadow a trusted one, is
+[Post 19](../19-security/index.md).
 
 ## 7. Who controls what
 
 The three primitives differ in a way that is easy to state and easy to get wrong: they
 differ in **who is allowed to start them**.
 
-![A control matrix showing that the model starts tools, the host starts resources, and the user starts prompts, with the other parties marked as able to block or take part.](diagrams/03-who-controls-what.svg)
+![A control matrix showing that the model starts tools, the host starts resources, and the user starts prompts, with the other parties marked as able to block, to take part, or not to choose at all, and a closing note that whoever starts an interaction the host can still refuse it.](diagrams/03-who-controls-what.svg)
 *One party per row pulls the trigger. Everyone else can at most take part, or refuse.*
 
 **Tools are model-controlled.** The specification says tools are designed so the model can
@@ -236,8 +285,8 @@ person.
 The practical design rule falls straight out of the table. If you want the model to be
 able to decide, on its own, to go and get something, that is a tool, even if it feels like
 data. If you want the host to place something in context, that is a resource. If you want
-a person to start a piece of work with one click, that is a prompt. Post 07 works through
-the borderline cases.
+a person to start a piece of work with one click, that is a prompt.
+[Post 07](../07-resources-and-prompts/index.md) works through the borderline cases.
 
 One clarification, because "controlled by" is doing a lot of work here. It names who may
 *start* the interaction, not who may *stop* it. The host can refuse all three, and in a
@@ -282,8 +331,8 @@ of host is calling you.
 Second, the boundary has to trust its own inputs. Tool descriptions and annotations are
 written by servers, and the specification tells clients to treat annotations as untrusted
 unless the server is trusted. A boundary that must trust text supplied by the thing it is
-guarding has a door in it. Post 19 walks through every attack that comes through that
-door, and it is the reason this post insisted on the vocabulary.
+guarding has a door in it. [Post 19](../19-security/index.md) walks through every attack
+that comes through that door, and it is the reason this post insisted on the vocabulary.
 
 ## 9. What this picture no longer contains
 
@@ -291,8 +340,8 @@ If you learned MCP before revision 2026-07-28, your mental model has a connectio
 phase in it. Delete it.
 
 There is no `initialize` handshake and no protocol-level session. Both were removed, by
-SEP-2575 and SEP-2567 respectively, and the words do not appear in the schema. A client
-does not negotiate once and then remember. It attaches
+Specification Enhancement Proposals SEP-2575 and SEP-2567 respectively, and the words do
+not appear in the schema. A client does not negotiate once and then remember. It attaches
 `io.modelcontextprotocol/protocolVersion` and
 `io.modelcontextprotocol/clientCapabilities` to the `_meta` field of **every single
 request**, and the server must not rely on anything an earlier request over the same
@@ -346,7 +395,7 @@ None of that changes the three roles. It changes how much the middle one has to 
 - Specification, *"Tools"* § Tool Names, revision 2026-07-28. Uniqueness scoping, the
   allowed character set, and the warning against keying disambiguation on a server's
   self-reported name.
-- SEP-2575, *"Remove the initialize handshake"*, and SEP-2567, *"Make MCP stateless"* (2026).
+- SEP-2575, *"Stateless MCP"*, and SEP-2567, *"Sessionless MCP"* (2026).
 - Model Context Protocol, *"Tool annotations are not enforcement"* (2026).
 
 Full citations in [REFERENCES.md](../../REFERENCES.md).
