@@ -18,6 +18,11 @@
 ![A tools/call request written out as JSON, with leader lines from each reserved metadata key to a short note explaining what that key tells the server.](diagrams/01-self-describing-request.svg)
 *Every key the server needs is in this one message, because there is no earlier message.*
 
+> **On reading order.** This is one of the longest posts in the series, and it is
+> reference-shaped: the wire format, field by field. It will keep. If you would rather have a
+> server running first, go to [Post 05](../05-first-server/index.md), write one, and come back
+> here the first time something breaks. Nothing in Part II assumes you read this post first.
+
 ---
 
 ## 1. One message has to be enough
@@ -33,8 +38,9 @@ and the server refused, usually without telling you which step you skipped.
 
 All of that was deleted. Revision 2026-07-28 removed the handshake (Specification
 Enhancement Proposal, or SEP, number 2575), removed protocol-level sessions (SEP-2567), and
-removed `ping` with no replacement. Those three words do not appear again in this post.
-What took their place is a single rule from the specification's base protocol page:
+removed `ping` with no replacement. Nothing took over their jobs, and where those words turn
+up again below it is always as history. What took their place is a single rule from the
+specification's base protocol page:
 
 > The Model Context Protocol (MCP) is a **stateless protocol**: all the information needed
 > to process a request is contained in the request itself. A server processes each request
@@ -156,7 +162,9 @@ this is the complete list:
 | `subscriptions/listen` | A stream of change notifications |
 
 Everything else you will ever see on an MCP connection is a notification, a result, or an
-error. Posts 06, 07, and 09 fill in what each method carries.
+error. [Post 06](../06-tools-in-depth/index.md),
+[Post 07](../07-resources-and-prompts/index.md), and [Post 09](../09-tasks/index.md) fill in
+what each method carries.
 
 ## 3. `server/discover`, and what replaced negotiation
 
@@ -327,8 +335,8 @@ request's response stream only.
 
 **`traceparent`, `tracestate`, and `baggage` are the one exception to the prefix rule.**
 They are unprefixed on purpose, so that MCP trace context matches World Wide Web Consortium
-(W3C) Trace Context and existing OpenTelemetry conventions. Post 21 wires them into a real
-trace.
+(W3C) Trace Context and existing OpenTelemetry conventions.
+[Post 21](../21-deploying/index.md) wires them into a real trace.
 
 Here is a `tools/call` with every request-side key present at once. The specification never
 prints them together, so this message is composed from the individual field definitions,
@@ -411,7 +419,8 @@ the schema enforces it by typing only those three response wrappers as a union.
 
 Four rules govern the field, and the last one is the useful one.
 
-- Extensions **may** add values. The tasks extension adds `"task"`, which Post 09 covers.
+- Extensions **may** add values. The tasks extension adds `"task"`, which
+  [Post 09](../09-tasks/index.md) covers.
 - The set of values a client accepts is the core set plus the values of extensions it has
   advertised in its capabilities.
 - A `resultType` the client does not recognize **must** be treated as invalid.
@@ -649,8 +658,8 @@ There is a second cross-call carrier, `requestState`, which a server mints when 
 `input_required` and the client echoes back verbatim on the retry. It is opaque to the
 client in exactly the same way and it travels through untrusted hands, so the specification
 requires servers to treat it as attacker-controlled input and to integrity-protect it with
-authenticated encryption when it influences authorization or business logic. Post 08 has
-the details.
+authenticated encryption when it influences authorization or business logic.
+[Post 08](../08-elicitation-and-mrtr/index.md) has the details.
 
 What you get in return is the diagram below. Three identical replicas, no affinity, no
 shared store to keep them in sync, and a failed replica costs you one retry instead of a
@@ -666,8 +675,9 @@ series, which claimed MCP defines extra error codes for tool failures. It does n
 correction is worth stating plainly: **MCP has never defined an error code for a tool that
 ran and failed, because a tool that ran and failed did not fail at the protocol layer.**
 
-![Two columns: a protocol error carried in a JSON-RPC error object, and a tool execution error carried in a successful result with isError set to true and fed back to the model.](diagrams/03-error-taxonomy.svg)
-*Left, the request was wrong. Right, the request was fine and the work did not succeed.*
+![Two columns: a protocol error carried in a JSON-RPC error object with no result member, which is not always an HTTP 200, and a tool execution error carried in a successful HTTP 200 result with isError set to true and fed back to the model.](diagrams/03-error-taxonomy.svg)
+*Left, the request was wrong. Right, the request was fine and the work did not succeed. Only
+the right-hand one reaches the model.*
 
 **Protocol errors** are problems with the request itself, the kind a model is unlikely to be
 able to fix: an unknown method, an unknown tool name, malformed parameters, a server that
@@ -755,8 +765,12 @@ a Server-Sent Events (SSE) stream, and a `main` that sends `server/discover` and
 `tools/list` and prints both results. Run it against any modern server:
 
 ```bash
-uv run --with httpx python raw_discover.py http://127.0.0.1:8000/mcp
+uv run --with 'httpx<1' python raw_discover.py http://127.0.0.1:8000/mcp
 ```
+
+The upper bound on `httpx` is deliberate, and the same habit the rest of the series
+applies to the SDK. httpx 1.0 removes `timeout` from the `Client` constructor, so an
+unpinned `--with httpx` will start failing the day that release lands.
 
 Pointed at the server built in [Post 05](../05-first-server/index.md), it prints this:
 
@@ -773,14 +787,22 @@ cacheable     0 ms, scope private
   watch_cpu                required: nothing
 ```
 
-Four things in that output are worth pausing on. The negotiated revision is the one this
-series targets. The capability list came from `server/discover` rather than from a
-handshake. The `cacheable` line is the `ttlMs` and `cacheScope` pair every list result now
-carries, here declining to be cached. And `terminate_process` requires only `pid`, even
+Four things in that output are worth pausing on. The revision on the `versions` line is the
+one this series targets, and it was read rather than negotiated. The capability list came
+from `server/discover` rather than from a handshake. The `cacheable` line is the `ttlMs` and
+`cacheScope` pair every list result now carries, here declining to be cached. And
+`terminate_process` requires only `pid`, even
 though the tool cannot run without a human approving it, because the approval is not
 something the caller supplies. [Post 08](../08-elicitation-and-mrtr/index.md) explains why.
 
-It is roughly sixty lines, and it is a complete, conformant MCP client for two methods.
+One thing in that output is not what it looks like. The `2.0.0b2` beside the server name is
+the SDK's version, not this project's. `app.py` constructs `MCPServer("system-info")` with
+no version argument, so the SDK fills its own in, and the `0.2.0` in that project's
+`pyproject.toml` never reaches the wire. Pass a version explicitly if you want
+`serverInfo` to mean anything to whoever reads your logs.
+
+It is about seventy lines once the comments come out, and it is a complete, conformant MCP
+client for two methods.
 That is the honest measure of how much protocol there is here. When something goes wrong in
 [Post 05](../05-first-server/index.md) and later, this script is the fastest way to find out
 whether the problem is your server or the thing calling it.
@@ -828,7 +850,7 @@ whether the problem is your server or the thing calling it.
 - Specification, *"Tools"* § Error handling, revision 2026-07-28. The split between protocol
   errors and tool execution errors, and the non-normative section on stateful tools that
   section 7 draws the basket example from.
-- SEP-2575, *"Make MCP stateless"*, and SEP-2567, *"Sessionless MCP"* (2026). The reasoning
+- SEP-2575, *"Stateless MCP"*, and SEP-2567, *"Sessionless MCP"* (2026). The reasoning
   behind removing the handshake and the session, including the load-balancing argument.
 - JSON-RPC 2.0 specification. The base standard MCP profiles.
   <https://www.jsonrpc.org/specification>

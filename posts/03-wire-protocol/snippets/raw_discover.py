@@ -3,7 +3,11 @@
 Speaks protocol revision 2026-07-28 over Streamable HTTP using nothing but an
 HTTP client. Sends server/discover, then tools/list, and prints both.
 
-    uv run --with httpx python raw_discover.py http://127.0.0.1:8000/mcp
+    uv run --with 'httpx<1' python raw_discover.py http://127.0.0.1:8000/mcp
+
+The upper bound is deliberate. httpx 1.0 drops `timeout` from the `Client`
+constructor, so an unpinned `--with httpx` starts failing with a TypeError the
+day that release lands.
 
 When something goes wrong later in the series, this is the fastest way to find
 out whether the problem is your server or the thing calling it.

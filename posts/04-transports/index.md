@@ -18,6 +18,11 @@
 ![Two panels of equal size. On the left, a host spawns a server as a child process and three pipes run between them for standard input, standard output, and standard error. On the right, the same host sends an ordinary POST with protocol headers to one HTTP endpoint, and the server answers with either one JSON object or an event stream.](diagrams/01-two-transports.svg)
 *Same messages, same metadata, two entirely different operational pictures.*
 
+> **On reading order.** Section 1 opens by assuming you have written a server. If you have
+> not, that is fine, and this post will keep: go to
+> [Post 05](../05-first-server/index.md), write one, and come back when you want to know how
+> the bytes actually move. Part II does not assume you read this post first.
+
 ---
 
 ## 1. The same message, two ways to move it
@@ -81,7 +86,7 @@ that, with a framing rule bolted on. From the specification's stdio page, in ful
 - The client **must not** write JSON-RPC responses.
 - The server **must not** write JSON-RPC requests to `stdout`.
 
-The last two restate Post 03's message-direction rules at the transport layer. Requests
+The last two restate [Post 03](../03-wire-protocol/index.md)'s message-direction rules at the transport layer. Requests
 travel one way in this revision, so a server writes exactly three kinds of thing: responses
 correlated by `id`; notifications relating to a request currently in flight, such as
 `notifications/progress` and `notifications/message`; and notifications belonging to an
@@ -172,7 +177,7 @@ tools            ['whoami']
 whoami           Windows 10
 ```
 
-The first line is the interesting one. It is the server's log record, which travelled on
+The first line is the interesting one. It is the server's log record, which traveled on
 standard error, was forwarded by the client, and appeared interleaved with the client's own
 output. That is the arrangement section 3 exists to protect.
 
@@ -411,7 +416,7 @@ INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
 ```
 
-Pointing the no-SDK client from Post 03 at it,
+Pointing the no-SDK client from [Post 03](../03-wire-protocol/index.md) at it,
 `python raw_discover.py http://127.0.0.1:8000/mcp`, prints:
 
 ```
@@ -424,7 +429,7 @@ cacheable     0 ms, scope private
   whoami                   required: nothing
 ```
 
-Sixty lines of Python and an HTTP client, with no SDK on the client side at all.
+Seventy lines of Python and an HTTP client, with no SDK on the client side at all.
 
 ## 5. The headers, one by one
 
@@ -605,7 +610,7 @@ looked is the expected cause.
 ![One client sends three requests to a round-robin load balancer, which forwards one to each of three identical replicas. A panel shows the three headers a balancer can route on, and a second panel shows the session identifier header struck out as removed.](diagrams/03-behind-a-load-balancer.svg)
 *Three properties compose into one operational result: any request can be answered by any replica.*
 
-Post 03 argued this from the message shape. Here it is from the transport, where it pays off.
+[Post 03](../03-wire-protocol/index.md) argued this from the message shape. Here it is from the transport, where it pays off.
 Four things compose.
 
 **There is no `Mcp-Session-Id`.** SEP-2567 removed it. There is no server-minted identifier
@@ -617,7 +622,7 @@ capabilities in its own `_meta`.
 
 **There is no cross-request state in flight.** MRTR ends each round trip with a real JSON-RPC
 result and the client re-sends everything on the retry, so the retry can land anywhere. That
-is SEP-2322, and Post 08 is the whole story.
+is SEP-2322, and [Post 08](../08-elicitation-and-mrtr/index.md) is the whole story.
 
 **The balancer no longer has to read the body.** That is SEP-2243, and section 5's headers are
 the mechanism. Routing on a header is cheap; routing on a JSON body means buffering, parsing,
@@ -681,13 +686,13 @@ its place.
 loses the in-flight request, and clients **must** re-issue it as a new request with a **new**
 request id. A long tool call over a flaky connection now starts again from the beginning. If
 that is unacceptable for your workload, the answer is the tasks extension, which turns long
-work into a pollable object with its own lifecycle, and that is Post 09.
+work into a pollable object with its own lifecycle, and that is [Post 09](../09-tasks/index.md).
 
 **The `GET` stream became a POST.** Everything the standalone stream used to carry, list
 changes and resource updates, now arrives on the response stream of a `subscriptions/listen`
 request: an ordinary POST whose reply happens to stay open. Request-scoped notifications like
 `notifications/progress` never appear there; they flow on the response stream of the request
-they belong to. Post 07 covers the method.
+they belong to. [Post 07](../07-resources-and-prompts/index.md) covers the method.
 
 **HTTP+SSE is deprecated.** The two-endpoint transport from revision 2025-03-26, with a `GET
 /sse` endpoint for the stream and a separate POST endpoint for messages, is in the deprecated
@@ -769,7 +774,7 @@ Invalid Origin header
 ```
 
 **Never put a token in a query string.** Servers **should** implement proper authentication
-for all connections, and OAuth 2.1 is Post 20. The transport-level rule is simpler than any of
+for all connections, and OAuth 2.1 is [Post 20](../20-authorization/index.md). The transport-level rule is simpler than any of
 that: credentials belong in the `Authorization` header, never in a uniform resource locator
 (URL). Query strings are written to access logs by nearly every proxy and web server by
 default, survive in browser history, and leak through the `Referer` header. A token in a
@@ -779,8 +784,8 @@ not to mark secrets with `x-mcp-header`.
 
 One line for the other transport. A stdio server is not sandboxed. It runs as the user who
 started the host, with that user's environment, filesystem, and credentials, and the only
-thing between a malicious server and the machine is the host's permission gate. Post 19 is
-about what that gate does and does not stop.
+thing between a malicious server and the machine is the host's permission gate.
+[Post 19](../19-security/index.md) is about what that gate does and does not stop.
 
 ## 9. Choosing between them
 
@@ -798,13 +803,14 @@ everybody", it listens, and that is Streamable HTTP.
 | The host runs in a browser | Streamable HTTP |
 | You need OAuth 2.1, rate limiting, or an audit trail at the edge | Streamable HTTP |
 | You want to scale horizontally, or deploy without restarting hosts | Streamable HTTP |
-| You are writing tests | Neither. Connect in memory, Post 12 |
+| You are writing tests | Neither. Connect in memory, [Post 12](../12-testing-and-debugging/index.md) |
 
 Two corrections to the reflex that "stdio is local, HTTP is remote".
 
 **Streamable HTTP on `127.0.0.1` is an excellent local choice**, and it is what you want while
 developing. Restarting a listening server does not require restarting the host, and you can
-drive it with `curl` or the sixty-line client from Post 03 while the real host is connected.
+drive it with `curl` or the no-SDK client from [Post 03](../03-wire-protocol/index.md) while
+the real host is connected.
 That is why the companion server for [Post 05](../05-first-server/index.md) runs both ways
 from one command line.
 
@@ -869,7 +875,7 @@ stays a deployment decision you can revisit later.
 - SEP-2243, *"HTTP standardization"* (Final, 2026). `Mcp-Method`, `Mcp-Name`, the
   `x-mcp-header` annotation, `Mcp-Param-{Name}`, the Base64 sentinel, and the reasoning behind
   mandatory server-side validation.
-- SEP-2575, *"Make MCP stateless"*, and SEP-2567, *"Sessionless MCP"* (2026). Why the session
+- SEP-2575, *"Stateless MCP"*, and SEP-2567, *"Sessionless MCP"* (2026). Why the session
   and the handshake were removed, and the load-balancing argument in section 6.
 - Specification, *"Deprecated features"*, revision 2026-07-28. Where HTTP+SSE now lives.
   <https://modelcontextprotocol.io/specification/draft/deprecated>

@@ -3,5 +3,5 @@ title: "03 · The wire protocol: JSON-RPC, discovery, and the stateless model"
 date: 2026-07-22
 tags: [model-context-protocol, mcp, foundations, json-rpc, stateless, protocol]
 hero: diagrams/01-self-describing-request.svg
-reading_time: 16
+reading_time: 31
 part: "Part I — Foundations"
