@@ -3,7 +3,8 @@
 One page, protocol revision **2026-07-28**. Print it, pin it.
 
 Everything here is the current revision. If a tutorial you are reading mentions `initialize`,
-a session id, or sampling, it predates this.
+a session id, or a server calling the client, it predates this. Sampling and roots do still
+exist, deprecated, and only as MRTR requests.
 
 ---
 
@@ -34,18 +35,32 @@ Using a tool where a resource belongs is the most common design mistake in MCP s
 | Method | Direction | Notes |
 |---|---|---|
 | `server/discover` | client to server | servers **must** implement, clients **may** call |
-| `tools/list` · `tools/call` | client to server | paginated list |
+| `tools/list` · `tools/call` | client to server | |
 | `resources/list` · `resources/read` | client to server | |
 | `resources/templates/list` | client to server | RFC 6570 templates |
 | `prompts/list` · `prompts/get` | client to server | |
 | `completion/complete` | client to server | for prompt args and template vars |
 | `subscriptions/listen` | client to server | one stream, opt into each change type |
+| `tasks/get` · `tasks/update` · `tasks/cancel` | client to server | tasks extension only; `Mcp-Name: <taskId>` over HTTP |
+| `notifications/subscriptions/acknowledged` | server to client | always the first message on a listen stream |
+| `notifications/resources/updated` · the three `*/list_changed` | server to client | on a listen stream, for what you opted into |
+| `notifications/tasks` | server to client | tasks extension; carries a whole task |
 | `notifications/progress` | server to client | needs a `progressToken` on the request |
 | `notifications/cancelled` | either | |
 | `notifications/message` | server to client | only if `logLevel` was set; deprecated |
 
+All four list methods are cursor-paginated: `cursor` in, `nextCursor` out, and a missing
+`nextCursor` means the end. Cursors are opaque; never parse one.
+
 **Gone:** `initialize`, `notifications/initialized`, `ping`, `logging/setLevel`,
-`resources/subscribe`, `resources/unsubscribe`, `notifications/roots/list_changed`.
+`resources/subscribe`, `resources/unsubscribe`, `notifications/roots/list_changed`. From the
+tasks extension: `tasks/result` and `tasks/list`.
+
+**Over HTTP, two required headers.** `Mcp-Method` mirrors `method` on every request.
+`Mcp-Name` mirrors `params.name` or `params.uri` on `tools/call`, `resources/read`, and
+`prompts/get`, and `params.taskId` on the `tasks/*` methods. A header that disagrees with the
+body is `400` and `-32020`, and it is the most common cause of a server that rejects
+everything.
 
 ---
 
@@ -76,6 +91,21 @@ Every result carries one. Absent **must** be read as `complete`.
 - `complete` — done.
 - `input_required` — the server needs something from the user. See MRTR below.
 - `task` — only with the tasks extension.
+
+## Caching: `ttlMs` and `cacheScope`
+
+Both are **required**, not optional, on a `resultType: "complete"` result from exactly six
+methods: `server/discover`, `tools/list`, `prompts/list`, `resources/list`,
+`resources/templates/list`, `resources/read`. `tools/call`, `prompts/get`, and
+`completion/complete` carry neither.
+
+- `ttlMs` — milliseconds of freshness, like `Cache-Control: max-age`. Missing or negative
+  means zero. It is permission to skip a request, never an instruction to make one: do not
+  poll on it, and if you do, jitter and back off.
+- `cacheScope` — `"public"` means a shared gateway may serve the result to somebody else,
+  `"private"` means it may not.
+- Paginated lists: each page runs its own `ttlMs` clock, but `cacheScope` **must** be the
+  same on every page of one request.
 
 ## The MRTR loop
 
@@ -108,8 +138,11 @@ recorded answer never matches and the call never converges.
 | Who sees it | the client | **the model**, so it can retry |
 
 Codes: `-32700` parse, `-32600` invalid request, `-32601` method not found, `-32602` invalid
-params, `-32603` internal, `-32020`, `-32021` missing client capability, `-32022` unsupported
-version. `-32002` and `-32042` are retired; resource-not-found is now `-32602`.
+params, `-32603` internal, `-32020` header does not match the body, `-32021` missing client
+capability, `-32022` unsupported version. `-32002` and `-32042` are retired;
+resource-not-found is now `-32602`. Never *send* a retired code, but a client **should** still
+accept `-32002` from an older server. The range `-32020` to `-32099` belongs to the
+specification; never mint your own code inside it.
 
 ---
 
@@ -135,6 +168,9 @@ mcp.run()                       # stdio; run("streamable-http", host=, port=) fo
 | `mcp.types` | `mcp_types` |
 | `McpError` | `MCPError` |
 | camelCase attributes | snake_case (`read_only_hint`) |
+| `ClientSession` plus `initialize()` | `from mcp import Client`, and nothing to initialize |
+| `streamablehttp_client`, a 3-tuple | `streamable_http_client`, a 2-tuple |
+| `httpx` | `httpx2`, which the SDK ships |
 
 **Python is snake_case, the wire is camelCase.** `read_only_hint` becomes `readOnlyHint`.
 
