@@ -3,5 +3,5 @@ title: "05 · Your first MCP server"
 date: 2026-07-23
 tags: [model-context-protocol, mcp, servers, hands-on, python-sdk, tools]
 hero: diagrams/01-your-file-and-the-host.svg
-reading_time: 16
+reading_time: 29
 part: "Part II — Building servers"

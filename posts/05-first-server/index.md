@@ -13,7 +13,7 @@
 > - Drive your own server by hand over standard input and output, one JSON line in and one JSON line out.
 > - Diagnose a server that does not appear in a host, in the order that finds the fault fastest.
 
-![A host process on the left spawns a Python server process on the right. Three labelled channels run between them: the host writes JSON-RPC requests to the server's standard input, the server writes JSON-RPC responses back on standard output, and the server writes human-readable log lines on standard error, which the host files away in a log rather than parsing.](diagrams/01-your-file-and-the-host.svg)
+![A host process on the left spawns a Python server process on the right. Three labeled channels run between them: the host writes JSON-RPC requests to the server's standard input, the server writes JSON-RPC responses back on standard output, and the server writes human-readable log lines on standard error, which the host files away in a log rather than parsing.](diagrams/01-your-file-and-the-host.svg)
 *The host starts your file as a child process, and three streams do all the work.*
 
 ---
@@ -68,8 +68,25 @@ Create the project:
 mkdir mcp-system-info
 cd mcp-system-info
 uv init
-uv add "mcp[cli]==2.0.0b2" psutil
+uv add --prerelease=allow "mcp[cli]==2.0.0b2" psutil
 ```
+
+That flag is where this project first stops if you leave it off. Naming a pre-release
+exactly is enough for the package you asked for, and it is the reason the pin is `==` rather
+than `>=2,<3`. It is not enough for `mcp-types==2.0.0b2`, which `mcp` depends on and you
+never named, so the resolver refuses to reach for it on your behalf:
+
+```
+× No solution found when resolving dependencies
+╰─▶ Because there is no version of mcp-types==2.0.0b2 and mcp==2.0.0b2 depends on
+    mcp-types==2.0.0b2, we can conclude that mcp==2.0.0b2 cannot be used.
+
+    hint: `mcp-types` was requested with a pre-release marker (e.g.,
+    mcp-types==2.0.0b2), but pre-releases weren't enabled (try: `--prerelease=allow`)
+```
+
+You need it exactly once. `uv add` writes a `uv.lock`, and every later `uv run` and `uv sync`
+reads that lock rather than resolving again.
 
 That pin is not decoration. This series targets protocol revision **2026-07-28**, and the
 2.0 line of the Python SDK is the first that speaks it. The 1.x line has a completely
@@ -87,10 +104,9 @@ ModuleNotFoundError: No module named 'mcp.types'
 Both of those modules are gone in 2.x. If a tutorial you find elsewhere imports either one,
 it was written for the previous revision, and so was its protocol.
 
-> **A note on the version this series pins.** `2.0.0b2` is a pre-release. Installers never
-> select a pre-release unless you name it exactly, which is why the pin uses `==` rather
-> than `>=2,<3`. When stable 2.0 ships, widen it. Every code listing and every transcript
-> in this post was produced against `mcp==2.0.0b2` and `mcp-types==2.0.0b2`.
+> **A note on the version this series pins.** `2.0.0b2` is a pre-release. When stable 2.0
+> ships, widen the pin and drop the flag. Every code listing and every transcript in this
+> post was produced against `mcp==2.0.0b2` and `mcp-types==2.0.0b2`.
 
 The layout of the finished project:
 
@@ -296,7 +312,8 @@ class SystemSnapshot:
 
     The class-body annotations below are load-bearing. A class that only sets
     attributes inside __init__ has no type hints for the SDK to read, and you
-    get `outputSchema: null` with no warning at all. Post 06 covers this trap.
+    get `outputSchema: null` with no warning at all.
+    [Post 06](../06-tools-in-depth/index.md) covers this trap.
     """
 
     cpu_percent: float
@@ -345,12 +362,11 @@ used here, and they became `title` and `annotations`.
 **`@mcp.tool()` needs its parentheses.** This is the mistake every reader makes once:
 
 ```
-TypeError: The @tool decorator was used incorrectly.
-Did you forget to call it? Use @tool() instead of @tool
+TypeError: The @tool decorator was used incorrectly. Did you forget to call it? Use @tool() instead of @tool
 ```
 
 The SDK checks for it explicitly, so at least the error names the fix. The same guard is on
-`@mcp.resource("uri")` and `@mcp.prompt()`.
+`@mcp.resource("uri")` and `@mcp.prompt()`, each naming its own decorator.
 
 Two details in the body are worth stealing. `psutil.cpu_percent(interval=0.5)` blocks for
 half a second and measures; `interval=0` compares against the previous call and returns a
@@ -399,7 +415,7 @@ schema'd as a string, which is rarely what you meant.
 
 **A default makes a parameter optional.** `limit: int = 25` produced both
 `"default": 25` and an absence from `required`. `name: str` has no default, so it is in
-`required`, and a client that omits it gets an error back.
+`required`, and a client that omits it gets an error instead of a result.
 
 **The docstring becomes the description.** Including the argument documentation, which is
 where the model learns things the schema cannot express.
@@ -464,7 +480,7 @@ them and your code reading them, and on Windows a good number of system processe
 inspection outright. A tool that raises on the first `AccessDenied` works on your machine
 and fails on your reader's.
 
-Two supporting dataclasses complete the file, and `total_matches` is separate from
+Two supporting dataclasses carry that result, and `total_matches` is separate from
 `returned` on purpose, so a caller can tell "there were three" from "there were three
 hundred and you are seeing the first twenty-five":
 
@@ -503,8 +519,8 @@ process. All it needs is a command and its arguments:
 Which file that JSON goes in, and which top-level key it sits under, differs from host to
 host. Claude Desktop reads `claude_desktop_config.json` and nests servers under
 `mcpServers`; other clients use a file called `mcp.json` with a similar but not identical
-shape. Post 23 has the full matrix. For Claude Desktop the file is at
-`%APPDATA%\Claude\claude_desktop_config.json` on Windows and
+shape. [Post 23](../23-multi-client/index.md) has the full matrix. For Claude Desktop the
+file is at `%APPDATA%\Claude\claude_desktop_config.json` on Windows and
 `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS, and if it does
 not exist you create it.
 
@@ -556,7 +572,13 @@ uv run mcp install path/to/server.py
 
 It takes **one file**, loads it as a standalone module, and looks for a global named `mcp`,
 `server`, or `app`. Our project is a package whose modules import each other with relative
-imports, so loading `__main__.py` that way fails before it can find anything:
+imports, so that load fails. The interesting part is what happens next: the command catches
+the failure, falls back to the file's own stem for the server name, and writes the entry
+anyway. Point it at `__main__.py` and it exits successfully, having registered a server
+called `__main__` whose command runs a file that cannot be imported on its own.
+
+Nothing appears on your terminal. The import error waits until the host runs that command,
+which is the one place you cannot see it:
 
 ```
 ImportError: attempted relative import with no known parent package
@@ -622,14 +644,16 @@ an argument fails validation. That choice is defensible, because a model can rea
 
 For a quicker look at the whole surface, the no-SDK client from
 [Post 03](../03-wire-protocol/snippets/raw_discover.py) works against this server as soon
-as you start it over HTTP. Two terminals:
+as you start it over HTTP. Two terminals, and the same pinning habit as the SDK, for the
+same reason: [Post 03](../03-wire-protocol/index.md) explains that bound where the script
+is written.
 
 ```bash
 uv run python -m system_info --http
 ```
 
 ```bash
-uv run --with httpx python raw_discover.py http://127.0.0.1:8000/mcp
+uv run --with 'httpx<1' python raw_discover.py http://127.0.0.1:8000/mcp
 ```
 
 which prints:
@@ -747,27 +771,6 @@ pkill -9 Claude
 
 Then start the host again from scratch.
 
-### Did the host find your server but fail to start it?
-
-A message about not being able to attach to a server means the opposite of the previous
-cases: the configuration was read, the process was launched, and it did not answer in time.
-
-The usual cause is dependency resolution at startup. `mcp install` writes a command of this
-shape into the configuration:
-
-```json
-{
-  "command": "C:\\Users\\yourname\\.local\\bin\\uv.exe",
-  "args": ["run", "--frozen", "--with", "mcp[cli]==2.0.0b2", "mcp", "run", "C:\\...\\server.py"]
-}
-```
-
-`uv run --with ...` resolves that requirement in a **fresh** environment rather than in your
-project's. The first time, that means downloading packages while the host sits waiting, and
-on a slow connection the host gives up first. The fix is the manual configuration from
-section 6, which runs inside your already-synced project environment and starts
-immediately. Run `uv sync` once in the project so that nothing needs fetching at all.
-
 ### Does anything in your server write to standard output?
 
 The rule from [Post 04](../04-transports/index.md), restated because this is where it bites:
@@ -798,6 +801,27 @@ log = logging.getLogger("system-info")
 
 log.info("Server started")   # stderr, safe, and the host will show it to you
 ```
+
+### One symptom that is not on the tree
+
+A message about not being able to *attach* to a server is the opposite of everything above:
+the configuration was read, the process was launched, and it did not answer in time. Five
+yeses and this message means your server is fine and its startup is too slow.
+
+The usual cause is dependency resolution. `mcp install` writes a command of this shape:
+
+```json
+{
+  "command": "C:\\Users\\yourname\\.local\\bin\\uv.exe",
+  "args": ["run", "--frozen", "--with", "mcp[cli]==2.0.0b2", "mcp", "run", "C:\\...\\server.py"]
+}
+```
+
+`uv run --with ...` resolves that requirement in a **fresh** environment rather than in your
+project's. The first time, that means downloading packages while the host sits waiting, and
+on a slow connection the host gives up first. The fix is the manual configuration from
+section 6, which runs inside your already-synced project environment and starts
+immediately. Run `uv sync` once in the project so that nothing needs fetching at all.
 
 ### Reading the host's log
 

@@ -15,8 +15,9 @@
 > - Publish an `outputSchema` deliberately, and prove with a test that you did.
 > - Decide, for any failure, whether it belongs in a JSON-RPC `error` object or in a result with `isError: true`.
 
-![A tools/call request on the left and its result on the right, with every field labelled: method, name, arguments and the metadata object on the request side, and resultType, content, structuredContent and isError on the result side.](diagrams/01-anatomy-of-a-tool-call.svg)
-*One request and the result it produced, both captured from the server built in Post 05.*
+![A tools/call request on the left and its result on the right, with every field labeled: method, name, arguments and the metadata object on the request side, and resultType, content, structuredContent and isError on the result side.](diagrams/01-anatomy-of-a-tool-call.svg)
+*One request and the result it produced, both captured from the server built in
+[Post 05](../05-first-server/index.md).*
 
 ---
 
@@ -486,7 +487,7 @@ message type only, and sampling is deprecated in this revision.
 has never defined an error code for a tool that ran and failed. An earlier edition of this
 series said otherwise. It was wrong.
 
-![One tools/call splitting into two paths: a protocol error returning a JSON-RPC error object that the client handles, and an execution error returning a successful result with isError true that is fed back to the model so it can retry.](diagrams/03-error-paths.svg)
+![One tools/call splitting into two paths: a protocol error returning a JSON-RPC error object that the client handles, which does not always arrive as HTTP 200 because several codes are pinned to 400 or 404, and an execution error returning a successful HTTP 200 result with isError true that is fed back to the model so it can retry.](diagrams/03-error-paths.svg)
 *Left, the server could not act on the request. Right, the request was fine and the work did not succeed.*
 
 This section is about what that means when you are the one writing the tool.
@@ -540,9 +541,9 @@ Calling it with `{"seconds": 500}` returns:
 }
 ```
 
-An uncaught `ZeroDivisionError` produces the same thing with `division by zero` as the text,
-which is a reasonable default and a poor message. Catch what you can predict and write the
-sentence yourself.
+An uncaught `ZeroDivisionError` produces the same shape, with
+`Error executing tool <name>: division by zero` as the text. That is a reasonable default and
+a poor message. Catch what you can predict and write the sentence yourself.
 
 **To raise a real protocol error, raise `MCPError`.** It is the one exception the server does
 not convert, and it travels as a JSON-RPC `error` object with the code you give it:
@@ -606,7 +607,7 @@ There are five annotation fields, and the defaults are not what most people assu
 | `title` | string | none | Display name, consulted after the tool's own `title` and before `name` |
 | `readOnlyHint` | boolean | `false` | The tool does not modify its environment |
 | `destructiveHint` | boolean | **`true`** | Updates are destructive. Meaningful only when `readOnlyHint` is `false` |
-| `idempotentHint` | boolean | `false` | Repeat calls with the same arguments have no additional effect |
+| `idempotentHint` | boolean | `false` | Repeat calls with the same arguments have no additional effect. Also meaningful only when `readOnlyHint` is `false` |
 | `openWorldHint` | boolean | **`true`** | The tool touches an external entity, for example the open web |
 
 Two of those default to the cautious answer. A tool that declares nothing is, as far as a
@@ -681,9 +682,12 @@ will meet names that break them.
 examples. **A slash is not in the allowed set.** That matters beyond your own naming, because
 when a host has to disambiguate two servers that both expose `search`, the separator has to be
 a dot, `files.search`, never a slash. And the server's self-reported name is not guaranteed
-unique across servers, so it **should not** be the disambiguation key.
+unique across servers, so it **should not** be the disambiguation key. A careful host
+qualifies only the contested name, and qualifies it on both sides, so a tool whose name is
+unique across the connected servers keeps the bare form a model may already know.
+[Post 11](../11-building-a-host/index.md) builds that catalog.
 
-The SDK checks and warns rather than refusing. Registering `files/search` logs five warning
+The SDK checks and warns rather than refusing. Registering `files/search` logs six warning
 lines from `mcp.shared.tool_name_validation`, of which these are the substance:
 
 ```
