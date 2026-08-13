@@ -3,5 +3,5 @@ title: "07 · Resources and prompts: the primitives that are not tools"
 date: 2026-07-23
 tags: [model-context-protocol, mcp, servers, resources, prompts, uri-templates]
 hero: diagrams/01-three-primitives.svg
-reading_time: 15
+reading_time: 32
 part: "Part II — Building servers"

@@ -15,7 +15,7 @@
 > - Write a completion handler, including the prefix match the software development kit (SDK) does not do for you.
 > - Say precisely what `subscriptions/listen`, `ttlMs`, and pagination do and do not give you.
 
-![Three columns, each headed by the actor that decides: a hexagon labelled the model above tools, a window labelled the application above resources, and a person labelled the user above prompts, with the specification's own words model-controlled, application-driven and user-controlled printed under each figure.](diagrams/01-three-primitives.svg)
+![Three columns, each headed by the actor that decides: a hexagon labeled the model above tools, a window labeled the application above resources, and a person labeled the user above prompts, with the specification's own words model-controlled, application-driven and user-controlled printed under each figure.](diagrams/01-three-primitives.svg)
 *The primitive under each figure is a detail. The figure is the decision.*
 
 ---
@@ -64,8 +64,8 @@ Everything in this post is built in
 [code/05-first-server/src/system_info/resources.py](../../code/05-first-server/src/system_info/resources.py),
 the system-information server that [Post 05](../05-first-server/index.md) started and
 [Post 06](../06-tools-in-depth/index.md) filled with tools. It is pinned to `mcp==2.0.0b2`,
-which implements protocol revision 2026-07-28, and its suite reports `19 passed in 6.75s`.
-Every string quoted below as output came from a run recorded in
+which implements protocol revision 2026-07-28, and its suite reports `19 passed`. Every
+string quoted below as output came from a run recorded in
 [verify/RESULTS.md](../../verify/RESULTS.md).
 
 ## 2. Resources, and who decides to read one
@@ -237,7 +237,8 @@ parentheses raises `TypeError`, the same trap the tool decorator has.
 On the wire, templates are listed separately by `resources/templates/list`, and the object is
 a `ResourceTemplate` whose `uriTemplate` replaces `uri`. The specification's summary is short:
 "Resource templates allow servers to expose parameterized resources using URI templates.
-Arguments may be auto-completed through the completion API." That second sentence is section 4.
+Arguments may be auto-completed through the completion API." That second sentence is the
+completion application programming interface (API), and it is section 4.
 
 **One honest gap.** The specification cites RFC 6570 and marks the
 field `@format uri-template`, but it does not say which RFC 6570 *level* an implementation must
@@ -245,8 +246,9 @@ support, nor what to do with a template that fails to parse. Both are undefined 
 candidate text, so treat matching behavior as an implementation detail rather than a contract.
 That matters more than it sounds, and the next paragraphs are why.
 
-**Design the URI scheme deliberately.** The standard schemes are `https://` for things a client
-could fetch directly, `file://`, and `git://`, and a custom scheme **must** conform to RFC 3986.
+**Design the URI scheme deliberately.** The standard schemes the specification names, and it
+says the list is not exhaustive, are `https://` for things a client could fetch directly,
+`file://`, and `git://`. A custom scheme **must** conform to RFC 3986.
 A custom scheme, `system://` here, is usually the right answer for a server-specific namespace,
 because it says plainly that the server is the only thing that knows how to resolve it. Keep the
 hierarchy readable, `system://disk/{disk}` rather than `system://d?x={disk}`, because the URI is
@@ -446,11 +448,13 @@ export interface SubscriptionFilter {
 }
 ```
 
-All four filter fields are optional and `notifications` itself is not. Omitting a field means
-not subscribing to it, and the rule that follows is a hard prohibition: "the server **MUST NOT**
-send notification types the client has not explicitly requested." Nothing is broadcast. A
-server with `listChanged: true` in its capabilities still sends nothing at all to a client that
-never opened a stream.
+Those four are every field core defines, all of them optional, and `notifications` itself is
+not. Omitting a field means not subscribing to it, and the rule that follows is a hard
+prohibition: "the server **MUST NOT** send notification types the client has not explicitly
+requested." Nothing is broadcast. A server with `listChanged: true` in its capabilities still
+sends nothing at all to a client that never opened a stream. An extension may add a fifth: the
+tasks extension puts `taskIds` in the same filter, which [Post 09](../09-tasks/index.md)
+covers.
 
 ![A sequence diagram with a client and a server lifeline: the client sends subscriptions/listen carrying the four filter fields, the server answers with an acknowledgment carrying the subscription id, work on the server changes a resource, notifications/resources/updated travels back down the open stream carrying only the URI, and the client issues a fresh resources/read.](diagrams/03-subscription-flow.svg)
 *The notification names the URI. Step 4 is where the content actually arrives.*
@@ -500,11 +504,14 @@ async with client.listen(
 
 Two notes to save you a search. The legacy `resources/subscribe` handlers are **not** available
 on the high-level server; if you must serve a pre-2026 client you register them on the private
-low-level server or use the low-level `Server` directly. And the specification's published
-examples of the three `list_changed` notifications print them with no `params` at all, while
-the subscriptions page requires `subscriptionId` in `_meta` on every notification delivered on
-a stream. That is a genuine inconsistency in the release candidate. Implement per the
-requirement and include the field.
+low-level server or use the low-level `Server` directly. And the specification argues with
+itself here, in a way worth knowing about before you diff your output against a published
+sample. The normative text is not ambiguous: the subscriptions page says the server **must**
+put `subscriptionId` in `_meta` on every notification delivered on a stream, and that is what
+[Post 03](../03-wire-protocol/index.md) records in its `_meta` table. What disagrees is the
+illustration. The schema types a notification's `params` as optional, and the published
+examples of the three `list_changed` notifications print them with no `params` at all, so the
+samples show a message the prose forbids. Follow the requirement and include the field.
 
 ## 6. Caching with `ttlMs` and `cacheScope`
 
@@ -548,7 +555,7 @@ per-user resource `"public"` is a data leak with a two-word diff.
 
 The cache key is the method plus the parameters that affect the result, the `uri` for a read
 or the `cursor` for a list page, and a client **must not** serve a cached response for a request
-whose parameters differ. A notification invalidates a fresh cached response immediately, which
+whose method or parameters differ. A notification invalidates a fresh cached response immediately, which
 is why sections 5 and 6 belong together: the TTL bounds how stale you can get, and a
 subscription cuts it short when something actually changes. Results from an MRTR retry are
 never cacheable at all.
@@ -572,6 +579,15 @@ Clients **must** treat cursors as opaque. The specification spells out the trap:
 any determination based on cursor value other than whether a non-null value was provided (e.g.
 **an empty string is a valid cursor and thus MUST NOT be treated as the end of results**)." A
 missing `nextCursor` means the end. An invalid cursor **should** produce `-32602`.
+
+Pages and section 6 interlock in three specific ways, and all three are easy to get wrong.
+Each page is independently cacheable and runs its own `ttlMs` clock, and a server **may** give
+different pages different values, so there is no cross-page consistency guarantee at all; a
+client that needs a coherent snapshot **should** re-fetch from the first page rather than trust
+the set it assembled. `cacheScope` is the opposite: a server **must** apply the same one to
+every page of a given list request, so a catalog cannot be public on page one and private on
+page two. And when a cursor comes back invalid, the client **should** discard the pages it
+already cached instead of stitching them onto a fresh run.
 
 Now the part to be plain about. **On the high-level Python server, pagination does not
 happen.** Every list handler on `MCPServer` ignores `params.cursor` and returns the entire set
@@ -730,8 +746,9 @@ them, and a host that does not is still conformant.
 
 `audience: ["user"]` on a resource is how you tell a host that a document is for a person to
 look at rather than for the model's context window, and `priority` is how you rank several
-resources a host might attach. Both are hints. Like the tool annotations in Post 06, nothing
-enforces them, and a client is free to ignore every one.
+resources a host might attach. Both are hints. Like the tool annotations in
+[Post 06](../06-tools-in-depth/index.md), nothing enforces them, and a client is free to
+ignore every one.
 
 `size` belongs in the same conversation. It is "the size of the raw resource content, in bytes
 (i.e., before base64 encoding or any tokenization), if known", and the specification's stated

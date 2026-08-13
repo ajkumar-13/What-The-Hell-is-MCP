@@ -52,16 +52,18 @@ purpose is to be set to `true` by the thing you were trying to gate. Annotations
 save you either: `destructiveHint` is a hint, and [Post 06](../06-tools-in-depth/index.md)
 is blunt about hints not being enforcement.
 
-What the tool actually needs is to pause halfway through, put a question in front of a
-human, and resume with the answer. MCP calls that **elicitation**, and it is the only
+What the tool actually needs is to get a question in front of a human and not act until the
+answer comes back. MCP calls that **elicitation**, and it is the only
 non-deprecated client feature left in this revision. How a server performs it changed
 completely in 2026-07-28, and the change is worth understanding for its own sake, because
 it is the clearest illustration of what statelessness did to the protocol.
 
 ## 2. How this used to work, and why the back channel had to go
 
-Until revision 2025-11-25 the mechanism was the obvious one. Your tool handler, partway
-through its work, sent a JSON-RPC request of its own back down the connection:
+Until revision 2025-11-25 the mechanism was the obvious one. JSON-RPC, which is Remote
+Procedure Call over JavaScript Object Notation, is symmetric by design: either end may send
+a request. So your tool handler, partway through its work, sent one of its own back down
+the connection:
 
 ```jsonc
 // server to client, in the old model. This is no longer legal.
@@ -69,9 +71,8 @@ through its work, sent a JSON-RPC request of its own back down the connection:
 ```
 
 It then awaited the client's response, exactly as if it had made a network call, and
-carried on. JSON-RPC is Remote Procedure Call over JavaScript Object Notation, and it is
-symmetric by design, so nothing in the base standard forbade this. MCP allowed it, and
-three features used it: `elicitation/create`, `sampling/createMessage`, and `roots/list`.
+carried on. Nothing in the base standard forbade this. MCP allowed it, and three features
+used it: `elicitation/create`, `sampling/createMessage`, and `roots/list`.
 
 Three things had to be true for that to work. The connection had to be bidirectional and
 still open. The original `tools/call` had to remain in flight, unanswered, for as long as
@@ -81,7 +82,8 @@ could resume.
 
 The last of those is the one that killed it. A request that must be finished by the same
 process that started it cannot be load balanced, cannot survive a deploy, and cannot be
-served by a stateless HTTP worker. [Post 03](../03-wire-protocol/index.md) covered the
+served by a stateless Hypertext Transfer Protocol (HTTP) worker.
+[Post 03](../03-wire-protocol/index.md) covered the
 sessionless model this revision adopted; the back channel was the last thing standing in
 its way.
 
@@ -101,7 +103,8 @@ And the MRTR page states the migration:
 *Left, the server asks and waits. Right, the server answers and stops. Only the right-hand column exists in 2026-07-28.*
 
 Sampling and roots did not survive this transition as features worth teaching: both are
-deprecated as of 2026-07-28, and Post 18 covers what replaced sampling. Elicitation did
+deprecated as of 2026-07-28, and [Post 18](../18-server-side-models/index.md) covers what
+replaced sampling. Elicitation did
 survive, in a new shape. If you are curious what happens when older Python code tries the
 old move, the software development kit (SDK) has an exception for it. `NoBackChannelError`
 is raised when a server tries to push a request over a transport with no channel for it,
@@ -207,8 +210,8 @@ Here is the whole thing on the wire. A desktop client is talking to a remote ser
 `https://example.com/mcp`, behind a plain round-robin load balancer with three identical
 backends, `A`, `B`, and `C`. The tool publishes a weather report as a GitHub gist and needs
 an account name the server does not have. The trace is assembled from the specification's
-own examples rather than captured from a live server, and the Hypertext Transfer Protocol
-(HTTP) headers are trimmed to the ones this post needs.
+own examples rather than captured from a live server, and the HTTP headers are trimmed to
+the ones this post needs.
 
 **Message 1, client to server.** The model picked the tool. This POST lands on backend `B`.
 
@@ -238,7 +241,7 @@ Mcp-Name: create_weather_gist
 
 The client declared `elicitation` with both modes. That declaration is what makes everything
 below legal. Had it declared neither mode, the server's only lawful move would be the error
-code `-32021`.
+code `-32021` (`MISSING_REQUIRED_CLIENT_CAPABILITY`).
 
 **Message 2, server to client.** HTTP `200`. Backend `B` has the weather but not the
 account name, so it answers with a question.
@@ -392,9 +395,10 @@ mcp = MCPServer("fleet", request_state_security=RequestStateSecurity(keys=[key])
 
 Keys are at least 32 bytes each, and the list exists so you can rotate: put the new key
 first, keep the old one until outstanding states expire. Passing a policy to an **unnamed**
-server raises `ValueError` at construction, which is deliberate, since the name is part of
-what the state is bound to. When verification fails the server returns a frozen error,
-`{"code": -32602, "message": "Invalid or expired requestState"}`.
+server raises `ValueError` at construction, which is deliberate: the server name is sealed
+into the state as an audience claim, so that state minted by another service sharing the same
+keys is rejected. When verification fails the server returns a frozen `-32602`
+(`Invalid params`): `{"code": -32602, "message": "Invalid or expired requestState"}`.
 
 Two further notes. Replay defenses bound the window; they do not make state single-use. If a
 given `requestState` must be redeemable at most once, a one-time payment for instance, you
@@ -500,10 +504,11 @@ you fight one:
   on stateless HTTP.
 
 If the client did not declare the capability the resolver needs, the call fails with
-`-32021` (`MISSING_REQUIRED_CLIENT_CAPABILITY`) and a `requiredCapabilities` payload naming
-what was missing. With no elicitation support wired up at all, the observed message is
-`Client did not declare the form elicitation capability required by resolver
-'__main__:ask_confirm'`.
+`-32021` and a `requiredCapabilities` payload naming what was missing. Driving a one-file
+throwaway server with a resolver named `ask_confirm` and no elicitation support wired up at
+all, on `mcp==2.0.0b2`, the message read `Client did not declare the form elicitation
+capability required by resolver '__main__:ask_confirm'`. The resolver's `module:qualname` is
+in the text, which is the fastest way to find the one that asked.
 
 ## 7. Schema rules for what you can ask
 
@@ -535,7 +540,8 @@ pre-populate the field.
 
 One rule is a hard prohibition rather than a limitation. Servers **must not** use form mode
 to request passwords, application programming interface (API) keys, access tokens, or payment
-credentials, and **must** use URL mode for anything involving them. The specification narrows
+credentials, and **must** use URL mode, which sends the user to a Uniform Resource Locator
+(URL) of the server's choosing, for anything involving them. The specification narrows
 what it means by sensitive: secrets and credentials that grant access or authorize
 transactions. A name, an email address, or a username is not categorically prohibited.
 
@@ -559,7 +565,7 @@ Decline and cancel are not errors and there is no separate channel for them. The
 to the server inside `inputResponses` on the retry, exactly like an accept, and your tool
 sees them as a value to branch on.
 
-![Three columns showing the accept, decline, and cancel actions, the SDK class each becomes, and what the terminate_process tool does with each, with a note that accept in URL mode means consent rather than completion.](diagrams/03-three-outcomes.svg)
+![Three columns, one per action, answering the same four questions down the page: what the user did, which SDK class arrives, whether it carries data, and what the terminate_process tool does. Only accept carries data, and even it acts only when the confirm field is true. A footer notes that none of the three is an error, that all three ride back inside inputResponses on the retry, and that an accept in URL mode means consent rather than completion.](diagrams/03-three-outcomes.svg)
 *Three outcomes, three code paths. Collapsing decline and cancel into "no" throws away the difference between a refusal and a closed window.*
 
 The four outcomes below are real. They come from [verify/RESULTS.md](../../verify/RESULTS.md),
@@ -593,7 +599,7 @@ requirement 8 explicitly allows repeated prompting. Pick one and be consistent. 
 above returns a plain `"complete"` result with a sentence the model can relay, on the grounds
 that a user declining is not a failure of the tool.
 
-## 9. URL mode, for OAuth and payments
+## 9. URL mode, for authorization flows and payments
 
 Form mode routes the answer through the client, which is precisely what you do not want for a
 credential. URL mode exists for that case:
@@ -621,7 +627,7 @@ catches everyone:
 > The response with `action: "accept"` indicates that the user has **consented to the
 > interaction**. It does **not** mean that the interaction is complete.
 
-The user agreed to open a Uniform Resource Locator (URL). Whether they finished whatever was
+The user agreed to open the URL. Whether they finished whatever was
 on the other side happens out of band, and the client is never told. So on the retry your
 server determines from its own records whether the out-of-band work completed, and either
 returns the final result or answers `input_required` **again**, which is why server
@@ -649,12 +655,16 @@ URL. A malicious client could use it to impersonate the user.
 **Third-party credentials must not transit the client**, you must not reuse the client's
 credentials against the third-party service, and you must not use URL mode elicitation to
 authorize users for *your own* server. That is what OAuth, the Open Authorization framework,
-is for, and Post 20 covers it.
+is for, and [Post 20](../20-authorization/index.md) covers it.
 
-**Two things you may remember from 2025-11-25 are gone.** The `elicitationId` field and the
+**Three things you may remember from 2025-11-25 are gone.** The `elicitationId` field and the
 `notifications/elicitation/complete` notification were both removed, because under MRTR the
-client learns the outcome by retrying rather than by being told. The error code `-32042`,
-which used to mean URL elicitation required, is retired and **must not** be emitted.
+client learns the outcome by retrying rather than by being told. So is the error code
+`-32042` (`URL_ELICITATION_REQUIRED`), which existed in 2025-11-25 only and meant "use URL
+mode for this". It is retired: the code stays reserved and will never be reused, a client may
+still meet it coming from a server implementing an older revision, and an implementation of
+2026-07-28 **must not** emit it. There is nothing to emit it *for* any more, because the
+elicitation request itself now names its own mode.
 
 ## 10. Designing questions a user can actually answer
 
