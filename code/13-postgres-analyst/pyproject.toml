@@ -26,6 +26,12 @@ dev = [
 [project.scripts]
 mcp-postgres-analyst = "pg_analyst.__main__:main"
 
+[tool.uv]
+# The mcp pin above is a pre-release, and so is its transitive mcp-types pin.
+# Without this, `uv lock` silently drops `prerelease-mode = "allow"` from
+# uv.lock, and the next `uv sync` on a clean machine fails to resolve.
+prerelease = "allow"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
