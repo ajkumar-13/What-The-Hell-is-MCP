@@ -17,6 +17,10 @@ dependencies = [
 dev = [
     "pytest>=8.0.0",
     "pytest-asyncio>=0.24.0",
+    # The suite opens the post 05 server in memory, so it needs that package and
+    # its psutil dependency. Declaring it beats a PYTHONPATH the reader has to
+    # remember: `uv run pytest` then works from a clean clone.
+    "mcp-system-info",
 ]
 # The reference provider needs no key and no network. A real provider adapter
 # is optional on purpose: the host works without one.
@@ -26,6 +30,15 @@ anthropic = [
 
 [project.scripts]
 mcp-host = "mcp_host.__main__:main"
+
+[tool.uv.sources]
+mcp-system-info = { path = "../05-first-server", editable = true }
+
+[tool.uv]
+# The mcp pin above is a pre-release, and so is its transitive mcp-types pin.
+# Without this, `uv lock` silently drops `prerelease-mode = "allow"` from
+# uv.lock, and the next `uv sync` on a clean machine fails to resolve.
+prerelease = "allow"
 
 [build-system]
 requires = ["hatchling"]

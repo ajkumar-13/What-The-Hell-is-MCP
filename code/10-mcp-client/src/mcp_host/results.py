@@ -140,7 +140,10 @@ class ToolOutcome:
     tool: str
     ok: bool
     blocks: tuple[Block, ...] = ()
-    structured: dict[str, Any] | None = None
+    # Any, not dict. SEP-2106 allows structuredContent to be any JSON value, and
+    # the SDK types CallToolResult.structured_content as Any to match. A server
+    # returning a top-level array is unusual but conformant.
+    structured: Any | None = None
     failure: str | None = None
 
     @property
