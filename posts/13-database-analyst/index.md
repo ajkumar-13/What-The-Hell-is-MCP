@@ -15,7 +15,7 @@
 > - Refuse the syntax your SQL parser quietly gave up on, instead of trusting a check that never ran.
 > - Test a security layer with no database at all, including the cases it deliberately allows.
 
-![Five stacked layers between a model's SQL and the data. The top three sit inside the server and are drawn with dashed outlines and labelled as filters: an abstract syntax tree walk, a sixteen-name dangerous-function blocklist, and a LIMIT ceiling. The bottom two sit inside PostgreSQL, are drawn with solid heavy outlines and labelled as enforcement: a login role granted SELECT and nothing else with read-only transactions forced on, and a server-side statement timeout. Each layer names what it stops and where it stops being reliable.](diagrams/01-defense-in-depth.svg)
+![Five stacked layers between a model's SQL and the data. The top three sit inside the server and are drawn with dashed outlines and labeled as filters: an abstract syntax tree walk, a sixteen-name dangerous-function blocklist, and a LIMIT ceiling. The bottom two sit inside PostgreSQL, are drawn with solid heavy outlines and labeled as enforcement: a login role granted SELECT and nothing else with read-only transactions forced on, and a server-side statement timeout. Each layer names what it stops and where it stops being reliable.](diagrams/01-defense-in-depth.svg)
 *Five layers. Three of them are opinions about a string, and two of them are grants.*
 
 ---
@@ -296,7 +296,7 @@ async def resolve_table_name(conn, table: str) -> str:
 ```
 
 The caller's string is looked up in `information_schema.tables` **as a bind parameter**, and
-the query is then built from the name the catalogue handed back. The catalogue is the
+the query is then built from the name the catalog handed back. The catalog is the
 allowlist, and it cannot contain a name that is not really a table. The suite verifies this
 against three arguments, including `users"; DROP TABLE users; --`, and all three come back
 as "no table named", with `executed_sql` empty. The identifier is then quoted by `sqlglot`
@@ -679,7 +679,7 @@ not another regular expression.
   as a primary key in the very document that tells the model which column identifies a row.
 - **Interpolating a table name from a tool argument.** PostgreSQL will not bind an
   identifier, so look the caller's string up in `information_schema.tables` as a parameter
-  and build the query from the catalogue's spelling, never from the caller's.
+  and build the query from the catalog's spelling, never from the caller's.
 - **Returning a formatted string instead of a dataclass.** No `outputSchema`, no
   `structuredContent`, and a model that has to re-parse your prose. Watch for the silent
   `outputSchema: null` from a class with no class-body annotations.
