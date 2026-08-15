@@ -3,5 +3,5 @@ title: "09 · Tasks: work that outlives a single request"
 date: 2026-07-23
 tags: [model-context-protocol, mcp, servers, tasks, extensions, async]
 hero: diagrams/01-task-state-machine.svg
-reading_time: 14
+reading_time: 28
 part: "Part II — Building servers"

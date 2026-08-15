@@ -7,16 +7,18 @@
 > server decides, on each individual request, whether to hand back a task instead of a
 > result. The per-tool `execution.taskSupport` field that most tutorials still teach was the
 > 2025-11-25 mechanism and does not exist in 2026-07-28. This post covers the extensions
-> framework, the whole lifecycle on the wire, and the honest state of tooling today.
+> framework, the whole lifecycle on the wire, and the honest state of tooling today, and
+> ends by building a working task on the seams the Python SDK already ships.
 >
 > **After reading this you will be able to:**
 > - Declare an extension in per-request capabilities, and read a server's from `server/discover`.
 > - Drive a task from creation through polling to a terminal state, by hand.
 > - Tell a task apart from a multi round-trip request, and pick the right one.
-> - Report progress from a slow tool today, using a method that actually ships.
+> - Report progress from a slow tool today, and stand up the extension yourself on the seams
+>   the software development kit already ships.
 
-![A state machine. A tools/call returns a result tagged resultType task, creating the task in a working state. Working and input_required sit inside a dashed non-terminal box, with the server moving one way and tasks/update moving the other. Three arrows leave the box to completed, failed, and cancelled.](diagrams/01-task-state-machine.svg)
-*Five states. The client drives only two of these arrows, and one of those two is a request rather than a command.*
+![A state machine. A tools/call returns a result tagged resultType task, creating the task in a working state. Working and input_required sit inside a dashed non-terminal box, with the server moving one way and tasks/update moving the other. A rail down the right edge of that box carries three arrows out to completed, failed, and cancelled.](diagrams/01-task-state-machine.svg)
+*Five states. Once the task exists the client drives only two of these arrows, and one of those two is a request rather than a command.*
 
 ---
 
@@ -408,6 +410,14 @@ terminal status or they cancel it. And clients **should** persist task identifie
 so a crash or a restart does not orphan work the server is still doing. That last one is the
 practical difference between a task and a promise: a promise dies with your process.
 
+This is also the answer to the debt [Post 04](../04-transports/index.md) left open. Streams
+are not resumable in this revision, so a broken response stream loses the in-flight request
+and the client has to re-issue it under a brand new identifier, starting the work again. A
+task changes what breaking costs. The exchange that dies is a `tasks/get` lasting
+milliseconds, the work carries on at the server, and the retry is the same poll with the same
+`taskId`. Resumability came back, one layer up, as an identifier the client stores instead of
+an event identifier the transport replays.
+
 **Time to live (TTL).** If `ttlMs` is not null, a client **may** treat `createdAt + ttlMs` as
 a backstop and give up after it. Servers **may** mark a task `failed` any time after the TTL
 elapses and delete it any time after that, and `ttlMs` itself **may** change over the task's
@@ -432,9 +442,11 @@ export interface SubscriptionsListenRequest extends Request {
 The server acknowledges with the subset it agreed to, in a
 `notifications/subscriptions/acknowledged` message. Each `notifications/tasks` payload carries
 a complete task, identical to what `tasks/get` would have returned at that moment, so there
-is no follow-up round trip. Clients **may** keep polling as well and need not, though a
-stream ends, so a client that listens and never polls should have a fallback. The
-notification was called `notifications/tasks/status` in 2025-11-25.
+is no follow-up round trip. Clients **may** keep polling as well and need not. Keeping a
+cheap poll as a backstop is still wise, because that stream is not resumable either: if it
+drops, the notifications you would have received are simply not delivered, and the `taskId`
+is the only thing that survives. The notification was called `notifications/tasks/status` in
+2025-11-25.
 
 ## 7. `tasks/update` and `tasks/cancel`
 
@@ -606,17 +618,17 @@ forgets gets an error naming exactly what was missing:
 2026-07-28 specification renumbered `MissingRequiredClientCapability` from `-32003` to
 `-32021`, declared `-32000` through `-32019` legacy, and says new implementations should not
 use that sub-range at all. The extension text has not caught up. Emit `-32021`, and accept
-either on the client side until the extension is updated.
+either on the client side until the extension is updated. The Python types package has
+already picked a side: `mcp_types.jsonrpc.MISSING_REQUIRED_CLIENT_CAPABILITY` is `-32021`.
 
 ## 10. What the software development kit gives you today
 
-This section is short and unsatisfying, and it is better to say so than to publish code that
-cannot run.
+Two things are true at once here, and most write-ups manage only one of them.
 
-**The Python software development kit (SDK) does not expose the tasks extension on the
-high-level server.** `@mcp.tool()` has no `execution` parameter, `MCPServer` never populates
-one, and there is no handler hook for `tasks/get`, `tasks/update`, or `tasks/cancel`. Two
-lines in a Python session against `mcp` 2.0.0b2 and `mcp-types` 2.0.0b2 tell the story:
+**The Python software development kit (SDK) ships no tasks implementation.** `@mcp.tool()`
+has no `execution` parameter, `MCPServer` never populates one, and nothing in `mcp` 2.0.0b2
+answers `tasks/get`, `tasks/update`, or `tasks/cancel` out of the box. Two lines in a Python
+session against `mcp` 2.0.0b2 and `mcp-types` 2.0.0b2 tell that half of the story:
 
 ```python
 >>> import inspect
@@ -625,7 +637,7 @@ lines in a Python session against `mcp` 2.0.0b2 and `mcp-types` 2.0.0b2 tell the
 ['self', 'name', 'title', 'description', 'annotations', 'icons', 'meta', 'structured_output']
 ```
 
-What the types package does ship is the **2025-11-25** feature, labelled as such in its own
+What the types package does ship is the **2025-11-25** feature, labeled as such in its own
 docstrings:
 
 ```python
@@ -645,8 +657,8 @@ docstring, and so do `GetTaskPayloadRequest` for the deleted `tasks/result` and
 are the old core types kept for talking to older servers, and using them against a 2026-07-28
 peer would produce the wrong messages.
 
-The 2026-07-28 half of the picture is present but thin. `ClientCapabilities` has the
-`extensions` field, which is the part you actually need:
+`ClientCapabilities` carries both revisions' fields at once, `extensions` for this one and
+`tasks` for the last:
 
 ```python
 >>> from mcp_types import ClientCapabilities
@@ -654,25 +666,62 @@ The 2026-07-28 half of the picture is present but thin. `ClientCapabilities` has
 ['experimental', 'sampling', 'elicitation', 'roots', 'extensions', 'tasks']
 ```
 
-Both fields are there at once: `extensions` for this revision, `tasks` for the last one.
+**The other half: the extension machinery is already there, and it was built with tasks in
+mind.** `mcp.server.extension` opens with the line "Pluggable extension interface for MCP
+servers (SEP-2133)", and between the two sides there are seven seams:
 
-So what can you build today? Server-side, the honest answer is the low-level
-`mcp.server.Server`, whose `add_request_handler(method, params_type, handler)` accepts
-arbitrary JSON-RPC methods, plus your own storage for task state. You would be implementing
-the extension, not calling it. Read the client's declaration per request from
-`ctx.client_capabilities`, which is a real property returning `ClientCapabilities | None`, and
-branch on `extensions`. Do not register tools conditionally at startup: under statelessness
-one process serves a task-capable client and a plain one on interleaved requests, so the
-branch belongs inside the handler.
+| Seam | What it does |
+|---|---|
+| `MCPServer(extensions=[...])` and the `Extension` base class | advertises `identifier` under `capabilities.extensions` in `server/discover` |
+| `Extension.methods()` returning `MethodBinding` | serves a request method the core schema does not define |
+| `Extension.intercept_tool_call` | wraps `tools/call` and may answer instead of the tool |
+| `require_client_extension(ctx, identifier)` | raises `-32021` with a `requiredCapabilities` payload |
+| `Client(extensions=[...])` and `ClientExtension` | puts the identifier in the per-request `_meta` |
+| `ClientExtension.claims()` returning `ResultClaim` | registers a `resultType` outside the core set, plus the resolver that finishes it |
+| `Request.name_param` | mirrors a params key into the `Mcp-Name` header on every send |
+
+Two of those docstrings say the quiet part out loud. `MethodBinding` is documented as "A new
+request method an extension serves, e.g. `tasks/get`". `name_param` is documented as
+"Wire-params key mirrored into the `Mcp-Name` header on sends; SEP-2663 requires it for
+`tasks/*`". There is also a client-side `advertise(identifier)` shortcut, whose own docstring
+warns that "advertising an extension you do not implement asserts wire support you do not
+have".
+
+So you can build it, and the check fits in one file.
+[snippets/tasks_extension.py](snippets/tasks_extension.py) wires a server-side extension to a
+client-side claim and runs both ends in one process:
+
+```
+$ uv run --with 'mcp==2.0.0b2' python tasks_extension.py
+server advertises: {'io.modelcontextprotocol/tasks': {}}
+poll 1 -> working
+poll 2 -> completed
+tasks client got: done 3
+plain client got: done 3   (resultType complete, no task involved)
+```
+
+Those last two lines are the whole post. Same server, same process, same registered tool: the
+client that declared the extension got a task and polled it to completion, and the client
+that did not got its answer directly. Nothing was registered conditionally at startup, which
+is the point. Under statelessness one process serves a task-capable client and a plain one on
+interleaved requests, so the branch belongs inside the handler, reading
+`ctx.session.client_params` fresh each time.
+
+The file cheats in two ways it admits to: the work runs eagerly inside the interceptor rather
+than out of band, and the store is a dictionary. A real server can afford neither, because of
+the durability rule. Nor does the file make you compliant. It has no `tasks/update`, no
+`tasks/cancel`, no `notifications/tasks`, no TTL, and none of the timestamp fields. Read it as
+proof that the SDK will not stop you, not as an implementation.
 
 Tasks is also absent from the published client support matrix entirely, which tracks only MCP
 Apps and the two authorization extensions. This post therefore cannot tell you which hosts
 would understand a task if you sent one, and neither can the documentation.
 
 The practical reading: build the slow tool now, report progress the way section 2 shows,
-design your state around an explicit handle you mint yourself, and adopt the extension when
-your SDK ships it. [Post 24](../24-mcp-apps-and-frontier/index.md) revisits the extension
-landscape once more of it has settled.
+design your state around an explicit handle you mint yourself, and keep the extension behind a
+per-request check until the wire format settles.
+[Post 24](../24-mcp-apps-and-frontier/index.md) revisits the extension landscape once more of
+it has settled.
 
 ## 11. When a task is the wrong answer
 

@@ -8,7 +8,7 @@
 > around the call never sees it.
 >
 > **After reading this you will be able to:**
-> - Connect to a server over standard input and output, Streamable Hypertext Transfer Protocol, or in memory, through one code path.
+> - Connect to a server over standard input and output, Streamable Hypertext Transfer Protocol (HTTP), or in memory, through one code path.
 > - Read every content block type a tool can return, and branch on `isError` rather than on exceptions.
 > - Answer a server that asks a question mid-call, both automatically and by hand.
 > - Tear a connection down without leaking the subprocess it was holding.
@@ -91,8 +91,8 @@ their catalogs into one list the model can see is the host's job, and it is
 [Post 11](../11-building-a-host/index.md).
 
 This post builds only the client half: `connection.py`, `results.py`, and `interactive.py` in
-the project. Post 11 adds `catalog.py`, `permissions.py`, `providers.py`, and `loop.py` on top
-of them.
+the project. [Post 11](../11-building-a-host/index.md) adds `catalog.py`, `permissions.py`,
+`providers.py`, and `loop.py` on top of them.
 
 ## 3. Three transports, one `Client`
 
@@ -100,11 +100,14 @@ Wire format before code, as always. Over standard input and output (stdio) a req
 line of JSON written to a subprocess's standard input:
 
 ```json
-{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"get_system_info","arguments":{},"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientCapabilities":{"elicitation":{"form":{}}}}}}
+{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"get_system_info","arguments":{},"_meta":{"io.modelcontextprotocol/protocolVersion":"2026-07-28","io.modelcontextprotocol/clientInfo":{"name":"mcp","version":"0.1.0"},"io.modelcontextprotocol/clientCapabilities":{"elicitation":{"form":{},"url":{}}}}}}
 ```
 
-Over Streamable Hypertext Transfer Protocol (HTTP) the same JSON is a POST body, with the
-routing headers [Post 04](../04-transports/index.md) covered:
+That is the second line this client wrote, which is why the identifier is 2. The first was
+`server/discover`, sent the moment the connection opened, and section 5 comes back to it.
+
+Over Streamable HTTP the same JSON is a POST body, with the routing headers
+[Post 04](../04-transports/index.md) covered:
 
 ```http
 POST /mcp HTTP/1.1
@@ -118,10 +121,11 @@ Mcp-Name: get_system_info
 Same message, different envelope. That is the entire difference, and it is why one client
 class covers both. Note the `_meta` block: revision 2026-07-28 has no `initialize` handshake
 and no session, so the protocol revision and the client's capabilities ride on **every**
-request. A client that sends them once and stops is not a client.
+request. A client that sends them once and stops is not a client. `clientInfo` travels with
+them, which the specification makes a **should** rather than a must, and the pinned software
+development kit (SDK) sends it on every request too.
 
-In the Python software development kit (SDK), `Client` dispatches on the *shape* of its first
-argument:
+In the Python SDK, `Client` dispatches on the *shape* of its first argument:
 
 ```python
 from mcp import Client, StdioServerParameters
@@ -135,8 +139,8 @@ Client(streamable_http_client(url, http_client=...))   # ditto, with headers and
 ```
 
 **There is no `Client("stdio://...")` form.** A plain string always means an HTTP Uniform
-Resource Locator. This surprises people who expect a scheme-based factory, and the error you
-get is a connection failure to a nonsense host rather than anything about stdio.
+Resource Locator (URL). This surprises people who expect a scheme-based factory, and the error
+you get is a connection failure to a nonsense host rather than anything about stdio.
 
 The project wraps that dispatch in one dataclass so a configuration file can drive it. From
 [src/mcp_host/connection.py](../../code/10-mcp-client/src/mcp_host/connection.py):
@@ -169,12 +173,13 @@ Five details in that function will each cost you an afternoon if you meet them c
    client object it will not accept.
 2. **The function is `streamable_http_client`.** In the 1.x line it was `streamablehttp_client`
    with no underscore before `http`, and the `get_session_id` callback that used to come with
-   it is gone along with sessions. It yields a **2-tuple**, not the 3-tuple of the older API.
+   it is gone along with sessions. It yields a **2-tuple**, not the 3-tuple of the older
+   signature.
 3. **`read_timeout_seconds` is a float of seconds.** In 1.x it was a `timedelta`. Passing a
    `timedelta` now is a type error at a place that does not name the parameter.
 4. **The trailing slash matters.** `POST /mcp/` against a server mounted at `/mcp` answers
-   **307**, not 404. If your client does not follow redirects you see an empty response and no
-   error worth reading.
+   **307** with a `Location` of `/mcp` and an empty body, not 404. If your client does not
+   follow redirects you see nothing back and no error worth reading.
 5. **The in-memory case is not a test double.** `Client(server_object)` runs a real client
    against a real server object through the full protocol path, with no subprocess and no
    socket. It is how this project's suite runs in seconds, and
@@ -305,10 +310,12 @@ await conn.list_prompts()
 
 `list_tools`, `list_resources`, `list_resource_templates`, and `list_prompts` all take
 `cursor` for pagination and `cache_mode` for the client-side cache the SDK keeps, because
-since 2026-07-28 list results must not vary from one connection to the next and therefore
-carry `ttlMs` and `cacheScope`. `read_resource` takes `cache_mode` as well. `call_tool` and
-`get_prompt` do not, and for `tools/call` the reason is in the schema: `CallToolResult` does
-not extend `CacheableResult`, so a tool result carries no freshness hint at all.
+since 2026-07-28 every complete list result carries `ttlMs` and `cacheScope`. Deterministic
+ordering across requests, which is what makes that cache worth keeping, is only a **should**,
+so a client still has to be correct when a server shuffles. `read_resource` takes `cache_mode`
+as well. `call_tool` and `get_prompt` do not, and the reason is in the schema: neither
+`CallToolResult` nor `GetPromptResult` extends `CacheableResult`, so neither carries a
+freshness hint at all.
 
 Here is the real thing. This is `python -m mcp_host list` against the system-information
 server, launched as a subprocess over stdio:
@@ -333,9 +340,14 @@ server's own claims about itself, nothing verifies them, and printing them next 
 name is roughly the extent of what a *client* should do with them. Turning them into a
 decision is the host's job and the subject of the next post.
 
-One naming note that matters later: the server calls itself `system-info` here because that is
-the key in the configuration file, not because the server said so. A server's self-reported
-name is not guaranteed unique across servers and must not be used as a disambiguation key.
+One naming note that matters later. Two different things in that transcript are both spelled
+`system-info`, and only one of them is yours. The heading over the tool list is the key from
+the configuration file, which you chose and which is unique on your machine. The name printed
+after `[ok]` is what the server reports for *itself*, and it happens to match here. A
+self-reported name is not guaranteed unique across servers, so a host that has to tell two
+identically named tools apart keys on the configuration key and never on that one. Building
+that catalog is [Post 11](../11-building-a-host/index.md), and it qualifies **both** sides of
+a collision rather than only the newcomer, and leaves every uncontested name alone.
 
 ## 6. Calling a tool, and reading the result properly
 
@@ -363,11 +375,11 @@ perfectly ordinary HTTP 200 with a flag set, and the specification says that is 
 > `isError` set to true, *not* as an MCP protocol-level error response. Otherwise, the LLM
 > would not be able to see that an error occurred and self-correct.
 
-So the split is deliberate. A protocol error is something the model cannot fix: unknown tool,
-malformed request, server fault. A tool execution error is something the model *can* fix: a
-date in the past, a value out of range, an application programming interface (API) that
-returned 503. The first is a JSON-RPC error, the second is `isError: true`, and a client that
-conflates them makes both worse.
+So the split is deliberate. A protocol error is something the large language model (LLM) in
+that quotation cannot fix: unknown tool, malformed request, server fault. A tool execution
+error is something it *can* fix: a date in the past, a value out of range, an application
+programming interface (API) that returned 503. The first is a JSON-RPC error, the second is
+`isError: true`, and a client that conflates them makes both worse.
 
 ![A decision flow for one tool result. The first branch asks whether the call raised, and a raised call becomes a failed outcome. Otherwise the flow reads isError first, before anything else, and a true value becomes the same failed outcome so both failure paths converge on one shape. On the success path, structuredContent is taken when present, and each content block is dispatched by its type through five branches for text, image, audio, resource link, and embedded resource, plus a sixth fallback branch for an unknown type from a newer server. Image, audio, and binary resources are summarized rather than inlined so their base64 never reaches the model.](diagrams/02-result-handling.svg)
 *Two failure paths, one outcome shape. `isError` is read before the content, and the content has six branches, not one.*
@@ -378,7 +390,7 @@ Two facts worth pinning, both measured against `mcp==2.0.0b2`:
 
 ```
 >>> CallToolResult.model_fields["is_error"]
-annotation=bool required=False default=False alias='isError' alias_priority=1
+FieldInfo(annotation=bool, required=False, default=False, alias='isError', alias_priority=1)
 ```
 
 `is_error` is a plain `bool` with a default of `False`. It is **not** `bool | None`, so absent
@@ -390,6 +402,7 @@ explicitly is not a way of saying "unknown":
 ValidationError: 1 validation error for CallToolResult
 is_error
   Input should be a valid boolean [type=bool_type, input_value=None, input_type=NoneType]
+    For further information visit https://errors.pydantic.dev/2.14/v/bool_type
 ```
 
 On the wire the field is `isError`; in Python it is `is_error`. Same rule as everywhere else in
@@ -449,8 +462,9 @@ the whole defect in two lines, and it is why the checking cannot live in an `exc
 
 ### Five content block types, and a sixth branch
 
-`content` is a list of blocks, and the union has five members. Handling one of them is the
-second defect from section 1.
+`content` is a list of blocks, and the union has five members, the same five
+[Post 06](../06-tools-in-depth/index.md) writes from the server's end. Handling one of them is
+the second defect from section 1.
 
 | `type` | Required fields | What a client should do with it |
 |---|---|---|
@@ -486,7 +500,8 @@ it was from the future.
 If a tool declares an `outputSchema`, its result carries `structuredContent` as well as
 `content`, and that is the machine-readable form of the same answer. On the wire it is
 `structuredContent`; in Python it is `structured_content`. It can be any JSON value since
-SEP-2106 loosened it, so do not assume a dictionary.
+SEP-2106 (Specification Enhancement Proposal 2106) loosened it, so do not assume a dictionary.
+The pinned SDK types it as `Any`, which is the honest annotation.
 
 The convention is that a server also serializes it into a text block for backward
 compatibility, which means a client that reads only `content` usually gets *something*, and
@@ -496,7 +511,7 @@ to the structured form when there are no text blocks at all.
 Finally, one concurrency fact, because it changes how a host is written: **concurrent
 `call_tool` calls on a single client are safe.** Request-identifier correlation is the client's
 job and it does it properly, so `asyncio.gather` over several calls on one connection needs no
-lock. Post 11 leans on that hard.
+lock. [Post 11](../11-building-a-host/index.md) leans on that hard.
 
 ## 7. Handling `input_required` from the client side
 
@@ -539,8 +554,8 @@ Three things to read off it. `inputRequests` is a **map**, keyed by identifiers 
 chose, so a server may ask several questions in one round and the client must answer them by
 key. The values are bare request objects with a `method` and `params` and no JSON-RPC envelope,
 because they are not requests on the wire. And `requestState` is an opaque sealed blob, 399
-characters in this capture, which the client **must** echo back byte for byte and **must not**
-inspect, parse, or modify.
+characters in this capture and a different length in the next one, which the client **must**
+echo back byte for byte and **must not** inspect, parse, or modify.
 
 The reply is the same tool, the same arguments, a **new** JSON-RPC identifier, and two extra
 parameters:
@@ -570,6 +585,12 @@ and the second leg completes:
 Note that "the user said no" came back as a **successful** result with `isError` false. A
 refusal is an outcome, not an error, and a server that reported it as `isError: true` would be
 telling the model to retry.
+
+There are two ways to be the client in that exchange, and one thing that is not optional in
+either of them.
+
+![Three lanes under a band stating that passing an elicitation callback is what puts the elicitation capability into the clientCapabilities carried on every request, and that the manual path never invokes the callback and still needs one. The first lane connects without a callback and dead-ends: the server refuses with -32021, MISSING_REQUIRED_CLIENT_CAPABILITY, before it ever asks, so there is no result and nothing to retry. The second lane hands the SDK a callback and lets it drive: the server returns resultType input_required, the SDK calls the callback once per inputRequests entry, and it retries with the same name, the same arguments, a new id, and the requestState echoed verbatim. The third lane drives the same loop by hand through allow_input_required, answering each key the server chose. The second and third lanes converge on one band saying both hand back the same CallToolResult. A band across the bottom explains the round cap and the question digest.](diagrams/03-two-ways-to-answer.svg)
+*The two paths differ only in who writes the loop. Neither runs at all without a callback on the `Client`.*
 
 ### The automatic path
 
@@ -656,9 +677,23 @@ callback, which makes it look optional.
 
 **It is not optional.** A `Client` with no `elicitation_callback` declares no elicitation
 capability in its per-request `_meta`, and a server whose tool needs an answer refuses the
-call before it ever asks, with `-32021` (`MissingRequiredClientCapability`). The manual path
-still needs one on the `Client`, purely as the declaration. The failing case has a test of its
-own, because otherwise the bug report you get is "your tool is broken":
+call before it ever asks, with `-32021` (`MISSING_REQUIRED_CLIENT_CAPABILITY`). Here is the
+real one, raised by the system-information server against a client that connected without a
+callback:
+
+```
+MCPError(-32021,
+  "Client did not declare the form elicitation capability required by resolver
+   'system_info.interactive:_confirm_terminate'",
+  {'requiredCapabilities': {'elicitation': {'form': {}}}})
+```
+
+`data.requiredCapabilities` is **required** on this code, not optional, and it names exactly
+what to add. Note the resolver in the message: it is the same key that would have appeared in
+`inputRequests` had the call got that far.
+
+The manual path still needs a callback on the `Client`, purely as the declaration. The failing
+case has a test of its own, because otherwise the bug report you get is "your tool is broken":
 
 ```python
 async def test_without_an_elicitation_callback_the_call_fails_cleanly():
@@ -677,7 +712,9 @@ sampling outright.
 
 ## 8. Resources and prompts
 
-Tools get the attention, and the other two primitives take about ten lines between them:
+Tools get the attention, and the other two primitives, which
+[Post 07](../07-resources-and-prompts/index.md) covers from the server's side, take about ten
+lines between them:
 
 ```python
 read = await conn.read_resource("system://processes/top")
@@ -692,7 +729,10 @@ either of them can answer with `input_required` and expect a retry. Those three 
 only those three, take `inputResponses` and `requestState`.
 
 Second, resource-not-found is `-32602` in this revision, not `-32002`. The old code was retired
-and must not be emitted, though a client **should** still accept it from an older server.
+and a server implementing this revision **must not** emit it, though a client **should** still
+accept it from an older server. Asking the system-information server for a URI it does not have
+comes back as `MCPError(-32602, 'Unknown resource: system://does/not/exist', {'uri': ...})`,
+and it raises rather than returning, because it is a protocol error and not a tool failure.
 
 ## 9. Running it
 
@@ -721,8 +761,10 @@ $ uv run python -m mcp_host call find_process --args '{"limit": "not-a-number"}'
 [failed] TOOL FAILED (find_process): Error executing tool find_process: 2 validation errors for find_processArguments
 name
   Field required [type=missing, input_value={'limit': 'not-a-number'}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.14/v/missing
 limit
   Input should be a valid integer, unable to parse string as an integer [type=int_parsing, input_value='not-a-number', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.14/v/int_parsing
 ```
 
 The prefix is the whole point. `TOOL FAILED (find_process):` is added by `ToolOutcome.for_model`
@@ -730,9 +772,10 @@ and it is what the model sees. A model recovers from a tool error it can read. I
 from one that arrives disguised as an answer.
 
 One deliberate absence in that transcript, and everywhere else this project prints: **the
-output is plain ASCII.** A checkmark or an arrow written to a Windows console under cp1252
-raises `UnicodeEncodeError` from inside `print`, which points the traceback at your output code
-rather than at the glyph you pasted in. `[ok]` and `->` render everywhere.
+output is plain American Standard Code for Information Interchange (ASCII).** A checkmark or an
+arrow written to a Windows console under cp1252 raises `UnicodeEncodeError` from inside
+`print`, which points the traceback at your output code rather than at the glyph you pasted in.
+`[ok]` and `->` render everywhere.
 
 ## 10. When not to write your own client
 
@@ -774,7 +817,7 @@ optional, and it will find dialect you invented without noticing.
   a loop that is not running. `asyncio.to_thread(input, prompt)` is the whole fix.
 - **Assuming `elicitation_callback` is optional because the manual path never calls it.**
   Passing one is what declares the capability. Without it, a server whose tool needs an answer
-  fails with `-32021` before it ever asks.
+  fails with `-32021` and a `requiredCapabilities` payload, before it ever asks.
 - **Expecting `Client("stdio://...")` to work.** A plain string is always an HTTP URL. stdio
   goes through `stdio_client(StdioServerParameters(...))`, and the trailing slash on an HTTP
   path gets you a 307 rather than the 404 you were debugging.
@@ -793,8 +836,8 @@ optional, and it will find dialect you invented without noticing.
   2026). The `inputRequests` map, the `requestState` rules, and the requirement that the retry
   carry a different JSON-RPC identifier.
 - Specification, *"Base protocol"* § Error codes, revision 2026-07-28. `-32021`
-  (`MissingRequiredClientCapability`) with its required `requiredCapabilities` payload, and the
-  move of resource-not-found from `-32002` to `-32602`.
+  (`MISSING_REQUIRED_CLIENT_CAPABILITY`) with its required `requiredCapabilities` payload, and
+  the move of resource-not-found from `-32002` to `-32602`.
 - Specification, *"Transports"*, revision 2026-07-28, and SEP-2243. The `Mcp-Method` and
   `Mcp-Name` routing headers shown in section 3.
 - MCP Python SDK, `mcp==2.0.0b2`. Every transcript here came from this version driving

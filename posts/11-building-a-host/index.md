@@ -346,7 +346,8 @@ you control that and it is unique on your machine.
 
 ### The separator is a dot, and it has to be
 
-Tool names are constrained to ASCII letters, digits, underscore, hyphen, and dot. **A slash is
+Tool names are constrained to American Standard Code for Information Interchange (ASCII)
+letters, digits, underscore, hyphen, and dot. **A slash is
 outside that set**, so `github/search` is not an option however natural it reads. That is a
 hard constraint, not a preference, and the catalog enforces it at its own boundary rather than
 letting an illegal name travel:

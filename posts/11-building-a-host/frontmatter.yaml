@@ -3,5 +3,5 @@ title: "11 · Building a host: the tool loop, many servers, and permissions"
 date: 2026-07-24
 tags: [model-context-protocol, mcp, hosts, tool-loop, permissions, multi-server]
 hero: diagrams/01-tool-loop.svg
-reading_time: 17
+reading_time: 29
 part: "Part III — Clients, hosts, and testing"
