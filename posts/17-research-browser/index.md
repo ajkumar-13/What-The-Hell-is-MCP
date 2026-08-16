@@ -85,7 +85,7 @@ Note the trap in the first result. A 99.9 percent reduction looks like a triumph
 fact a total failure: the six words are the contents of the `<title>` element. Any metric that
 only reports how much you discarded can be maximized by discarding everything. That is why the
 server reports both counts and the method that produced them, and why an extraction that found
-nothing is labelled `empty` rather than dressed up as a success.
+nothing is labeled `empty` rather than dressed up as a success.
 
 Rendering the same page costs 1,541 extra bytes of document, about three percent, and turns
 six words into 265.

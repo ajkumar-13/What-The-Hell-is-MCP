@@ -3,5 +3,5 @@ title: "20 · Authorization: OAuth 2.1 for MCP servers"
 date: 2026-07-26
 tags: [model-context-protocol, mcp, security, oauth, authorization, tokens]
 hero: diagrams/01-three-party-flow.svg
-reading_time: 18
+reading_time: 19
 part: "Part V — Production"

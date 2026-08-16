@@ -10,7 +10,7 @@
 > **After reading this you will be able to:**
 > - Explain precisely what happened to sampling, and what survives of it.
 > - Build a server-side summarizer as a protocol with an offline default and an opt-in provider.
-> - Report which summarizer actually ran, so a fallback is never labelled as the model.
+> - Report which summarizer actually ran, so a fallback is never labeled as the model.
 > - Run a bounded multi-page research pass whose every claim carries the page it came from.
 
 ![Two panels. On the left, the old sampling path: a server sends a request up through the client to the host that owns the model, with both legs struck through because revision 2026-07-28 has no channel to carry them, and a dashed billing boundary drawn around the host. On the right, the replacement: the client still calls the server, and the server reaches a model provider directly over HTTPS with its own key, with the billing boundary redrawn around the server and the provider. A table underneath answers who pays, who consented, and who answers for the prompt.](diagrams/01-sampling-vs-direct-call.svg)
@@ -34,7 +34,7 @@ the server called back through the MCP session, the host's model generated the s
 nobody needed an API key. That post opened with the line "here is the mind-bending part: what
 if the server could ask the model for help?"
 
-That mechanism is gone. Not softened, not discouraged. The back channel it travelled over does
+That mechanism is gone. Not softened, not discouraged. The back channel it traveled over does
 not exist in revision 2026-07-28, and the feature itself is formally deprecated. This is the
 largest single correction in this series, and the rest of the post is what replaces it.
 
@@ -283,7 +283,7 @@ appended a footer:
 ```
 
 The footer was printed on the failure path too. A caller receiving that text had a summary
-labelled as the product of a model, when in fact it was the first two thousand words of the
+labeled as the product of a model, when in fact it was the first two thousand words of the
 page with the rest thrown away.
 
 That is not a cosmetic bug. Consider what a reader does with each answer. Given a model summary
@@ -346,7 +346,7 @@ be part of the published output schema rather than a sentence in a text block.
 
 ## 7. Multi-page research: the loop and the budget
 
-![A call to research_urls removes duplicate URLs, then enters a loop drawn as a dashed container. Each pass starts at a budget gate checking pages visited against the page limit and words read against the word limit; failing either leaves the loop with a message naming the limit and how many sources went unvisited. Inside the loop a page is loaded, summarized, and recorded with its citations, and a page that will not load is written to a failures list rather than ending the pass. Five labelled exits converge on one report whose stopped_because field says which happened.](diagrams/02-research-loop.svg)
+![A call to research_urls removes duplicate URLs, then enters a loop drawn as a dashed container. Each pass starts at a budget gate checking pages visited against the page limit and words read against the word limit; failing either leaves the loop with a message naming the limit and how many sources went unvisited. Inside the loop a page is loaded, summarized, and recorded with its citations, and a page that will not load is written to a failures list rather than ending the pass. Five labeled exits converge on one report whose stopped_because field says which happened.](diagrams/02-research-loop.svg)
 *Every exit from the loop is named in the result, so "it finished" and "it ran out" are told apart.*
 
 One page at a time is a browsing server. Several pages, a budget, and an audit trail is a

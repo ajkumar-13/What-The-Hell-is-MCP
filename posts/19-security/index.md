@@ -170,7 +170,7 @@ in a field whose entire purpose is prose.
 Two structural facts make this worse than it first looks. The user interface usually shows
 the tool's `title` and a truncated description, so the human sees "Adds two numbers" and the
 model sees the rest. And Invariant Labs observed that the confirmation dialog they tested
-against did not show the full tool input either, so the exfiltrated key travelled inside an
+against did not show the full tool input either, so the exfiltrated key traveled inside an
 argument nobody was shown.
 
 There is no protocol defense. The specification's only relevant instruction is on the tools

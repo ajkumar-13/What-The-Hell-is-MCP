@@ -1,6 +1,6 @@
 # 20 · Authorization: OAuth 2.1 for MCP servers
 
-> **TL;DR.** A Model Context Protocol (MCP) server that needs authorization is an OAuth 2.1 resource server and nothing more exotic than that, so the whole job is validating a token you did not issue, for an audience that is you. This post covers when the specification tells you *not* to add authorization, the handful of normative requirements a resource server owes, why Dynamic Client Registration is deprecated in favor of Client ID Metadata Documents, and the two attacks that explain the fiddly parts. Every response shown was produced by running the code.
+> **TL;DR.** A Model Context Protocol (MCP) server that needs authorization is an OAuth 2.1 resource server and nothing more exotic than that, so the whole job is validating a token you did not issue, for an audience that is you. This post covers when the specification tells you *not* to add authorization, the handful of normative requirements a resource server owes, why Dynamic Client Registration is deprecated in favor of Client ID Metadata Documents, and the two attacks that explain the fiddly parts. Every response shown was produced by running [code/20-auth/](../../code/20-auth/), whose test suite asserts each one.
 >
 > **After reading this you will be able to:**
 > - Decide whether your server needs authorization at all, and leave it off correctly on a local server.
@@ -71,7 +71,7 @@ And two rules that are easy to get right and expensive to get wrong. Tokens trav
 
 Picture the chain before the fields. A client that knows nothing but your endpoint asks four questions in order: where do I authenticate, what does that authorization server support, how do I identify myself to it, and what token do I end up with.
 
-![A left-to-right chain of four steps with the exact Uniform Resource Locator (URL) at each hop. Step one, an unauthenticated POST to the MCP endpoint returns 401 with a WWW-Authenticate header whose resource_metadata parameter is a URL. Step two, a GET of that URL returns the protected resource metadata document, whose fields resource, authorization_servers, scopes_supported and bearer_methods_supported are each labelled with what the client does with them. Step three shows the fallback path used when no header is present, probing the well-known URI with the resource path inserted and then the well-known URI at the root. Step four shows the client building the authorization server metadata URL and probing OAuth 2.0 metadata before OpenID Connect discovery.](diagrams/02-metadata-discovery.svg)
+![A left-to-right chain of four steps with the exact Uniform Resource Locator (URL) at each hop. Step one, an unauthenticated POST to the MCP endpoint returns 401 with a WWW-Authenticate header whose resource_metadata parameter is a URL. Step two, a GET of that URL returns the protected resource metadata document, whose fields resource, authorization_servers, scopes_supported and bearer_methods_supported are each labeled with what the client does with them. Step three shows the fallback path used when no header is present, probing the well-known URI with the resource path inserted and then the well-known URI at the root. Step four shows the client building the authorization server metadata URL and probing OAuth 2.0 metadata before OpenID Connect discovery.](diagrams/02-metadata-discovery.svg)
 *Two ways in, one document, and a fallback the client is required to try.*
 
 The wire format first. An unauthenticated request to a protected server produces this, which is a real response from the demonstration server described in section 9:
@@ -101,7 +101,7 @@ Note the well-known path. RFC 9728 inserts the well-known segment between the ho
 
 ## 5. Validating the token, including the check everyone skips
 
-![A vertical gate diagram. A bearer token enters at the top and passes through five checks in order: is a token present, is it cryptographically valid, has it expired, was it issued for this server as its audience, and does it carry the scopes this operation needs. Each check has a labelled failure exit on the right: the first four exit with 401 Unauthorized, the fifth exits with 403 Forbidden and an insufficient_scope challenge. Below the gate, a separate blocked arrow shows the validated token being forwarded to an upstream API with a cross through it, annotated MUST NOT pass through.](diagrams/03-token-validation-gate.svg)
+![A vertical gate diagram. A bearer token enters at the top and passes through five checks in order: is a token present, is it cryptographically valid, has it expired, was it issued for this server as its audience, and does it carry the scopes this operation needs. Each check has a labeled failure exit on the right: the first four exit with 401 Unauthorized, the fifth exits with 403 Forbidden and an insufficient_scope challenge. Below the gate, a separate blocked arrow shows the validated token being forwarded to an upstream API with a cross through it, annotated MUST NOT pass through.](diagrams/03-token-validation-gate.svg)
 *Five checks, two failure codes, and one arrow that must never be drawn.*
 
 Four of these five checks are the ones any bearer-token middleware already does. The fourth is the one that gets skipped, and it is the one the specification spends the most words on.
@@ -169,6 +169,10 @@ The mitigation is issuer identification (RFC 9207, adopted for MCP as SEP-2468).
 The comparison has to be exact, and the specification spells out what "exact" excludes. Clients **MUST NOT** "apply scheme or host case folding, default-port elision, trailing-slash, or percent-encoding normalization" before comparing. `https://auth.example.com` and `https://auth.example.com/` are different issuers. So are `https://AUTH.example.com` and `https://auth.example.com`. This is simple string comparison in the RFC 3986 sense, and every helpful URL library you might reach for will quietly break it.
 
 That precision leaks into server configuration too. The Python software development kit (SDK) sets `url_preserve_empty_path=True` on its settings model with a comment saying exactly why: a path-less issuer passed as a string must keep its canonical form, because "RFC 8414/9207 issuer comparison is exact string comparison, so a spurious trailing slash would break it."
+
+**This is not hypothetical, and it cost this series a test.** The toy authorization server in [code/20-auth/](../../code/20-auth/) originally built its issuer string by hand, as `http://127.0.0.1:9123`, and minted the `iss` claim from it. But `build_metadata` publishes the issuer *after* pydantic's `AnyHttpUrl` has normalized it, and normalizing a URL with no path appends a slash. So the metadata document advertised `http://127.0.0.1:9123/` while every token it issued said `http://127.0.0.1:9123`. A client doing exactly what the paragraph above requires, comparing byte for byte with no normalization, would have rejected every token that server ever produced.
+
+Two things make this worth your attention. It only bites an issuer with no path, which is the ordinary case. And a test that compared the token against the same hand-built constant would have passed, because the constant was wrong in both places at once. The regression test asserts the published issuer and the minted `iss` against *each other*, which is the only arrangement that could have caught it.
 
 **The confused deputy.** This one bites servers that proxy to a third-party interface. The server holds one static client ID with the third party. A user authorizes once, the third-party authorization server drops a consent cookie, and from then on the consent screen is skipped for that static client ID. An attacker who can get a client registered against your server, with a redirect URI they control, rides that cookie and collects an authorization code without the user ever seeing a prompt.
 
@@ -247,9 +251,9 @@ The required scope is in the human-readable description rather than the machine-
 
 The SDK also still ships Dynamic Client Registration handlers, and in `2.0.0b2` they carry no deprecation marker. They are off unless you pass `ClientRegistrationOptions(enabled=True)`, and the default is `False`. Leave it that way.
 
-## 10. Testing it, with three requests
+## 10. Testing it, with four requests
 
-You do not need an authorization server to test a resource server. You need a `TokenVerifier` that accepts a fixed string, and three requests. These are real responses from a demonstration server with `required_scopes=["system:read"]`, a verifier that accepts `good-token` with that scope and `weak-token` with none, and everything else rejected:
+You do not need an authorization server to test a resource server. You need a `TokenVerifier` that accepts a fixed string, and four requests. These are real responses from [code/20-auth/](../../code/20-auth/) with `required_scopes=["system:read"]`, a verifier that accepts `good-token` with that scope and `weak-token` with none, and everything else rejected:
 
 ```
 no Authorization header      401   www-authenticate: Bearer error="invalid_token", ...
@@ -260,7 +264,11 @@ Authorization: Bearer good-token   200
 
 Four assertions, and they cover the shape of everything in this post: the challenge is present and points somewhere real, an unknown token is refused, a valid token with thin scopes gets `403` rather than `401`, and a good token gets through. Add a fifth for the audience: hand your verifier a token whose `aud` names a different service and assert `401`. That test is the one that fails on a server nobody has audited.
 
-Two things this level of testing cannot see, and you should check by hand once. The metadata document is served at the path-inserted well-known URL and not at the root, so fetch both and confirm which returns `200`. And nothing here proves the `Origin` check is armed; section 4 of [post 21](../21-deploying/index.md) has a measured case where it is not.
+All five are in [tests/test_resource_server.py](../../code/20-auth/tests/test_resource_server.py), along with a sixth that is easy to forget: a *correctly* audienced token must still be accepted. Without it, the audience test would pass just as happily if the verifier refused everything, and a test that cannot tell the behavior it is checking from total failure is not a test.
+
+None of this needs a socket. `streamable_http_app()` returns a Starlette application, so the suite drives the server in process over ASGI, and the whole three-party exchange in [tests/test_flow.py](../../code/20-auth/tests/test_flow.py) runs with no browser and nothing to wait for.
+
+One thing this level of testing still cannot see, and you should check by hand once: nothing here proves the `Origin` check is armed, and section 4 of [post 21](../21-deploying/index.md) has a measured case where it is not. The well-known paths *are* covered, because the split between the path-inserted URL and the root is the most common discovery failure there is: the tests fetch both and assert `200` and `404` respectively.
 
 ---
 
