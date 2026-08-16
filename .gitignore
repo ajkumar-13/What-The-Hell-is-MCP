@@ -44,3 +44,6 @@ node_modules/
 
 # Working notes and source material for the rewrite (not published)
 .research/
+
+# Diagram assets, the poster, and the Excalidraw generator: kept local, not published.
+assets/

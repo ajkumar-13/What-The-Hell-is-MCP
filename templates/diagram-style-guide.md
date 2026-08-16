@@ -2,7 +2,7 @@
 
 Every diagram in this series speaks the same visual language. Departures look out of place;
 adherence makes the whole repository feel like one book. The source of truth for the tokens is
-[assets/diagrams/style/tokens.css](../assets/diagrams/style/tokens.css).
+`assets/diagrams/style/tokens.css`.
 
 The palette is shared with the sibling "from scratch" series, so a reader who has seen one
 recognises the other. Only the prefix differs: `--mcp-*` here, `--mi-*` there.
@@ -100,8 +100,8 @@ Copy this skeleton for every new diagram. It already satisfies every mechanical 
   written for someone who cannot see it.</desc>
 
   <style><![CDATA[
-    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFFFF;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;}
-    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;}}
+    :root{--mcp-bg:#FAFAF7;--mcp-surface:#FFFFFF;--mcp-ink:#1A1A1A;--mcp-ink-muted:#5C5C5C;--mcp-ink-subtle:#9A9A9A;--mcp-border:#D9D9D4;--mcp-primary:#5B7FBF;--mcp-accent:#D98E5F;--mcp-success:#5C9E78;--mcp-warn:#B8895A;--mcp-alert:#C66B5E;--mcp-neutral-1:#EAEAE4;--mcp-neutral-2:#CFCFC8;--mcp-on-fill:#FFFDF9;--mcp-on-accent:#1A1A1A;}
+    @media (prefers-color-scheme:dark){:root{--mcp-bg:#0E0F12;--mcp-surface:#16181C;--mcp-ink:#F2F2EE;--mcp-ink-muted:#B4B4AE;--mcp-ink-subtle:#6E6E68;--mcp-border:#2A2D33;--mcp-primary:#8BA8E0;--mcp-accent:#E8B088;--mcp-success:#7FBF9B;--mcp-warn:#D4B58A;--mcp-alert:#D88880;--mcp-neutral-1:#1F2229;--mcp-neutral-2:#2C3038;--mcp-on-fill:#14161A;--mcp-on-accent:#1A1A1A;}}
     .bg{fill:var(--mcp-bg);}
     .title{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:20px;fill:var(--mcp-ink);}
     .label{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:14px;fill:var(--mcp-ink);}
@@ -114,6 +114,7 @@ Copy this skeleton for every new diagram. It already satisfies every mechanical 
     .ok{fill:var(--mcp-success);}
     .bad{fill:var(--mcp-alert);}
     .onfill{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-on-fill);}
+    .onaccent{font-family:Inter,system-ui,sans-serif;font-weight:600;font-size:13px;fill:var(--mcp-on-accent);}
     .flow{stroke:var(--mcp-ink);stroke-width:1.5;fill:none;}
     .flow-thin{stroke:var(--mcp-ink-muted);stroke-width:1;fill:none;}
     .lifeline{stroke:var(--mcp-ink-muted);stroke-width:1;stroke-dasharray:4 4;fill:none;}

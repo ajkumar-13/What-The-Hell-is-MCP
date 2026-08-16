@@ -111,8 +111,8 @@ This series targets protocol revision **2026-07-28** and only that revision.
 - **Hand-drawn Excalidraw companions are welcome** in `posts/NN-slug/diagrams/excalidraw/`,
   as a `.excalidraw` scene plus a rendered SVG. They are alternates for slides and talks, not
   the embedded figure. Generate them with
-  [assets/diagrams/excalidraw-generator/](assets/diagrams/excalidraw-generator/) rather than
-  by hand, so a rebuild stays byte-identical.
+  the generator under `assets/diagrams/excalidraw-generator/` rather than by hand, so a
+  rebuild stays byte-identical.
 - Follow [templates/diagram-style-guide.md](templates/diagram-style-guide.md) exactly.
 - Client side blue, server side terracotta.
 - `viewBox` only; no `width` or `height` on the root element.
