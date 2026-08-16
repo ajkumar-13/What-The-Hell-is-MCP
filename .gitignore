@@ -47,3 +47,7 @@ node_modules/
 
 # Diagram assets, the poster, and the Excalidraw generator: kept local, not published.
 assets/
+
+# poster/: only the rendered sheet is published.
+poster/*
+!poster/*.svg
