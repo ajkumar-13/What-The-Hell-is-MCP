@@ -16,6 +16,10 @@ python <path-to>/blog-quality/checks.py --root .
 
 Exit code 0 means clean. Errors block a merge; warnings are advisory.
 
+The checker is a separate tool and is not vendored here, so you may not have it. You do not
+need it: every rule it fails a build on is written out below, and a change that respects
+them will pass.
+
 ## Larger changes (new posts, new diagrams, code companions)
 
 Open an issue first so we can agree on scope. Every post is specified in
@@ -34,7 +38,17 @@ posts/NN-slug/
 └── snippets/           # short code shown inline (optional)
 ```
 
+`reading_time` is derived, not guessed. Prose words divided by 250, plus fenced code lines
+divided by 25, rounded up, with diagram alt text excluded. Recompute it when a post's length
+changes materially, so the numbers stay comparable across the series rather than drifting into
+whatever felt right on the day.
+
 `NN` is stable and the slug never changes after publishing, because inbound links break.
+Three more structure rules are hard checker errors: `slug` must equal the directory name,
+`hero` must resolve to a file inside the post directory, and `index.md` must never restate
+the reading time — that field lives only in `frontmatter.yaml`. Post numbers must also run
+contiguously from 01, so a new post is appended at the end of the series. Inserting one
+mid-series means renumbering directories, which is a decision to agree on in the issue first.
 
 ## Writing style (short version; full guide in [PLAN.md](PLAN.md) section 7)
 
@@ -48,8 +62,17 @@ posts/NN-slug/
 - Expand every acronym on first use **in every post**; readers arrive from search engines.
 - Use the vocabulary in [notation_guide.md](notation_guide.md) exactly. Host, client, and
   server in particular are not interchangeable.
+- **Every post opens with a TL;DR blockquote**, written `> **TL;DR.**`, four sentences or
+  fewer. A post without one fails the checker.
+- **Every post has a `## Common pitfalls` section**, four to seven bullets, near the end.
+  A post without one fails the checker.
+  [templates/post-template.md](templates/post-template.md) has the skeleton.
 - **At most ten em-dashes per post.** The checker enforces this. A comma or a full stop is
   almost always better.
+- **Every relative link must resolve, forward slashes only.** A backslash path is an error,
+  not a warning: it breaks on GitHub, and this repository is authored on Windows where a
+  pasted path is the natural mistake. A cross-reference that reads `[Part 14 ...]` must
+  point at `../14-.../`; a number that disagrees with its target is also an error.
 - **No invented numbers and no invented output.** Every empirical claim cites a primary
   source in [REFERENCES.md](REFERENCES.md), or is reproducible from [code/](code/).
 
@@ -69,12 +92,27 @@ This series targets protocol revision **2026-07-28** and only that revision.
 ## Code rules
 
 - Target the Python SDK version pinned in each project's `pyproject.toml`. Pin, never float.
-- Every project under [code/](code/) must import cleanly and pass its tests.
-- Every number printed in a post must be reproducible from a committed file.
+- Every Python project under [code/](code/) must import cleanly and pass its tests.
+  [code/21-deploy/](code/21-deploy/) is the exception: deployment configuration only, with no
+  package, no `pyproject.toml`, and no tests.
+- Every number printed in a post must be reproducible. The measured values for
+  [code/05-first-server/](code/05-first-server/) live in [verify/RESULTS.md](verify/RESULTS.md),
+  regenerated with
+  `PYTHONPATH=code/05-first-server/src python verify/capture.py > verify/RESULTS.md`. If a
+  post and that file disagree, the post is wrong, so commit the regenerated diff. Every other
+  project's figures come from its own test suite; name the command that produces them.
 - No secrets, no personal paths, no usernames in committed code, configuration, or images.
 
 ## Diagrams
 
+- **The figure a post embeds is hand-edited SVG.** No Mermaid, no screenshots of text. A
+  generated diagram can satisfy every bullet below and still be rejected as the canonical
+  figure.
+- **Hand-drawn Excalidraw companions are welcome** in `posts/NN-slug/diagrams/excalidraw/`,
+  as a `.excalidraw` scene plus a rendered SVG. They are alternates for slides and talks, not
+  the embedded figure. Generate them with
+  [assets/diagrams/excalidraw-generator/](assets/diagrams/excalidraw-generator/) rather than
+  by hand, so a rebuild stays byte-identical.
 - Follow [templates/diagram-style-guide.md](templates/diagram-style-guide.md) exactly.
 - Client side blue, server side terracotta.
 - `viewBox` only; no `width` or `height` on the root element.

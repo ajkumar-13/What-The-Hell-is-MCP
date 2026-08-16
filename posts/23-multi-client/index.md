@@ -13,7 +13,7 @@
 > - Serve the same server locally over stdio and remotely over Streamable HTTP from one process.
 > - Diagnose the failures that account for most "it will not connect" reports.
 
-![One server box in the center. Six host boxes around it, each labelled with its configuration file name and the top-level JSON key it expects: mcpServers for Claude Desktop, Claude Code, Cursor and Gemini CLI, servers for VS Code, and context_servers for Zed. A seventh box, a Python client, has no configuration file at all.](diagrams/01-one-server-five-hosts.svg)
+![One server box in the center. Six host boxes around it, each labeled with its configuration file name and the top-level JSON key it expects: mcpServers for Claude Desktop, Claude Code, Cursor and Gemini CLI, servers for VS Code, and context_servers for Zed. A seventh box, a Python client, has no configuration file at all.](diagrams/01-one-server-five-hosts.svg)
 *The wire protocol is identical down every one of these arrows. The file at the top of each box is not.*
 
 ---
@@ -391,7 +391,7 @@ narrower and testable:
 Not every host in section 3 reads resources. Not every host offers prompts. So the server is
 built in three layers, most-supported first.
 
-![Three stacked layers. The bottom layer, tools, is labelled universal and marked as load-bearing. The middle layer, resources, is labelled common and marked additive. The top layer, prompts, is labelled patchy and marked additive. Arrows from each of the upper layers point down to the tool that covers it. A side panel names the two tests that assert the mapping.](diagrams/02-capability-matrix.svg)
+![Three stacked layers. The bottom layer, tools, is labeled universal and marked as load-bearing. The middle layer, resources, is labeled common and marked additive. The top layer, prompts, is labeled patchy and marked additive. Arrows from each of the upper layers point down to the tool that covers it. A side panel names the two tests that assert the mapping.](diagrams/02-capability-matrix.svg)
 *Capability goes in the bottom layer. The upper two make it nicer to reach, and nothing else.*
 
 | Layer | Assumed support | What a client without it loses |
