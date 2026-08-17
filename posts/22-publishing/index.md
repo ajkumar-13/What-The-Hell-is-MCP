@@ -1,6 +1,6 @@
 # 22 · Publishing: the registry, `server.json`, and MCPB bundles
 
-> **TL;DR.** A Model Context Protocol (MCP) server nobody can install is a private script, and the two mechanisms that fix that are a registry entry described by a `server.json` file and a bundle file a user can double-click. Both are worth an hour, and both come with caveats large enough that this post leads with them: the registry is in preview rather than generally available, and its own moderation policy says it will not remove servers with known security vulnerabilities. This post publishes the server from post 05 for real, and reports three places where the primary sources still contradict each other.
+> **TL;DR.** A Model Context Protocol (MCP) server nobody can install is a private script, and the two mechanisms that fix that are a registry entry described by a `server.json` file and a bundle file a user can double-click. Both are worth an hour, and both come with caveats large enough that this post leads with them: the registry is in preview rather than generally available, and its own moderation policy says it will not remove servers with known security vulnerabilities. This post publishes the server from [Post 05](../05-first-server/index.md) for real, and reports three places where the primary sources still contradict each other.
 >
 > **After reading this you will be able to:**
 > - Write a `server.json` that validates against the current schema and matches your package metadata.
@@ -8,8 +8,7 @@
 > - Automate publishing from continuous integration using GitHub OpenID Connect, with no stored secret.
 > - Say precisely what the registry promises a consumer, which is much less than people assume.
 
-![Four routes from one repository to a running server on a user's machine. Route one is a package registry such as PyPI plus a metadata entry in the MCP Registry, which an aggregator indexes and a host resolves into a uvx command. Route two is a remote server, where the registry entry carries a URL and the host simply connects to it. Route three is an MCPB bundle attached to a GitHub release, which a user double-clicks into a desktop application. Route four is the baseline: a git clone and a hand-edited configuration file, which works and reaches nobody. Each route is annotated with what the user has to do and what the registry actually knows about it.](diagrams/01-distribution-paths.svg)
-*Four routes out of one repository. The registry stores metadata about three of them and hosts none of them.*
+![Four routes from one repository to a running server on a user's machine. Route one is a package registry such as PyPI plus a metadata entry in the MCP Registry, which an aggregator indexes and a host resolves into a uvx command. Route two is a remote server, where the registry entry carries a URL and the host simply connects to it. Route three is an MCPB bundle attached to a GitHub release, which a user double-clicks into a desktop application. Route four is the baseline: a git clone and a hand-edited configuration file, which works and reaches nobody. Each route is annotated with what the user has to do and what the registry actually knows about it.](diagrams/01-distribution-paths.svg) *Four routes out of one repository. The registry stores metadata about three of them and hosts none of them.*
 
 ---
 
@@ -126,7 +125,7 @@ GitHub is a login. Domain ownership is a public key you publish, either as a DNS
 example.com. IN TXT "v=MCPv1; k=ed25519; p=${PUBLIC_KEY}"
 ```
 
-or as a file at `https://example.com/.well-known/mcp-registry-auth` containing the same line. Ed25519 keys are 64 hex characters and ECDSA P-384 keys are 96.
+or as a file at `https://example.com/.well-known/mcp-registry-auth` containing only what is inside the quotes. Ed25519 keys are 64 hex characters and ECDSA P-384 keys are 96.
 
 There is a **second, separate proof** that catches people out. Owning the namespace does not prove you own the package the entry points at, so each package type has its own marker:
 
@@ -138,14 +137,13 @@ There is a **second, separate proof** that catches people out. Owning the namesp
 | Open Container Initiative image | `LABEL io.modelcontextprotocol.server.name="…"` |
 | MCPB | the URL must contain the string `mcp`, and `fileSha256` is required |
 
-For a Python package that marker is an HTML comment in the README, which PyPI renders invisibly and the registry reads off the project page. It is already in [code/05-first-server/README.md](../../code/05-first-server/README.md), on the second line, and if it is missing the publish fails with "Registry validation failed for package".
+For a Python package that marker is an HTML comment in the README, which PyPI renders invisibly and the registry reads off the project page. It is already in [code/05-first-server/README.md](../../code/05-first-server/README.md), directly under the heading, and if it is missing the publish fails with "Registry validation failed for package".
 
 Two things the documentation does not settle. The public package-types page omits Cargo and Quay.io, while the repository's own requirements document lists both, and no ownership-verification method for Cargo is documented anywhere. If you publish a Rust server, expect to find out by trying.
 
 ## 5. Publishing with the CLI
 
-![The publish flow as a left-to-right sequence with two gates. The command sequence runs init, validate, login, publish, status. Between login and publish sit two separate ownership gates drawn as checkpoints: namespace ownership, proved by GitHub identity, a DNS TXT record, or a file on your own domain, and package ownership, proved by a marker inside the published package itself. A parallel lower track shows the same flow inside continuous integration, where login github-oidc replaces the interactive device-code login and the workflow needs only the id-token write permission and no stored secret. A note marks where the audience claim comes from.](diagrams/02-publish-flow.svg)
-*Five commands, two independent ownership proofs, and one of them lives inside your package.*
+![The publish flow as a left-to-right sequence with two gates. The command sequence runs init, validate, login, publish, status. Between login and publish sit two separate ownership gates drawn as checkpoints: namespace ownership, proved by GitHub identity, a DNS TXT record, or a file on your own domain, and package ownership, proved by a marker inside the published package itself. A parallel lower track shows the same flow inside continuous integration, where login github-oidc replaces the interactive device-code login and the workflow needs only the id-token write permission and no stored secret. A note marks where the audience claim comes from.](diagrams/02-publish-flow.svg) *Five commands, two independent ownership proofs, and one of them lives inside your package.*
 
 `mcp-publisher` is a single binary. Install it from a release archive or with `brew install mcp-publisher`. The command surface:
 
@@ -217,7 +215,7 @@ One mechanism worth knowing before it bites you. The audience claim is derived, 
 
 The consequence is that an older `mcp-publisher` fails against a current registry with `invalid audience`, and the fix is to upgrade the publisher rather than to change anything on your side.
 
-The complete workflow for this series lives at [code/05-first-server/.github/workflows/publish.yml](../../code/05-first-server/.github/workflows/publish.yml). It runs on a `v*` tag and does four things in order: run the tests, build and publish the package to PyPI with trusted publishing, stamp the tag's version into both `version` fields of `server.json`, and publish. The version stamping matters more than it looks:
+The complete workflow for this series lives at [code/05-first-server/.github/workflows/publish.yml](../../code/05-first-server/.github/workflows/publish.yml). It runs on a `v*` tag and does five things in order: run the tests, build and publish the package to PyPI with trusted publishing, stamp the tag's version into both `version` fields of `server.json`, validate that file, and publish. The version stamping matters more than it looks:
 
 ```yaml
 - name: Stamp the version from the tag
@@ -246,8 +244,7 @@ The other distribution path is a single file a user double-clicks. It has been r
 
 The compatibility story is precise and asymmetric. **`dxt_version` is still accepted** as an alias for `manifest_version`, across every schema version from 0.1 to 0.4, marked deprecated. **The `.dxt` file extension is not** honored anywhere in the tool; only `.mcpb`. So an old manifest keeps working and an old filename does not.
 
-![The anatomy of a .mcpb file. The upper half shows the ZIP contents: manifest.json at the root, which is the only required file, a server directory holding the entry point, an optional icon.png, and whatever else the server needs. The lower half shows the optional signature block appended after the ZIP content, delimited by an MCPB_SIG_V1 marker, a four-byte little-endian length prefix, a DER-encoded PKCS number seven signature, and an MCPB_SIG_END marker, with a note that the signature is detached so the original ZIP content is unmodified. A side panel lists the manifest's five required fields and flags the unresolved disagreement between sources about what manifest_version should be.](diagrams/03-bundle-anatomy.svg)
-*A ZIP file with a manifest, plus an optional signature appended after the archive rather than inside it.*
+![The anatomy of a .mcpb file. The upper half shows the ZIP contents: manifest.json at the root, which is the only required file, a server directory holding the entry point, an optional icon.png, and whatever else the server needs. The lower half shows the optional signature block appended after the ZIP content, delimited by an MCPB_SIG_V1 marker, a four-byte little-endian length prefix, a DER-encoded PKCS number seven signature, and an MCPB_SIG_END marker, with a note that the signature is detached so the original ZIP content is unmodified. A side panel lists the manifest's five required fields and flags the unresolved disagreement between sources about what manifest_version should be.](diagrams/03-bundle-anatomy.svg) *A ZIP file with a manifest, plus an optional signature appended after the archive rather than inside it.*
 
 The manifest is `manifest.json` at the bundle root, and it is the only required file. Five fields are required inside it: `name`, `version`, `description`, `author`, and `server`. The `server` object requires `type`, `entry_point`, and `mcp_config`, and `type` is one of `python`, `node`, `binary`, or `uv`.
 
@@ -302,7 +299,7 @@ This series' rule is that a hedge beats a confident guess. Three disagreements h
 
 | Source | Value |
 |---|---|
-| `LATEST_MANIFEST_VERSION` on `main` | `0.4` |
+| `LATEST_MANIFEST_VERSION` at the published tag v2.1.2 | `0.4` |
 | `DEFAULT_MANIFEST_VERSION` on `main` | `0.3` |
 | `DEFAULT_MANIFEST_VERSION` at the published tag v2.1.2 | `0.2` |
 | `MANIFEST.md` header | `Current version: 0.3` |

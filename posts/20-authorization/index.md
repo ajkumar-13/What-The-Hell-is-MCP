@@ -8,8 +8,7 @@
 > - Validate an inbound token, including the audience check, and answer `401` and `403` the way clients expect.
 > - Explain the mix-up attack and the confused deputy to whoever reviews your design.
 
-![Three vertical lifelines. On the left, a client. In the middle, highlighted, the MCP server acting as an OAuth 2.1 resource server. On the right, an authorization server. Seven numbered exchanges run between them: an unauthenticated request, a refusal with 401 and a WWW-Authenticate challenge, a fetch of the protected resource metadata document, a fetch of the authorization server's own metadata, a browser authorization step carrying Proof Key for Code Exchange (PKCE) parameters and returning a code and an issuer, a token exchange, and finally the same MCP request repeated with a bearer token and answered with 200. A call-out marks the four exchanges the MCP server is involved in, and notes that it never issues a token.](diagrams/01-three-party-flow.svg)
-*The MCP server appears in four of the seven exchanges, and issues nothing.*
+![Three vertical lifelines. On the left, a client. In the middle, highlighted, the MCP server acting as an OAuth 2.1 resource server. On the right, an authorization server. Seven numbered exchanges run between them: an unauthenticated request, a refusal with 401 and a WWW-Authenticate challenge, a fetch of the protected resource metadata document, a fetch of the authorization server's own metadata, a browser authorization step carrying Proof Key for Code Exchange (PKCE) parameters and returning a code and an issuer, a token exchange, and finally the same MCP request repeated with a bearer token and answered with 200. A call-out marks the four exchanges the MCP server is involved in, and notes that it never issues a token.](diagrams/01-three-party-flow.svg) *The MCP server appears in four of the seven exchanges, and issues nothing.*
 
 ---
 
@@ -63,7 +62,7 @@ There are more normative statements in the authorization pages than anyone wants
 
 **Check every request, and do not use a session as the check.** "MCP servers that implement authorization **MUST** verify all inbound requests. MCP Servers **MUST NOT** use sessions for authentication."
 
-That last pair deserves a note. Revision 2026-07-28 removed protocol sessions outright, along with `Mcp-Session-Id` and the `initialize` handshake (SEP-2567 and SEP-2575), so there is no protocol session left to misuse. The rule now bites on sessions you invent yourself: a cookie your reverse proxy sets after the first authorized call, an in-memory map from connection to user, a cache keyed on client address. Every request carries its own token, so validate that token, every time.
+That last pair deserves a note. Revision 2026-07-28 removed protocol sessions outright, along with `Mcp-Session-Id` and the `initialize` handshake (Specification Enhancement Proposals SEP-2567 and SEP-2575), so there is no protocol session left to misuse. The rule now bites on sessions you invent yourself: a cookie your reverse proxy sets after the first authorized call, an in-memory map from connection to user, a cache keyed on client address. Every request carries its own token, so validate that token, every time.
 
 And two rules that are easy to get right and expensive to get wrong. Tokens travel in the `Authorization` header: "Access tokens **MUST NOT** be included in the URI query string." Separately, from the transports page, a server "**MUST** validate the `Origin` header on all incoming connections to prevent DNS rebinding attacks", where DNS is the Domain Name System, and where `Origin` is present and invalid, "servers **MUST** respond `403 Forbidden`". [Post 21](../21-deploying/index.md) shows a measured case where that protection is silently off.
 
@@ -71,8 +70,7 @@ And two rules that are easy to get right and expensive to get wrong. Tokens trav
 
 Picture the chain before the fields. A client that knows nothing but your endpoint asks four questions in order: where do I authenticate, what does that authorization server support, how do I identify myself to it, and what token do I end up with.
 
-![A left-to-right chain of four steps with the exact Uniform Resource Locator (URL) at each hop. Step one, an unauthenticated POST to the MCP endpoint returns 401 with a WWW-Authenticate header whose resource_metadata parameter is a URL. Step two, a GET of that URL returns the protected resource metadata document, whose fields resource, authorization_servers, scopes_supported and bearer_methods_supported are each labeled with what the client does with them. Step three shows the fallback path used when no header is present, probing the well-known URI with the resource path inserted and then the well-known URI at the root. Step four shows the client building the authorization server metadata URL and probing OAuth 2.0 metadata before OpenID Connect discovery.](diagrams/02-metadata-discovery.svg)
-*Two ways in, one document, and a fallback the client is required to try.*
+![A left-to-right chain of four steps with the exact Uniform Resource Locator (URL) at each hop. Step one, an unauthenticated POST to the MCP endpoint returns 401 with a WWW-Authenticate header whose resource_metadata parameter is a URL. Step two, a GET of that URL returns the protected resource metadata document, whose fields resource, authorization_servers, scopes_supported and bearer_methods_supported are each labeled with what the client does with them. Step three shows the fallback path used when no header is present, probing the well-known URI with the resource path inserted and then the well-known URI at the root. Step four shows the client building the authorization server metadata URL and probing OAuth 2.0 metadata before OpenID Connect discovery.](diagrams/02-metadata-discovery.svg) *Two ways in, one document, and a fallback the client is required to try.*
 
 The wire format first. An unauthenticated request to a protected server produces this, which is a real response from the demonstration server described in section 9:
 
@@ -101,10 +99,9 @@ Note the well-known path. RFC 9728 inserts the well-known segment between the ho
 
 ## 5. Validating the token, including the check everyone skips
 
-![A vertical gate diagram. A bearer token enters at the top and passes through five checks in order: is a token present, is it cryptographically valid, has it expired, was it issued for this server as its audience, and does it carry the scopes this operation needs. Each check has a labeled failure exit on the right: the first four exit with 401 Unauthorized, the fifth exits with 403 Forbidden and an insufficient_scope challenge. Below the gate, a separate blocked arrow shows the validated token being forwarded to an upstream API with a cross through it, annotated MUST NOT pass through.](diagrams/03-token-validation-gate.svg)
-*Five checks, two failure codes, and one arrow that must never be drawn.*
+![A vertical gate diagram. A bearer token enters at the top and passes through five checks in order: is a token present, is it cryptographically valid, has it expired, was it issued for this server as its audience, and does it carry the scopes this operation needs. Each check has a labeled failure exit on the right: the first four exit with 401 Unauthorized, the fifth exits with 403 Forbidden and an insufficient_scope challenge. Below the gate, two arrows to an upstream API are contrasted: forwarding the client's own token is crossed out and annotated MUST NOT pass through, while calling that upstream with a separate token the server obtained itself is ticked.](diagrams/03-token-validation-gate.svg) *Five checks, two failure codes, and one arrow that must never be drawn.*
 
-Four of these five checks are the ones any bearer-token middleware already does. The fourth is the one that gets skipped, and it is the one the specification spends the most words on.
+Four of these five checks are the ones any bearer-token middleware already does. The exception is the fourth, the audience check, and it is the one the specification spends the most words on.
 
 Here is the failure it prevents. Your company runs one identity provider. It issues tokens to a dozen internal services. A user authorizes a token for the calendar service, and something later presents that token to your MCP server. If you validate only the signature and the expiry, the token verifies perfectly and you serve the request. You have just accepted a credential that a user never granted you, and the security specification names the consequence: "This breaks a fundamental OAuth security boundary, allowing attackers to reuse legitimate tokens across different services than intended."
 
@@ -162,7 +159,7 @@ None of this is your problem as a resource server, with one exception: if you al
 
 Two attacks explain most of the remaining requirements.
 
-**The mix-up attack.** A client talks to many authorization servers over its life. One of them is hostile. The hostile one tries to make the client hand it an authorization code that an honest server issued, which it can then redeem. The specification is blunt about why the obvious defense is not enough: "PKCE alone does not prevent this attack because the client transmits the `code_verifier` to the attacker's token endpoint."
+**The mix-up attack.** A client talks to many authorization servers over its life. One of them is hostile. The hostile one tries to make the client hand it an authorization code that an honest server issued, which it can then redeem. The specification is blunt about why the obvious defense, Proof Key for Code Exchange (PKCE), is not enough: "PKCE alone does not prevent this attack because the client transmits the `code_verifier` to the attacker's token endpoint."
 
 The mitigation is issuer identification (RFC 9207, adopted for MCP as SEP-2468). Before redirecting the user, the client records the `issuer` from the authorization server metadata it validated. The authorization server returns an `iss` parameter in the authorization response. The client compares them before sending the code anywhere.
 
@@ -238,7 +235,7 @@ mcp = MCPServer(
 
 The constructor is strict, and the errors are worth knowing before you meet them. Passing both `auth_server_provider` and `token_verifier` raises `ValueError`. So does setting `auth` with neither, and so does setting either one without `auth`.
 
-What those nine lines buy you is most of section 3. The SDK installs bearer authentication middleware, wraps the MCP route so every request is checked, publishes the RFC 9728 document at the well-known path derived from `resource_server_url`, and attaches the `WWW-Authenticate` challenge to `401` responses with the metadata URL already filled in. That is the `401` and the metadata document quoted in section 4, both produced by exactly this configuration.
+What those nine lines buy you is most of section 3. The SDK installs bearer authentication middleware, wraps the MCP route so every request is checked, publishes the RFC 9728 document at the well-known path derived from `resource_server_url`, and attaches the `WWW-Authenticate` challenge to `401` and `403` responses with the metadata URL already filled in. That is the `401` and the metadata document quoted in section 4, both produced by exactly this configuration.
 
 **One gap to know about.** The specification says servers **SHOULD** include a `scope` parameter in the `WWW-Authenticate` challenge. Running `mcp==2.0.0b2`, the header carries `error`, `error_description` and `resource_metadata`, and no `scope`:
 
@@ -266,9 +263,9 @@ Four assertions, and they cover the shape of everything in this post: the challe
 
 All five are in [tests/test_resource_server.py](../../code/20-auth/tests/test_resource_server.py), along with a sixth that is easy to forget: a *correctly* audienced token must still be accepted. Without it, the audience test would pass just as happily if the verifier refused everything, and a test that cannot tell the behavior it is checking from total failure is not a test.
 
-None of this needs a socket. `streamable_http_app()` returns a Starlette application, so the suite drives the server in process over ASGI, and the whole three-party exchange in [tests/test_flow.py](../../code/20-auth/tests/test_flow.py) runs with no browser and nothing to wait for.
+None of this needs a socket. `streamable_http_app()` returns a Starlette application, so the suite drives the server in process over the Asynchronous Server Gateway Interface (ASGI), and the whole three-party exchange in [tests/test_flow.py](../../code/20-auth/tests/test_flow.py) runs with no browser and nothing to wait for.
 
-One thing this level of testing still cannot see, and you should check by hand once: nothing here proves the `Origin` check is armed, and section 4 of [post 21](../21-deploying/index.md) has a measured case where it is not. The well-known paths *are* covered, because the split between the path-inserted URL and the root is the most common discovery failure there is: the tests fetch both and assert `200` and `404` respectively.
+One thing this level of testing still cannot see, and you should check by hand once: nothing here proves the `Origin` check is armed, and section 4 of [Post 21](../21-deploying/index.md) has a measured case where it is not. The well-known paths *are* covered, because the split between the path-inserted URL and the root is the most common discovery failure there is: the tests fetch both and assert `200` and `404` respectively.
 
 ---
 

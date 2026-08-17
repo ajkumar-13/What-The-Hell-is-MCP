@@ -3,5 +3,5 @@ title: "19 · Security: the attacks the protocol does not stop"
 date: 2026-07-25
 tags: [model-context-protocol, mcp, security, prompt-injection, threat-model]
 hero: diagrams/01-trust-boundary.svg
-reading_time: 26
+reading_time: 25
 part: "Part V — Production"
