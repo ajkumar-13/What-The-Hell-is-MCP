@@ -51,3 +51,7 @@ assets/
 # poster/: only the rendered sheet is published.
 poster/*
 !poster/*.svg
+
+# Excalidraw working directories: the editable scenes and their notes. The
+# rendered SVG is published one level up, in posts/NN-slug/diagrams/.
+posts/*/diagrams/excalidraw/
