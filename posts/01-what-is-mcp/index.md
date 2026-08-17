@@ -167,7 +167,7 @@ And the answer:
 }
 ```
 
-Two things to flag, both of which get a full treatment in post 03. The first is what the specification's examples leave out for readability. A real request also carries a `_meta` object, which is where the sender writes down the protocol revision it is speaking and which optional parts of the protocol it supports. It goes on every single request, because this revision has no opening exchange in which to say it once. The second is `resultType`, which is on every result. `"complete"` means the server finished the job, and a server can also answer that it needs something from the user before it can finish, which is what post 08 is about.
+Two things to flag, both of which get a full treatment in [Post 03](../03-wire-protocol/index.md). The first is what the specification's examples leave out for readability. A real request also carries a `_meta` object, which is where the sender writes down the protocol revision it is speaking and which optional parts of the protocol it supports. It goes on every single request, because this revision has no opening exchange in which to say it once. The second is `resultType`, which is on every result. `"complete"` means the server finished the job, and a server can also answer that it needs something from the user before it can finish, which is what [Post 08](../08-elicitation-and-mrtr/index.md) is about.
 
 That is the entire boundary, and three useful properties fall out of it.
 
