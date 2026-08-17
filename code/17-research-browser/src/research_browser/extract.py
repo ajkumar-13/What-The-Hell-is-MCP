@@ -41,9 +41,9 @@ MIN_USEFUL_CHARS = 200
 #
 # This has to happen before markdownify sees the document. markdownify's own
 # `strip=` argument removes the *tag* and keeps the *text*, which on a `<script>`
-# means the page's JavaScript comes back as prose. On the fixtures in this repo
-# that turned a JavaScript shell into 577 words of minified bundle, extracted
-# with every appearance of success.
+# means the page's JavaScript comes back as prose. On tests/fixtures/spa-shell.html
+# that turned a JavaScript shell into 2,539 words, 1,777 of them the minified
+# bundle, extracted with every appearance of success.
 _DROP_ELEMENTS = (
     "script",
     "style",

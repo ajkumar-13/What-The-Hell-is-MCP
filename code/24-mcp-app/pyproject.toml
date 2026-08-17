@@ -11,6 +11,11 @@ requires-python = ">=3.10"
 # neither.
 dependencies = [
     "mcp[cli]==2.0.0b2",
+    # zoneinfo reads the system IANA database, and Windows does not have one,
+    # so without this every zone the world_clock tool is given -- including
+    # plain "UTC" -- comes back as "unknown zone". Slim Linux images have the
+    # same gap, which is why this is not gated on the platform.
+    "tzdata",
 ]
 
 [project.optional-dependencies]

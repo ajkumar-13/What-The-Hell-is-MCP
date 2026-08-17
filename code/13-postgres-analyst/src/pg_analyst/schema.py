@@ -103,7 +103,7 @@ def _escape(text: object) -> str:
     """Escape pipes so database content cannot forge extra Markdown rows.
 
     Table and column names are data, and data from a database an untrusted
-    party can write to is untrusted input. This is the same defence the
+    party can write to is untrusted input. This is the same defense the
     resources in post 07 used against process names.
     """
     return str(text).replace("|", "\\|")
@@ -120,14 +120,14 @@ async def fetch_foreign_keys() -> list[asyncpg.Record]:
 
 
 async def resolve_table_name(conn: asyncpg.Connection, table: str) -> str:
-    """Confirm a table exists, and return the catalogue's spelling of its name.
+    """Confirm a table exists, and return the catalog's spelling of its name.
 
     PostgreSQL will not accept an identifier as a bind parameter, so the name
     has to be interpolated into the statement text, and that is exactly where
     injection lives. The safe construction is this one: look the caller's
     string up in `information_schema` as a *parameter*, then build the query
-    from the name the catalogue handed back rather than from the caller's
-    string. The catalogue is the allowlist, and it cannot contain a name that
+    from the name the catalog handed back rather than from the caller's
+    string. The catalog is the allowlist, and it cannot contain a name that
     is not really a table.
     """
     row = await conn.fetchrow(_TABLE_EXISTS_SQL, INTROSPECTED_SCHEMA, table)
@@ -139,7 +139,7 @@ async def resolve_table_name(conn: asyncpg.Connection, table: str) -> str:
 
 
 async def fetch_table_sample(table: str, limit: int) -> tuple[str, list[asyncpg.Record]]:
-    """A few rows from one table, with the identifier taken from the catalogue.
+    """A few rows from one table, with the identifier taken from the catalog.
 
     An earlier version of this built `f"SELECT * FROM {table} LIMIT {limit}"`
     straight from the tool arguments, which is a SQL injection with a friendly

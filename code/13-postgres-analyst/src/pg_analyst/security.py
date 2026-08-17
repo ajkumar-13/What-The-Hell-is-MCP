@@ -7,7 +7,7 @@ Posts 13 and 14. This module has no database dependency at all, which is why
 
 Every statement is parsed with `sqlglot` using `dialect="postgres"`, and the
 checks below walk the resulting tree. That is a real difference from a
-tokeniser or a regex, and it shows up immediately:
+tokenizer or a regex, and it shows up immediately:
 
     SELECT * FROM users WHERE note = 'pg_sleep' LIMIT 1
 

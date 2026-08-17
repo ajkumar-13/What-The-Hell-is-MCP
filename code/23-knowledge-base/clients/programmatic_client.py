@@ -13,7 +13,7 @@ minutes wondering why a desktop app shows a red dot and no error message.
 ## Three corrections to the older, widely copied version of this script
 
 **1. `Client`, not `ClientSession` plus manual `initialize()`.** In SDK 2.x,
-`mcp.Client` is the whole client. It owns the transport, the handshake, and the
+`mcp.Client` is the whole client. It owns the transport, request correlation, and the
 multi-round-trip retry loop.
 
 **2. `streamable_http_client(url)` is a transport, not a pair of streams.** The

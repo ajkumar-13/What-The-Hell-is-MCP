@@ -149,7 +149,7 @@ async def test_query_database_refuses_before_touching_a_pool(sql):
 
 async def test_a_refusal_is_a_result_not_a_protocol_error():
     """A model that gets structured `ok: false` can correct itself next turn.
-    A model that gets a JSON-RPC error usually just apologises."""
+    A model that gets a JSON-RPC error usually just apologizes."""
     async with Client(mcp) as c:
         result = await c.call_tool("query_database", {"sql": "DROP TABLE users"})
         assert result.is_error is not True
@@ -394,7 +394,7 @@ async def test_non_json_column_types_survive_the_trip():
 
 
 @needs_database
-async def test_sample_table_uses_the_catalogue_as_its_allowlist():
+async def test_sample_table_uses_the_catalog_as_its_allowlist():
     async with Client(mcp) as c:
         result = await c.call_tool("sample_table", {"table": "products", "limit": 4})
         data = result.structured_content
@@ -412,8 +412,8 @@ async def test_sample_table_uses_the_catalogue_as_its_allowlist():
         "users WHERE 1=1",
     ],
 )
-async def test_sample_table_rejects_anything_not_in_the_catalogue(table):
-    """The injection test. None of these name a real table, so the catalogue
+async def test_sample_table_rejects_anything_not_in_the_catalog(table):
+    """The injection test. None of these name a real table, so the catalog
     lookup finds nothing and no SQL is ever built from them."""
     async with Client(mcp) as c:
         result = await c.call_tool("sample_table", {"table": table, "limit": 1})

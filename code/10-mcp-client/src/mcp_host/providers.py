@@ -97,7 +97,7 @@ class ScriptedProvider:
     exactly, keeps a real message history, and exercises every branch of the
     loop: parallel calls, several rounds, tool failures fed back as text. What
     it does not do is choose. That makes it useless for a demo of model
-    behaviour and ideal for a test of everything around the model.
+    behavior and ideal for a test of everything around the model.
     """
 
     name = "scripted"

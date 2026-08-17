@@ -47,7 +47,7 @@ def test_a_failed_tool_is_not_an_answer():
     assert "bad input" in outcome.for_model()
 
 
-def test_a_successful_tool_is_not_labelled_as_failed():
+def test_a_successful_tool_is_not_labeled_as_failed():
     result = CallToolResult(content=[TextContent(text="12 processes")])
     outcome = read_result("find_process", result)
 

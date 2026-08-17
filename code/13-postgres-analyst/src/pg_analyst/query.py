@@ -12,7 +12,7 @@ which by getting `executed_sql` back in the result.
 
 Errors are returned in the result rather than raised. A model that gets a
 structured `ok: false` with a `error` string can correct itself on the next
-turn; a model that gets a protocol error usually just apologises.
+turn; a model that gets a protocol error usually just apologizes.
 """
 
 from __future__ import annotations
@@ -181,7 +181,7 @@ async def sample_table(table: str, limit: int = 10) -> TableSample:
 
     Faster and safer than writing a query when all you want is a look at what
     a column actually contains. The table name is checked against the
-    database's own catalogue before it is used.
+    database's own catalog before it is used.
 
     Args:
         table: A table name in the public schema, for example `orders`.

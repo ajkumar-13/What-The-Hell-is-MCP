@@ -21,7 +21,7 @@ That is the whole shape of this module:
   present and the `anthropic` package is installed.
 - `summarize()` wraps whichever one you hand it and **records which one
   actually produced the text.** A provider call that fails falls back to the
-  extractive summarizer and says so in the result. Labelling a fallback as if
+  extractive summarizer and says so in the result. Labeling a fallback as if
   the model had run is the bug this module exists to not have.
 """
 
@@ -44,7 +44,7 @@ DEFAULT_MAX_SENTENCES = 5
 API_KEY_ENV = "ANTHROPIC_API_KEY"
 MODEL_ENV = "RESEARCH_BROWSER_MODEL"
 # Set this to force the no-network path even where a key is configured, which
-# is what you want in CI and when you are demonstrating the offline behaviour.
+# is what you want in CI and when you are demonstrating the offline behavior.
 FORCE_ENV = "RESEARCH_BROWSER_SUMMARIZER"
 
 _SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
@@ -165,7 +165,7 @@ class ExtractiveSummarizer:
             words = _content_words(sentence)
             if not words:
                 continue
-            # Normalising by sqrt(length) stops a single long paragraph-sentence
+            # Normalizing by sqrt(length) stops a single long paragraph-sentence
             # from winning on sheer word count alone.
             score = sum(frequencies[w] / peak for w in words) / math.sqrt(len(words))
             if focus_terms:

@@ -140,7 +140,7 @@ class FakeClient:
         self.messages = FakeMessages(reply, error)
 
 
-async def test_a_successful_provider_call_is_labelled_as_the_provider() -> None:
+async def test_a_successful_provider_call_is_labeled_as_the_provider() -> None:
     client = FakeClient(reply="A model wrote this.")
     provider = AnthropicSummarizer(model="claude-opus-5", client=client)
 
@@ -154,7 +154,7 @@ async def test_a_successful_provider_call_is_labelled_as_the_provider() -> None:
     assert result.note == ""
 
 
-async def test_a_failed_provider_call_is_never_labelled_as_the_provider() -> None:
+async def test_a_failed_provider_call_is_never_labeled_as_the_provider() -> None:
     """The defect this module exists to not have.
 
     The first edition caught the exception, fell through to truncated text, and

@@ -61,7 +61,7 @@ def test_nav_heavy_page_reduces_by_more_than_ninety_nine_percent(
     """The worse the page, the better the number.
 
     A short story wrapped in a mega menu, four ad slots, thirty recirculation
-    cards, and a serialised store is the case that makes the server worth
+    cards, and a serialized store is the case that makes the server worth
     building.
     """
     result = extract(nav_heavy_html, url="https://example.com/news/x", title="News")
@@ -163,7 +163,7 @@ def test_the_fallback_never_returns_javascript_as_prose(spa_shell_html: str) -> 
     for javascript in ("function", "dataLayer", "addEventListener", "querySelector"):
         assert javascript not in result.text, javascript
 
-    # Nor the serialised store, which is the other large inline script.
+    # Nor the serialized store, which is the other large inline script.
     assert "buildId" not in result.text
     assert "__NEXT_DATA__" not in result.text
 

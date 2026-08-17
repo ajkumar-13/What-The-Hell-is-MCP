@@ -339,7 +339,7 @@ async def test_every_requested_call_gets_a_result_even_when_mixed():
         assert "no such tool" in turn.results[2].text
 
 
-async def test_a_failed_tool_result_is_labelled_for_the_model():
+async def test_a_failed_tool_result_is_labeled_for_the_model():
     plan = [[("find_process", {"limit": "nope"})], "That did not work."]
     async with open_pool([spec()]) as pool:
         loop = ToolLoop(pool, PermissionGate(always_allow()), ScriptedProvider(plan))

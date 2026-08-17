@@ -154,7 +154,7 @@ class ToolOutcome:
     def for_model(self) -> str:
         """The string to send back as the tool result.
 
-        A failure is labelled, not hidden. Models recover from a tool error
+        A failure is labeled, not hidden. Models recover from a tool error
         they can read ("no such process") and cannot recover from one that
         arrives disguised as an answer.
         """

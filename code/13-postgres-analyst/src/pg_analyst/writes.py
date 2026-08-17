@@ -284,7 +284,7 @@ async def write_database(
             )
         # Both statements committed here, together. Had the audit insert
         # raised, the write above it would have rolled back with it, which is
-        # the behaviour you want: no unlogged change.
+        # the behavior you want: no unlogged change.
     except (asyncpg.PostgresError, DatabaseNotConfigured, OSError) as exc:
         audit_id = await _record_failure(plan, note, exc)
         server_log.warning("write failed and rolled back: %s", exc)

@@ -124,3 +124,20 @@ async def test_an_unknown_zone_is_a_row_not_a_failure():
         result = await c.call_tool("world_clock", {"zones": ["Mars/Olympus_Mons"]})
         assert result.is_error is not True
         assert result.structured_content["readings"][0]["local_time"] == "unknown zone"
+
+
+async def test_a_known_zone_actually_resolves():
+    """The counterpart to the test above, and the reason `tzdata` is a dependency.
+
+    zoneinfo reads the system IANA database, and Windows has none. Without
+    `tzdata` every zone falls into the "unknown zone" branch, including plain
+    UTC -- and every other test here still passes, because they only check that
+    the zone name is echoed back and that both clients agree. This one fails.
+    """
+    async with Client(mcp) as c:
+        result = await c.call_tool("world_clock", {"zones": ["UTC", "Asia/Tokyo"]})
+        readings = result.structured_content["readings"]
+
+    for reading in readings:
+        assert reading["local_time"] != "unknown zone", reading["zone"]
+        assert reading["utc_offset"], reading["zone"]

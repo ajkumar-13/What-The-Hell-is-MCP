@@ -85,7 +85,7 @@ def test_chained_statements_are_refused():
 
 
 def test_a_mutation_hidden_in_a_cte_is_refused():
-    """The reason this module uses a parser rather than a tokeniser.
+    """The reason this module uses a parser rather than a tokenizer.
 
     PostgreSQL really does execute this, and it really is a `Select` at the
     root, so every check that only looks at the leading keyword lets it past.
