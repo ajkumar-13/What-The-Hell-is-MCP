@@ -7,8 +7,8 @@ against protocol revision **2026-07-28**.
 No protocol background, no networking background, and no OAuth background are assumed.
 If you can read Python and run a command in a terminal, you have the prerequisites.
 
-This repository contains the source for all 24 posts, every diagram as editable SVG, eight
-runnable project codebases, and a one-page poster of the whole protocol.
+This repository contains the source for all 24 posts, every diagram as a self-contained SVG,
+eight runnable project codebases, and a one-page poster of the whole protocol.
 
 Every code sample is Python. The protocol itself is language-neutral, and the wire formats
 shown here are exactly what a TypeScript, Go, or Rust server would send; only the SDK calls
@@ -168,9 +168,14 @@ full table of what changed.
 
 ## How the diagrams are made
 
-Every diagram is hand-edited SVG drawn against a single design-token system that supports
-light and dark mode and is colorblind-safe. Client side is blue, server side is terracotta,
-and a request always flows blue to terracotta.
+Every diagram is drawn by hand and generated from a scene file, so the sketched line is
+deliberate rather than an artifact. Each element carries a seed derived from its index,
+which makes a rebuild byte-identical and keeps a regeneration from showing up as a diff.
+
+They are drawn against a single design-token system that supports light and dark mode and
+is colorblind-safe: the SVG carries `var(--mcp-*)` rather than baked hex, with the light
+and `prefers-color-scheme` blocks inlined, so one file serves both themes. Client side is
+blue, server side is terracotta, and a request always flows blue to terracotta.
 
 You are welcome to copy, remix, or translate them under CC-BY 4.0. Please credit the series
 and link back.
