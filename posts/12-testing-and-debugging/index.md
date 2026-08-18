@@ -138,7 +138,9 @@ The nineteen take six seconds, which looks slow next to the knowledge-base numbe
 
 ## 4. Two rules that make async tests work
 
-These two will cost you more time than anything else in this post. Neither is documented anywhere you would look, and both produce error messages that point at the wrong thing.
+These two will cost you more time than anything else in this post. Neither is documented anywhere you would look, and both produce error messages that point at the wrong thing. They are also the same bug twice: the client owns an `anyio` task group, and everything below follows from that one fact.
+
+![Two panels side by side over a shared picture of two lanes, one for the pytest fixture task and one for the test task. In the left panel a yield fixture enters the client context on the fixture lane, hands it down to the test body on the test lane, and exits it back up on the fixture lane, so the group is entered in one task and exited in another and teardown raises. In the right panel the fixture lane is empty and the enter marker, the test body, and the exit marker all sit in one row on the test lane. Below them, a raised exception is drawn as three nested boxes, an ExceptionGroup inside an ExceptionGroup inside the original error, which is why one level of unwrapping is not enough.](diagrams/03-one-task-group.svg) *Both failures are the same task group: who exits it, and what it does to whatever escapes it.*
 
 ### Do not hand the client over from a yield fixture
 
