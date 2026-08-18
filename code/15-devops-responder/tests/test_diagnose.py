@@ -281,7 +281,7 @@ def test_the_failed_phase_is_reported_with_its_reason():
     assert "Evicted" in result.likely_cause
 
 
-def test_an_unrecognised_failure_says_it_does_not_know():
+def test_an_unrecognized_failure_says_it_does_not_know():
     """The honest answer beats a confident wrong one."""
     pod = make_pod(
         "web-1",

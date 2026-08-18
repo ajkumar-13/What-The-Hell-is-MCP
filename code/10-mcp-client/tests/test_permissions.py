@@ -166,7 +166,7 @@ async def test_a_destructive_tool_always_prompts():
     assert len(asked) == 2
 
 
-async def test_allow_always_is_not_honoured_for_a_destructive_tool():
+async def test_allow_always_is_not_honored_for_a_destructive_tool():
     """The user can say "always". The host declines to remember it.
 
     That is a deliberate asymmetry, and it is the sharp end of the policy:
