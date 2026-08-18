@@ -151,7 +151,24 @@ full table of what changed.
 
 ---
 
-## Reference assets
+## Repository layout
+
+```
+posts/NN-slug/
+├── index.md          # the post
+├── frontmatter.yaml  # title, date, tags, hero, reading time
+└── diagrams/         # the figures it embeds, as SVG
+
+code/                 # eight runnable projects, plus the deployment configs for post 21
+poster/               # the one-page reference sheet
+```
+
+Each post is plain Markdown with relative links, so it reads on GitHub as-is. Nothing here
+needs a site generator.
+
+---
+
+## Reference material
 
 - [GLOSSARY.md](GLOSSARY.md) — every term, one line each.
 - [CHEATSHEET.md](CHEATSHEET.md) — one printable page: the method table, the `_meta` keys,
@@ -161,21 +178,16 @@ full table of what changed.
 - [poster/one-page-of-mcp.svg](poster/one-page-of-mcp.svg) — the whole protocol on one
   canvas, drawn by hand and designed to print at A2.
 - [code/](code/) — eight runnable projects. Every measured figure a post quotes comes from
-  running one of them, and each has a test suite that reproduces it. If a post and its
-  source disagree, the post is wrong. Ground truth before prose.
+  running one of them, and each ships a test suite that reproduces it.
 
 ---
 
-## How the diagrams are made
+## The diagrams
 
-Every diagram is drawn by hand and generated from a scene file, so the sketched line is
-deliberate rather than an artifact. Each element carries a seed derived from its index,
-which makes a rebuild byte-identical and keeps a regeneration from showing up as a diff.
-
-They are drawn against a single design-token system that supports light and dark mode and
-is colorblind-safe: the SVG carries `var(--mcp-*)` rather than baked hex, with the light
-and `prefers-color-scheme` blocks inlined, so one file serves both themes. Client side is
-blue, server side is terracotta, and a request always flows blue to terracotta.
+Every diagram is hand-drawn, and every one is a self-contained SVG that reads correctly in
+both light and dark mode. The palette is colorblind-safe and consistent across all 24 posts:
+client side is blue, server side is terracotta, and a request always flows blue to
+terracotta.
 
 You are welcome to copy, remix, or translate them under CC-BY 4.0. Please credit the series
 and link back.
@@ -197,3 +209,11 @@ documentation moves; if a link here is dead or a claim is stale, that is a real 
 MCP is becoming the way software talks to models, and the on-ramp should not sit behind a
 paywall. If this series helps you, the best thank-you is to send it to one other person who
 is trying to work out what the hell MCP is.
+
+---
+
+## License
+
+Prose and diagrams are licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
+Code is licensed under the MIT License. See [LICENSE](LICENSE) for the full text and for
+which files fall under which.
