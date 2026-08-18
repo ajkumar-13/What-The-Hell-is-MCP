@@ -45,6 +45,12 @@ need real entropy.
 resolver, so an out-of-bounds change fails before anyone is asked to approve it, rather than
 in the tool body, where the refusal arrives after a human has already been prompted.
 
+**`CacheableResult`** — The result type carrying `ttlMs` and `cacheScope`, both required.
+Servers **must** include them on `complete` results from six methods: `server/discover`,
+`tools/list`, `prompts/list`, `resources/list`, `resources/templates/list`, and
+`resources/read`. `tools/call`, `prompts/get`, and `completion/complete` are not cacheable and
+carry neither field.
+
 **`cacheScope`** — The required companion to `ttlMs` on a cacheable result: `public` or
 `private`. `private` means caches **must not** be shared across authorization contexts. It is
 a sharing hint, and a server **must not** rely on it alone to prevent unauthorized access.
@@ -83,6 +89,12 @@ model uses a *different*, trusted server's tools. The malicious server is never 
 nothing about it appears in the interaction log. Not the host-side *shadow* strategy for name
 collisions.
 
+**CSP (Content Security Policy)** — The browser policy the host applies to an MCP Apps view.
+The host builds it from the resource's own `ui.csp` declarations — `connectDomains` becomes
+`connect-src`, `resourceDomains` becomes the script, style, image, font, and media sources,
+`frameDomains` becomes `frame-src` — over a `default-src 'none'` base. A declaration is a
+request, and the host is free to narrow it.
+
 **Cursor** — The opaque pagination token a list result returns as `nextCursor` and a later
 request sends back. Clients **must** treat it as opaque, and an empty string is a valid
 cursor rather than the end of the results. Not the editor of the same name.
@@ -94,6 +106,12 @@ earliest removal in the first revision released on or after 2027-07-28. Use CIMD
 **Deprecated features registry** — The specification's table of what is deprecated, from
 which revision, and what to migrate to. It is where a feature's earliest-removal date is
 stated, and the first place to check before building on anything.
+
+**DNS rebinding** — An attack where a hostile page resolves its own name to `127.0.0.1` after
+the browser has loaded it, so the page's own scripts can reach a server bound to loopback. It
+is why a local server **must** validate `Origin`, and why the Python SDK's
+`TransportSecuritySettings` carries `enable_dns_rebinding_protection`, `allowed_hosts`, and
+`allowed_origins`.
 
 **Dry run** — A call that validates a change and reports what would happen without executing
 it and without asking anyone to approve it. The cheapest gate on a write path, because it
@@ -107,7 +125,9 @@ spends no consent.
 `initialize` handshake), or *dual-era*.
 
 **Extension** — An optional, independently versioned addition to the protocol, named with a
-reverse-DNS identifier such as `io.modelcontextprotocol/tasks`. Always opt-in.
+reverse-DNS identifier such as `io.modelcontextprotocol/tasks`. Always opt-in: each side
+declares it in an `extensions` map, where `{}` means supported with no settings. A client that
+does not declare one **must** still get core behavior back.
 
 **Handle** — A server-minted opaque identifier passed back as an ordinary tool argument.
 The stateless replacement for storing things in a session.
@@ -120,7 +140,8 @@ template, or prompt. Nothing requires a host to render them, and one that does n
 conformant.
 
 **`initialize`** — **(removed)** The handshake that used to open a connection. Replaced by
-`server/discover` plus per-request `_meta`.
+`server/discover` plus per-request `_meta`. MCP Apps' `ui/initialize` is a different
+handshake on a different channel and is unaffected.
 
 **`InputRequiredResult`** — A result whose `resultType` is `input_required`, carrying
 `inputRequests`, `requestState`, or both. Each field is individually optional, but at least
@@ -143,6 +164,12 @@ clients should feed the message back to the model so it can retry.
 **JSON-RPC 2.0** — The message format MCP is built on. Requests carry `id` and `method`,
 responses carry `result` or `error`, and notifications carry no `id`.
 
+**JWT (JSON Web Token)** — A signed, self-describing access token whose claims, including
+`aud`, a server can validate locally against the authorization server's published keys, per
+RFC 9068. Its opposite is an opaque token, which carries no readable claims and has to be
+handed to the authorization server's introspection endpoint instead. Which one you hold
+changes how you perform the audience check, not whether you perform it.
+
 **Lethal trifecta** — The combination of access to private data, exposure to untrusted
 content, and the ability to communicate externally. Any agent with all three can be made to
 exfiltrate.
@@ -161,8 +188,9 @@ only stable one, which lets a tool point at a `ui://` resource the host renders 
 double-sandboxed frame. It versions on its own cadence, and the tool's text `content` must
 still stand on its own.
 
-**MCPB** — A bundle format packaging a server for one-click desktop installation. Formerly
-`.dxt`.
+**MCPB** — A bundle format packaging a server for one-click desktop installation, as a
+`.mcpb` file carrying a `manifest.json`. Formerly `.dxt`, and the old `dxt_version` manifest
+key is still accepted, so set `manifest_version` explicitly.
 
 **`Mcp-Method` and `Mcp-Name`** — HTTP headers mirroring `method` and `params.name` or
 `params.uri`, so a proxy can route, log, or rate limit without parsing the body. Required
@@ -173,6 +201,12 @@ body disagree, with `-32020`.
 required on every POST and mirroring `io.modelcontextprotocol/protocolVersion` in the body.
 Routing-relevant values appear twice on purpose, once for a proxy to read cheaply and once
 for the server to execute, which is why the server must validate that they agree.
+
+**`mcpServers`** — The top-level key of a host's configuration file, and the first thing that
+differs between hosts: Claude Desktop, Claude Code, Cursor, and Gemini CLI use `mcpServers`,
+VS Code uses `servers`, and Zed uses `context_servers`. The entries below it disagree too,
+about whether a `type` field exists and about how a variable is spelled. None of it reaches
+the wire.
 
 **`_meta`** — The reserved metadata object carried on protocol messages. Since 2026-07-28 it
 is load-bearing: it carries the protocol version, client capabilities, client identity, log
@@ -190,13 +224,19 @@ the original request with `inputResponses` attached.
 **Name collision** — Two connected servers exposing the same tool name. Names are unique only
 within one server, so the host disambiguates, and the separator has to be a dot because a
 slash is outside the character set a tool name may use. The prefix comes from the key in your
-own configuration, never from the server's self-reported name.
+own configuration, never from the server's self-reported name. Qualifying every colliding name
+is the strategy this series builds; the alternatives are *shadowing*, where first or last wins
+and one tool silently disappears, and refusing the connection outright.
 
 **Namespace** — In the registry, the reverse-domain prefix of a `server.json` `name`, such as
 `io.github.you/`. You have to prove you own it, by GitHub identity, a DNS `TXT` record, or a
 file on your own domain, and that is a separate proof from owning the package it points at.
 
 **Notification** — A JSON-RPC message with no `id` and therefore no response.
+
+**OpenTelemetry** — The vendor-neutral tracing standard MCP leans on now that protocol
+logging is deprecated. A trace is a tree of spans; the W3C trace context in `_meta` is what
+lets your server's spans join the host's tree rather than starting a second one.
 
 **`Origin` validation** — The requirement that a server check the `Origin` header on every
 incoming connection and answer `403 Forbidden` where it is present and invalid. It is what
@@ -218,13 +258,24 @@ synchronous call, and not available on tasks at all.
 **Prompt** — A user-invoked template that expands into one or more pre-filled messages.
 User-controlled, unlike a tool.
 
+**Prompt injection** — Text that reaches the model as data and is followed as instruction.
+Every attack in this series is a delivery mechanism for it: a tool description at
+`tools/list` time, a row in a database, an issue in a repository, a page a browser tool
+fetched. The protocol does not stop it, so the defenses are the host gate and what the tool
+was allowed to do in the first place.
+
 **Protected resource metadata** — The RFC 9728 document a protected server **must** publish,
 naming its canonical `resource` identifier, the authorization servers whose tokens it
 accepts, and its published minimum scopes. A client finds it through the `resource_metadata`
 parameter on a `401` challenge, or by probing the well-known URI.
 
 **Protocol error** — A JSON-RPC-level failure such as an unknown method or malformed
-request. Distinct from a tool execution error.
+request, carried in an `error` member rather than a `result`. Distinct from a tool execution
+error. Codes `-32020` to `-32099` are reserved for the specification and allocated
+sequentially: `-32020` (`HeaderMismatch`), `-32021` (`MissingRequiredClientCapability`, whose
+`data.requiredCapabilities` names what was missing), and `-32022`
+(`UnsupportedProtocolVersion`) are the three defined so far, and all three answer `400 Bad
+Request`. Resource-not-found is now `-32602`, not the retired `-32002`.
 
 **Provider** — A model vendor's own HTTP application programming interface, reached with a
 key, and outside MCP entirely. What a server calls directly now that sampling is deprecated,
@@ -260,22 +311,29 @@ refreshes, or revokes anything.
 `input_required`, or, with the tasks extension, `task`.
 
 **Roots** — **(deprecated)** A client-side capability advertising which directories a server
-may operate within. Pass the paths as tool arguments or server configuration instead.
+may operate within. `roots/list` survives only inside MRTR `inputRequests`, and
+`notifications/roots/list_changed` is **(removed)** with no window. Pass the paths as tool
+arguments or server configuration instead.
 
 **Rug pull** — A server that changes its tool definitions after being approved, so the
 thing the user consented to is not the thing that runs.
 
 **Sampling** — **(deprecated)** A server asking the host's model to generate a completion.
-There is no back channel for it since 2026-07-28. Call a model provider directly and
-disclose that you are doing so.
+There is no back channel for it since 2026-07-28: `sampling/createMessage` survives only as a
+`CreateMessageRequest` inside MRTR `inputRequests`, and earliest removal is the first revision
+released on or after 2027-07-28. Call a model provider directly and disclose that you are
+doing so.
 
 **Scope** — A named permission carried on an access token. Publish the minimum in
 `scopes_supported`, answer `403` with an `insufficient_scope` challenge rather than `401`
 when a token is valid but too thin, and name every scope an operation needs at once rather
 than one at a time.
 
-**SEP (Specification Enhancement Proposal)** — The process by which MCP changes. Reading the
-SEP usually explains *why* far better than the normative text does.
+**SEP (Specification Enhancement Proposal)** — The process by which MCP changes, running
+propose, implement, review, publish, adopt, with a reference implementation required before
+review. A Standards Track SEP changes the core specification; an Extensions Track one ships an
+extension, and promoting that extension into core later needs its own Standards Track SEP.
+Reading the SEP usually explains *why* far better than the normative text does.
 
 **Server** — The process exposing tools, resources, and prompts. Usually your code. Not
 necessarily remote and not necessarily a web service. When it speaks OAuth it plays the
@@ -291,6 +349,12 @@ artifact, which is why the stateless revision changed nothing in it.
 
 **Session** — **(removed)** The protocol-level connection state, formerly tracked with
 `Mcp-Session-Id`. Its removal is what makes MCP servers ordinary scalable web services.
+
+**SSE (Server-Sent Events)** — The one-way `text/event-stream` format a Streamable HTTP POST
+uses when a server streams notifications before its response. Each request has its own stream,
+closing the stream **must** be treated as cancellation of that request, and resumability is
+gone: there is no `Last-Event-ID` and no redelivery, so a client that loses a stream re-issues
+with a new request id.
 
 **SSRF (Server-Side Request Forgery)** — Making a party fetch a URL an attacker chose. In MCP
 it is mostly a client problem: the URLs come from the server you connected to, so require
@@ -328,10 +392,11 @@ effects by design.
 **Tool poisoning** — Hiding instructions in a tool's description or schema so that merely
 listing the tool injects them into the model's context.
 
-**Trace context** — The W3C `traceparent`, `tracestate`, and `baggage` keys, the only
-unprefixed reserved `_meta` keys. Riding in `_meta` rather than in an HTTP header is what lets
-a stdio server join the host's OpenTelemetry trace; prefixing them produces a key nothing
-reads.
+**Trace context** — The W3C `traceparent`, `tracestate`, and `baggage` keys, named by the
+specification as an explicit exception to the reverse-DNS prefix rule for reserved `_meta`
+keys; `progressToken` is the only other reserved key with a bare name. Riding in `_meta`
+rather than in an HTTP header is what lets a stdio server join the host's OpenTelemetry
+trace; prefixing them produces a key nothing reads.
 
 **Transport** — The layer carrying JSON-RPC messages: stdio or Streamable HTTP.
 
@@ -342,6 +407,11 @@ It is permission to skip a request, not an instruction to make one.
 **`ui://`** — The URI scheme MCP Apps reserves for the HTML document a host fetches with
 `resources/read` and renders. The MIME type **must** be `text/html;profile=mcp-app`, and the
 document may be omitted from `resources/list` entirely.
+
+**`ui/initialize`** — The MCP Apps handshake between a view and its host, carried over
+`window.postMessage` rather than over an MCP transport, and versioned on the Apps line
+(`McpUiInitializeResult.protocolVersion`) rather than the core one. Unrelated to the removed
+core `initialize`, and not something to "fix".
 
 **URI template** — See *resource template*.
 
@@ -354,6 +424,12 @@ not that the out-of-band work finished.
 header pointed it at a server's metadata. RFC 9728 inserts the segment between host and path,
 so a server at `/mcp` publishes at `/.well-known/oauth-protected-resource/mcp` and not at the
 root.
+
+**`WWW-Authenticate`** — The header a protected server sends on a `401`, and the client's
+route to your metadata: its `resource_metadata` parameter names where the protected resource
+metadata lives. The same header carries `error` and `error_description`, and on a `403` it
+carries `insufficient_scope` plus the `scope` the caller still needs, which is what makes a
+step-up possible without a fresh login.
 
 **`x-mcp-header`** — A JSON Schema annotation on a tool input property, and not an HTTP
 header itself. Its value supplies the name in a resulting `Mcp-Param-{Name}` header. Never
