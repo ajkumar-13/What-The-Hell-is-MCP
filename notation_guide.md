@@ -86,9 +86,10 @@ and *traveled* (one `l`), *catalog* (no `-ue`), *canceled* (one `l`, matching th
 `notifications/cancelled` only when quoting the literal method name — the method itself is
 spelled with two `l`s, so quote it exactly and do not "fix" it in code spans).
 
-The same holds for identifiers in [code/](code/). Quote `analyse()` and
-`test_init_containers_are_analysed_too` exactly as the source spells them, and keep the
-American form in the surrounding prose.
+The same holds for identifiers in [code/](code/), with no grandfathered exceptions: an
+identifier is renamed rather than quoted around. Where a post shows a function or a test
+name, the post and the source move together, so a quoted name is always byte-identical to
+the code it comes from.
 
 The checker flags minority variants of `-ise`/`-ize`, `-isation`/`-ization`,
 `-iser`/`-izer`, `-ised`/`-ized`. It does **not** catch the doubled-consonant family

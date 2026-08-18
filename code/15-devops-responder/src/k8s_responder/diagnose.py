@@ -7,7 +7,7 @@ as a terminated record with an exit code, and often only the events explain how
 the kubelet got there. Reading one of those three and stopping is how you end up
 telling someone their pod is "restarting" when it is out of memory.
 
-`analyse()` below is a pure function of (pod object, events). It touches no
+`analyze()` below is a pure function of (pod object, events). It touches no
 network, which is why the test suite can throw two dozen synthetic pods at it
 without a cluster anywhere in sight. The tools are thin wrappers that fetch and
 then call it.
@@ -125,7 +125,7 @@ class Verdict(NamedTuple):
 # --------------------------------------------------------------------------
 
 
-def analyse(pod, events: list[ClusterEvent] | None = None) -> Diagnosis:
+def analyze(pod, events: list[ClusterEvent] | None = None) -> Diagnosis:
     """Correlate pod status, container statuses, and events into one verdict.
 
     The order of the checks below is the order of specificity, not the order of
@@ -275,7 +275,7 @@ def _event_findings(events: list[ClusterEvent]) -> list[Finding]:
     ]
 
 
-# Each check returns a `Verdict` or None. Splitting them out keeps `analyse`
+# Each check returns a `Verdict` or None. Splitting them out keeps `analyze`
 # readable and lets a test aim at exactly one signature at a time.
 
 
@@ -552,7 +552,7 @@ async def diagnose_pod(pod_name: str, namespace: str = "default") -> Diagnosis:
     """
     pod = await fetch_pod(pod_name, namespace)
     events = await fetch_pod_events(pod_name, namespace)
-    return analyse(pod, events)
+    return analyze(pod, events)
 
 
 @mcp.tool(title="Find crash loops", annotations=READ_ONLY)
@@ -596,7 +596,7 @@ async def find_crash_loops(namespace: str = "default", limit: int = 10) -> Crash
         if row.phase != "Running" or row.restarts > threshold or "0/" in row.ready:
             interesting.append(pod)
 
-    diagnoses = [analyse(p, by_pod.get(p.metadata.name, [])) for p in interesting]
+    diagnoses = [analyze(p, by_pod.get(p.metadata.name, [])) for p in interesting]
     diagnoses = [d for d in diagnoses if not d.healthy][:limit]
 
     verdicts: dict[str, int] = {}
@@ -618,7 +618,7 @@ __all__ = [
     "Diagnosis",
     "CrashLoopReport",
     "Finding",
-    "analyse",
+    "analyze",
     "diagnose_pod",
     "find_crash_loops",
 ]

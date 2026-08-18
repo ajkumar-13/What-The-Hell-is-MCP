@@ -215,7 +215,7 @@ statuses = list(pod.status.container_statuses or []) if pod.status else []
 statuses += list(pod.status.init_container_statuses or []) if pod.status else []
 ```
 
-A pod that never gets past its init container looks identical to a healthy pod if you only read `containerStatuses`. That is two lines to avoid an entire category of wrong answer, and there is a test named `test_init_containers_are_analysed_too` that fails if either is removed.
+A pod that never gets past its init container looks identical to a healthy pod if you only read `containerStatuses`. That is two lines to avoid an entire category of wrong answer, and there is a test named `test_init_containers_are_analyzed_too` that fails if either is removed.
 
 One more piece of defensive shape. Events are a separate RBAC resource from pods, so a service account can perfectly well be allowed one and not the other. Losing events should degrade a diagnosis, not fail it:
 
@@ -286,7 +286,7 @@ Two smaller things in the same tool. A 404 becomes a sentence in `note` with an 
 
 ## 7. Diagnosing, as a pure function
 
-The analysis in [diagnose.py](../../code/15-devops-responder/src/k8s_responder/diagnose.py) is one function, `analyse(pod, events)`, that touches no network. The tools are thin wrappers that fetch and then call it. That split is worth the small amount of plumbing it costs: the interesting logic is the correlation, and correlation is testable without a cluster, a server, or an event loop. All twenty-four tests in [tests/test_diagnose.py](../../code/15-devops-responder/tests/test_diagnose.py) call it directly, and they run in 0.06 seconds.
+The analysis in [diagnose.py](../../code/15-devops-responder/src/k8s_responder/diagnose.py) is one function, `analyze(pod, events)`, that touches no network. The tools are thin wrappers that fetch and then call it. That split is worth the small amount of plumbing it costs: the interesting logic is the correlation, and correlation is testable without a cluster, a server, or an event loop. All twenty-four tests in [tests/test_diagnose.py](../../code/15-devops-responder/tests/test_diagnose.py) call it directly, and they run in 0.06 seconds.
 
 The function runs ten checks in order and returns on the first match:
 

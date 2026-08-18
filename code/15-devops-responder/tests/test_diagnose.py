@@ -1,6 +1,6 @@
 """Crash-loop detection against synthetic pods. Post 15.
 
-`analyse()` is a pure function of a pod object and a list of events, so every
+`analyze()` is a pure function of a pod object and a list of events, so every
 case below is a shape of failure written out in full and handed straight to it.
 No cluster, no network, no server, no event loop. That is the point of keeping
 the analysis separate from the tools that fetch its inputs: the interesting
@@ -15,7 +15,7 @@ from __future__ import annotations
 
 import unicodedata
 
-from k8s_responder.diagnose import analyse
+from k8s_responder.diagnose import analyze
 from k8s_responder.inspect import ClusterEvent
 
 from conftest import (
@@ -46,7 +46,7 @@ def event(reason: str, message: str = "something happened", type_: str = "Warnin
 
 def test_a_running_ready_pod_is_healthy():
     pod = make_pod("web-1", statuses=[container_status(ready=True, restarts=0)])
-    result = analyse(pod, [])
+    result = analyze(pod, [])
     assert result.healthy is True
     assert result.verdict == "healthy"
     assert result.likely_cause == ""
@@ -59,7 +59,7 @@ def test_a_completed_pod_is_not_a_failure():
         phase="Succeeded",
         statuses=[container_status(ready=False, state=terminated(0, "Completed"))],
     )
-    assert analyse(pod, []).healthy is True
+    assert analyze(pod, []).healthy is True
 
 
 # --------------------------------------------------------------------------
@@ -79,7 +79,7 @@ def test_crashloopbackoff_is_a_crash_loop():
             )
         ],
     )
-    result = analyse(pod, [])
+    result = analyze(pod, [])
     assert result.verdict == "crash_loop"
     assert result.confidence == "high"
     assert result.restart_count == 9
@@ -98,7 +98,7 @@ def test_the_exit_code_is_translated_not_just_repeated():
             )
         ],
     )
-    result = analyse(pod, [])
+    result = analyze(pod, [])
     assert result.verdict == "crash_loop"
     assert "127" in result.likely_cause
     assert "not found in the image" in result.likely_cause
@@ -117,7 +117,7 @@ def test_exit_code_zero_is_still_a_crash_loop():
             )
         ],
     )
-    result = analyse(pod, [])
+    result = analyze(pod, [])
     assert result.verdict == "crash_loop"
     assert "restartPolicy Always" in result.likely_cause
 
@@ -140,7 +140,7 @@ def test_a_crash_loop_between_backoffs_is_still_caught():
             )
         ],
     )
-    result = analyse(pod, [])
+    result = analyze(pod, [])
     assert result.verdict == "crash_loop"
     assert result.confidence == "medium"
 
@@ -157,7 +157,7 @@ def test_an_unknown_exit_code_says_so_rather_than_guessing():
             )
         ],
     )
-    result = analyse(pod, [])
+    result = analyze(pod, [])
     assert "application-defined" in result.likely_cause
 
 
@@ -184,7 +184,7 @@ def test_oom_beats_crashloop():
             )
         ],
     )
-    result = analyse(pod, [])
+    result = analyze(pod, [])
     assert result.verdict == "oom_killed"
     assert "memory" in result.likely_cause.lower()
 
@@ -201,7 +201,7 @@ def test_image_pull_failure_is_not_a_crash_loop():
         ],
         phase="Pending",
     )
-    result = analyse(pod, [])
+    result = analyze(pod, [])
     assert result.verdict == "image_pull_failure"
     assert "registry" in result.likely_cause
 
@@ -220,14 +220,14 @@ def test_a_missing_configmap_is_a_config_error():
             )
         ],
     )
-    result = analyse(pod, [])
+    result = analyze(pod, [])
     assert result.verdict == "config_error"
     assert "checkout-config" in result.likely_cause
 
 
 def test_pending_with_failedscheduling_is_unschedulable():
     pod = make_pod("web-1", phase="Pending", statuses=[])
-    result = analyse(
+    result = analyze(
         pod,
         [event("FailedScheduling", "0/3 nodes are available: 3 Insufficient cpu.")],
     )
@@ -238,7 +238,7 @@ def test_pending_with_failedscheduling_is_unschedulable():
 def test_pending_without_an_event_is_just_pending():
     """Not every Pending pod is broken. Most of them are downloading an image."""
     pod = make_pod("web-1", phase="Pending", statuses=[])
-    result = analyse(pod, [])
+    result = analyze(pod, [])
     assert result.verdict == "pending"
     assert result.confidence == "low"
 
@@ -248,7 +248,7 @@ def test_a_failing_probe_is_reported_as_a_probe_failure():
         "web-1",
         statuses=[container_status(ready=False, restarts=1, state=running())],
     )
-    result = analyse(
+    result = analyze(
         pod, [event("Unhealthy", "Readiness probe failed: HTTP probe failed with 503")]
     )
     assert result.verdict == "probe_failure"
@@ -257,26 +257,26 @@ def test_a_failing_probe_is_reported_as_a_probe_failure():
 
 def test_a_ready_pod_with_an_old_unhealthy_event_is_not_a_probe_failure():
     pod = make_pod("web-1", statuses=[container_status(ready=True)])
-    result = analyse(pod, [event("Unhealthy", "Readiness probe failed")])
+    result = analyze(pod, [event("Unhealthy", "Readiness probe failed")])
     assert result.healthy is True
 
 
 def test_a_pod_that_is_up_but_has_restarted_a_lot_is_flagged():
     pod = make_pod("web-1", statuses=[container_status(ready=True, restarts=11)])
-    result = analyse(pod, [])
+    result = analyze(pod, [])
     assert result.verdict == "restarting"
     assert result.restart_count == 11
 
 
 def test_a_terminating_pod_is_not_reported_as_a_failure():
     pod = make_pod("web-1", deleting=True, statuses=[container_status(ready=True)])
-    result = analyse(pod, [])
+    result = analyze(pod, [])
     assert result.verdict == "terminating"
 
 
 def test_the_failed_phase_is_reported_with_its_reason():
     pod = make_pod("web-1", phase="Failed", statuses=[], reason="Evicted")
-    result = analyse(pod, [])
+    result = analyze(pod, [])
     assert result.verdict == "failed"
     assert "Evicted" in result.likely_cause
 
@@ -287,7 +287,7 @@ def test_an_unrecognized_failure_says_it_does_not_know():
         "web-1",
         statuses=[container_status(ready=False, restarts=0, state=running())],
     )
-    result = analyse(pod, [])
+    result = analyze(pod, [])
     assert result.verdict == "unknown"
     assert result.confidence == "low"
     assert "Not determined" in result.likely_cause
@@ -310,7 +310,7 @@ def test_every_finding_names_the_field_it_came_from():
             )
         ],
     )
-    result = analyse(pod, [event("BackOff", "Back-off restarting failed container")])
+    result = analyze(pod, [event("BackOff", "Back-off restarting failed container")])
 
     sources = {f.source for f in result.findings}
     assert "status.phase" in sources
@@ -322,7 +322,7 @@ def test_every_finding_names_the_field_it_came_from():
 
 def test_only_warning_events_become_findings():
     pod = make_pod("web-1", statuses=[container_status(ready=True)])
-    result = analyse(
+    result = analyze(
         pod,
         [
             event("Pulled", "Container image already present", type_="Normal"),
@@ -346,11 +346,11 @@ def test_next_steps_point_at_the_previous_container_log():
             )
         ],
     )
-    steps = " ".join(analyse(pod, []).next_steps)
+    steps = " ".join(analyze(pod, []).next_steps)
     assert "previous=True" in steps
 
 
-def test_init_containers_are_analysed_too():
+def test_init_containers_are_analyzed_too():
     """A pod stuck in its init container looks healthy if you skip them."""
     pod = make_pod("web-1", phase="Pending", statuses=[])
     pod.status.init_container_statuses = [
@@ -362,7 +362,7 @@ def test_init_containers_are_analysed_too():
             last_state=terminated(1),
         )
     ]
-    result = analyse(pod, [])
+    result = analyze(pod, [])
     assert result.verdict == "crash_loop"
     assert "wait-for-db" in result.summary
 
@@ -370,7 +370,7 @@ def test_init_containers_are_analysed_too():
 def test_a_pod_with_no_status_at_all_does_not_explode():
     pod = make_pod("web-1", statuses=[])
     pod.status = None
-    result = analyse(pod, [])
+    result = analyze(pod, [])
     assert result.pod == "web-1"
 
 
@@ -392,7 +392,7 @@ def test_no_diagnosis_text_contains_an_emoji():
             )
         ],
     )
-    result = analyse(pod, [event("BackOff", "Back-off restarting failed container")])
+    result = analyze(pod, [event("BackOff", "Back-off restarting failed container")])
 
     text = " ".join(
         [result.summary, result.likely_cause, *result.next_steps]
