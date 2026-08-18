@@ -51,6 +51,8 @@ logging goes to stderr, which is set up in `app.py`.
 uv run pytest
 ```
 
+`78 passed`, in a few seconds.
+
 **The suite needs no cluster.** `tests/conftest.py` is a fake CoreV1Api and
 AppsV1Api pair that returns real `kubernetes.client` model objects and raises
 real `ApiException`s, installed through `cluster.use()`. Nothing in the package

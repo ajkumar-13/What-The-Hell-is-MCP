@@ -10,7 +10,7 @@ Apps at its smallest.
 |---|---|
 | `src/mcp_app_demo/server.py` | The tool, the resource, and the `Apps` extension instance. |
 | `src/mcp_app_demo/widget.html` | The View. The postMessage dialect written out by hand. |
-| `tests/test_app.py` | Ten in-memory protocol tests. |
+| `tests/test_app.py` | Eleven in-memory protocol tests. |
 
 ## Requirements
 
@@ -22,9 +22,14 @@ uv run pytest
 uv run python -m mcp_app_demo --http     # 127.0.0.1:8000/mcp
 ```
 
+`uv run pytest` reports `11 passed, 1 warning`.
+
 The `mcp` dependency is pinned exactly to `2.0.0b2`. That is the release that
 implements protocol revision 2026-07-28 and the first one to ship
-`mcp.server.apps`.
+`mcp.server.apps`. The only other dependency is `tzdata`, unpinned: `zoneinfo`
+reads the system IANA database, Windows has no such database and slim Linux
+images often drop it, and without it every zone `world_clock` is handed --
+`UTC` included -- comes back as an unknown zone.
 
 ## What the SDK covers, and what it does not
 

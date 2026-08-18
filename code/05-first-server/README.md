@@ -48,6 +48,8 @@ logging goes to stderr, which is set up in `app.py`.
 uv run pytest
 ```
 
+`19 passed`, in a few seconds.
+
 The tests connect a client directly to the server object with no subprocess and
 no socket, so the whole suite finishes in a few seconds while still exercising
 the real protocol path. Post 12 explains the pattern.

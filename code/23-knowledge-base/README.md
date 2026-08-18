@@ -52,6 +52,8 @@ logging goes to stderr, which is set up in `app.py`.
 uv run pytest
 ```
 
+`51 passed`, in a few seconds, with no network.
+
 Two files, split by what they can tell you when they fail:
 
 - `tests/test_index.py` imports no MCP at all. When a search result looks wrong,

@@ -5,7 +5,7 @@ from the transport up; post 11 wraps it in a loop with a model and a permission
 gate.
 
 It is a few hundred lines, which is the point of writing one: afterwards every
-host behaviour you see in Claude Desktop or an IDE is explicable.
+host behavior you see in Claude Desktop or an IDE is explicable.
 
 | File | Subject | Post |
 |---|---|---|
@@ -92,16 +92,15 @@ missing.
 ## Test
 
 ```bash
+uv sync --extra dev
 uv run pytest
 ```
 
-Or, without installing anything:
+The post 05 server is a dev dependency of this project, declared in
+`pyproject.toml` and resolved from `../05-first-server`, so `uv sync` is all the
+setup there is; there is no `PYTHONPATH` to remember.
 
-```bash
-PYTHONPATH="src;../05-first-server/src" python -m pytest tests -q
-```
-
-68 tests, a few seconds, no network and no API key. Every test that needs a
+68 passed, a few seconds, no network and no API key. Every test that needs a
 server connects to `code/05-first-server` **in memory** -- `Client(server)` with
 no subprocess and no socket, going over the real protocol path. Post 12 explains
 the pattern.

@@ -106,6 +106,9 @@ with it.
 uv run pytest
 ```
 
+With no database configured that is `85 passed, 12 skipped`; the twelve skips
+are the tests marked `needs_database`.
+
 Two files, two levels, from post 12:
 
 - `tests/test_security.py` is unit tests of a pure function. **No database, no

@@ -51,7 +51,8 @@ uv run python -m auth_demo --jwt        # the same, trusting the toy authorizati
 uv run python -m toy_as                 # toy authorization server, 127.0.0.1:9123
 ```
 
-With the resource server up, the four requests from post 20 §10:
+With the resource server up, the refusals from post 20 §10 and the two
+discovery probes from §4:
 
 ```bash
 curl -i -X POST http://127.0.0.1:8123/mcp                                  # 401
@@ -68,7 +69,7 @@ uv run pytest
 ```
 
 ```
-21 passed
+21 passed, 1 warning
 ```
 
 The suite binds no socket. `streamable_http_app()` returns a Starlette application and the
