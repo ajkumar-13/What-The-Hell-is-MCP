@@ -8,7 +8,7 @@
 > - Write a permission policy that treats tool annotations as untrusted claims rather than facts.
 > - Point at the exact place in the loop where a prompt-injection payload enters.
 
-![The tool-execution loop drawn as a cycle. User text enters a model call at the top. If the model returns no tool calls the loop exits to a final answer. If it returns tool calls, every one of them passes through a permission gate drawn directly on the path, one call at a time; the gate has three exits, allowed, denied, and unknown tool. Only the allowed calls reach the parallel execution stage, where several servers are called at once. Denied and unknown calls skip execution but still produce a result. All results, whatever their origin, are fed back to the model in one turn, and the cycle repeats up to a round cap.](diagrams/01-tool-loop.svg) *Gating is sequential, execution is parallel, and every requested call comes back with a result whether or not it ran.*
+![The tool-execution loop drawn as a cycle. User text enters a model call at the top. If the model returns no tool calls the loop exits to a final answer. If it returns tool calls, every one of them passes through a permission gate drawn directly on the path, one call at a time. A call can end three ways: allowed, denied, or an unknown name that never reaches the gate at all. Only the allowed calls reach the parallel execution stage, where several servers are called at once. Denied and unknown calls skip execution but still produce a result. All results, whatever their origin, are fed back to the model in one turn, and the cycle repeats up to a round cap.](diagrams/01-tool-loop.svg) *Gating is sequential, execution is parallel, and every requested call comes back with a result whether or not it ran.*
 
 ---
 
@@ -412,7 +412,7 @@ Read it as a statement about whose data wins.
 Approvals and denials are not treated alike, and that is deliberate.
 
 ```python
-async def test_allow_always_is_not_honoured_for_a_destructive_tool():
+async def test_allow_always_is_not_honored_for_a_destructive_tool():
     gate = PermissionGate(
         scripted_prompter([Decision.ALLOW_ALWAYS, Decision.ALLOW_ALWAYS], asked=asked))
 
