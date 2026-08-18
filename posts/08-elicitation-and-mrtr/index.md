@@ -320,7 +320,7 @@ def terminate_process(
     ...
 ```
 
-**The security property is measured, not asserted.** The `approval` parameter is stripped from the published input schema. From [verify/RESULTS.md](../../verify/RESULTS.md), the required properties of `terminate_process` are:
+**The security property is measured, not asserted.** The `approval` parameter is stripped from the published input schema. Measured against the published schema, the required properties of `terminate_process` are:
 
 ```json
 ["pid"]
@@ -388,7 +388,7 @@ Decline and cancel are not errors and there is no separate channel for them. The
 
 ![Three columns, one per action, answering the same four questions down the page: what the user did, which SDK class arrives, whether it carries data, and what the terminate_process tool does. Only accept carries data, and even it acts only when the confirm field is true. A footer notes that none of the three is an error, that all three ride back inside inputResponses on the retry, and that an accept in URL mode means consent rather than completion.](diagrams/03-three-outcomes.svg) *Three outcomes, three code paths. Collapsing decline and cancel into "no" throws away the difference between a refusal and a closed window.*
 
-The four outcomes below are real. They come from [verify/RESULTS.md](../../verify/RESULTS.md), produced against `mcp` 2.0.0b2 on Python 3.13.5 by driving the tool with a scripted elicitation callback:
+The four outcomes below are real. They were produced against `mcp` 2.0.0b2 on Python 3.13.5 by driving the tool with a scripted elicitation callback:
 
 | What the user did | What the tool returned |
 |---|---|
@@ -446,7 +446,7 @@ The protocol will let you ask anything. Most of the craft is in not doing that.
 
 **Derive the question from the arguments, deterministically.** This is the pitfall that costs the most debugging time, so it gets its own paragraph. The SDK asks each question once per call, and it recognizes an already-answered question by matching the recorded answer against a **SHA-256 digest of the exact rendered question text**, where SHA-256 is the 256-bit Secure Hash Algorithm. Reword the message between rounds, or change the schema, and the digest changes, the recorded answer no longer matches, and the server asks again. Put a timestamp, a live memory reading, or a "3 processes match" count in the message and every recorded answer looks stale forever. **The call never converges.** It is not an exception and not a loop you can see; the tool simply keeps returning `input_required` until something upstream gives up.
 
-The resolver in section 6 is written the safe way, and the behavior is measured. From [verify/RESULTS.md](../../verify/RESULTS.md):
+The resolver in section 6 is written the safe way, and the behavior is measured:
 
 ```
 - asked 1 time(s)

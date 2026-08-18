@@ -102,8 +102,8 @@ Keep to the `z` and single-`l` forms in prose.
   `mcp[cli]==2.0.0b2` in a dependency list, `mcp==2.0.0b2` when naming the build a result
   was measured on. Never a range.
 - Never invent a benchmark, a latency figure, or a tool output. If a number appears in a
-  post it must come from a citation in [REFERENCES.md](REFERENCES.md), from
-  [verify/RESULTS.md](verify/RESULTS.md), or from a script in [code/](code/) that the reader
+  post it must come from a citation in [REFERENCES.md](REFERENCES.md), or from a script in
+  [code/](code/) that the reader
   can run.
 - Where a figure was measured against a throwaway server that is not committed, say so in
   the sentence that quotes it, and give the exact package version and configuration so the

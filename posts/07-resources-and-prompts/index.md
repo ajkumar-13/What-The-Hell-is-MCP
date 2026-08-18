@@ -32,7 +32,7 @@ The protocol backs this up with four concrete differences, none of which are mat
 
 That last point is also where the honest caveat lives, and it is the reason this mistake is so common: host support for resources is uneven, and a tool works everywhere today. Section 10 has the bridge for when you need both.
 
-Everything in this post is built in [code/05-first-server/src/system_info/resources.py](../../code/05-first-server/src/system_info/resources.py), the system-information server that [Post 05](../05-first-server/index.md) started and [Post 06](../06-tools-in-depth/index.md) filled with tools. It is pinned to `mcp==2.0.0b2`, which implements protocol revision 2026-07-28, and its suite reports `19 passed`. Every string quoted below as output came from a run recorded in [verify/RESULTS.md](../../verify/RESULTS.md).
+Everything in this post is built in [code/05-first-server/src/system_info/resources.py](../../code/05-first-server/src/system_info/resources.py), the system-information server that [Post 05](../05-first-server/index.md) started and [Post 06](../06-tools-in-depth/index.md) filled with tools. It is pinned to `mcp==2.0.0b2`, which implements protocol revision 2026-07-28, and its suite reports `19 passed`. Every string quoted below as output came from a recorded run of that server.
 
 ## 2. Resources, and who decides to read one
 
@@ -130,7 +130,7 @@ def top_processes() -> str:
 
 That escaping line is not decoration. Process names are attacker-controlled on any machine where an attacker can start a process, and a name containing a pipe character would otherwise forge extra columns in a table that a model is about to read as fact. Untrusted text entering a formatted document is where injection starts, whichever primitive is carrying it.
 
-Listing the finished server prints, from [verify/RESULTS.md](../../verify/RESULTS.md):
+Listing the finished server prints:
 
 ```
 - resource `system://processes/top` (text/markdown)
@@ -198,7 +198,7 @@ The allowlist is the defense. Not validation, not escaping, not a regular expres
 
 ![Three resources/read requests entering from the left and traveling through a matcher stage and an allowlist gate before reaching the handler; the first passes both, the second is stopped at the gate with error -32602, and the third never matches the template at all and is rejected one stage earlier.](diagrams/02-uri-template.svg) *Two rejections, two different stages. Only one of them is a defense you wrote.*
 
-Now the part worth slowing down for. Two hostile-looking reads fail, and they fail for completely different reasons. Both strings and both messages come from [verify/RESULTS.md](../../verify/RESULTS.md):
+Now the part worth slowing down for. Two hostile-looking reads fail, and they fail for completely different reasons. Both strings and both messages come from driving the server in [code/05-first-server/](../../code/05-first-server/):
 
 ```
 system://disk/etc               -> MCPError: Unknown disk 'etc'. Known disks: root.
@@ -278,7 +278,7 @@ async def complete(ref, argument, context):
 
 **The SDK does not filter for you.** Whatever list you return is the list the user sees, so the `startswith` is yours to write and yours to forget. This is the single most common completion bug: a handler that ignores `argument.value` and returns everything, which turns a picker into a wall. Returning `None` is normalized to an empty `Completion`, which is the correct answer for a reference you do not handle.
 
-Measured, from [verify/RESULTS.md](../../verify/RESULTS.md):
+Measured against the running server:
 
 ```
 - completion for prefix `r` returns `['root']`
@@ -577,7 +577,7 @@ Two closing rules that apply to all three primitives, and both are easy to viola
 - Specification, *"Subscriptions"*, revision 2026-07-28. The filter fields, the acknowledgment ordering, the subscription id, and the statement that this replaces `resources/subscribe`.
 - RFC 6570, *URI Template*. <https://www.rfc-editor.org/rfc/rfc6570>
 - RFC 3986, *Uniform Resource Identifier (URI): Generic Syntax*, for custom schemes.
-- MCP Python SDK, `mcp==2.0.0b2`, driving [code/05-first-server/](../../code/05-first-server/). Every captured string in this post is reproducible from [verify/RESULTS.md](../../verify/RESULTS.md).
+- MCP Python SDK, `mcp==2.0.0b2`, driving [code/05-first-server/](../../code/05-first-server/). Every captured string in this post is reproducible by running that project.
 
 Full citations in [REFERENCES.md](../../REFERENCES.md).
 

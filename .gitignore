@@ -55,3 +55,9 @@ poster/*
 # Excalidraw working directories: the editable scenes and their notes. The
 # rendered SVG is published one level up, in posts/NN-slug/diagrams/.
 posts/*/diagrams/excalidraw/
+
+# Working material, not part of the published series: the master plan, the
+# measurement harness, and the authoring templates.
+PLAN.md
+verify/
+templates/

@@ -363,7 +363,7 @@ async def test_the_question_is_asked_once_and_names_the_process():
     assert "4242" in seen[0]
 ```
 
-One question means the digest matched. The recorded text, from [verify/RESULTS.md](../../verify/RESULTS.md), is `Terminate process 4242 (unknown)? This cannot be undone.`, which is derived from the arguments and nothing else. That is the property the test is really pinning.
+One question means the digest matched. The recorded text is `Terminate process 4242 (unknown)? This cannot be undone.`, which is derived from the arguments and nothing else. That is the property the test is really pinning.
 
 ## 7. Reading a wire trace
 
@@ -499,7 +499,7 @@ jobs:
 
 Include Windows in the matrix even if you do not use it. Path separators, console encodings, and process teardown all differ there, and a server that only ever ran on Linux will meet a Windows user eventually. A tool description containing a character your console cannot encode is a `UnicodeEncodeError` that takes the whole host down, and it is the sort of thing only a second operating system tells you about.
 
-**Regenerate the numbers you quote.** Anything a document claims about your server should be produced by a script rather than typed by a person. This repository's version is [verify/capture.py](../../verify/capture.py), which opens an in-memory client, walks the published surface, drives the four elicitation outcomes, runs the test suite, and prints Markdown to [verify/RESULTS.md](../../verify/RESULTS.md):
+**Regenerate the numbers you quote.** Anything a document claims about your server should be produced by a script rather than typed by a person. The one behind this series opens an in-memory client, walks the published surface, drives the four elicitation outcomes, runs the test suite, and prints Markdown:
 
 ```python
 async with Client(mcp) as c:
@@ -510,7 +510,7 @@ async with Client(mcp) as c:
 ```
 
 ```bash
-PYTHONPATH=code/05-first-server/src python verify/capture.py > verify/RESULTS.md
+PYTHONPATH=path/to/your/src python capture.py > RESULTS.md
 ```
 
 The committed output is diffed like any other file. If a change makes an output schema disappear, the word `**null**` shows up in a pull request in a place a reviewer is already looking. The rule is one line: if a document and the generated file disagree, the document is wrong.

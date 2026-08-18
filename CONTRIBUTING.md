@@ -22,9 +22,8 @@ them will pass.
 
 ## Larger changes (new posts, new diagrams, code companions)
 
-Open an issue first so we can agree on scope. Every post is specified in
-[PLAN.md](PLAN.md) section 6; a new post starts by adding or amending its spec there,
-not by writing prose.
+Open an issue first so we can agree on scope. A new post starts by settling its outline
+and its worked example in that issue, not by writing prose.
 
 ## Repository layout
 
@@ -50,7 +49,7 @@ the reading time — that field lives only in `frontmatter.yaml`. Post numbers m
 contiguously from 01, so a new post is appended at the end of the series. Inserting one
 mid-series means renumbering directories, which is a decision to agree on in the issue first.
 
-## Writing style (short version; full guide in [PLAN.md](PLAN.md) section 7)
+## Writing style
 
 - **Audience is a working developer with no protocol background.** Assume Python, assume
   nothing else.
@@ -66,7 +65,6 @@ mid-series means renumbering directories, which is a decision to agree on in the
   fewer. A post without one fails the checker.
 - **Every post has a `## Common pitfalls` section**, four to seven bullets, near the end.
   A post without one fails the checker.
-  [templates/post-template.md](templates/post-template.md) has the skeleton.
 - **At most ten em-dashes per post.** The checker enforces this. A comma or a full stop is
   almost always better.
 - **Every relative link must resolve, forward slashes only.** A backslash path is an error,
@@ -96,24 +94,20 @@ This series targets protocol revision **2026-07-28** and only that revision.
   [code/21-deploy/](code/21-deploy/) is the exception: deployment configuration only, with no
   package, no `pyproject.toml`, and no tests.
 - Every number printed in a post must be reproducible. The measured values for
-  [code/05-first-server/](code/05-first-server/) live in [verify/RESULTS.md](verify/RESULTS.md),
-  regenerated with
-  `PYTHONPATH=code/05-first-server/src python verify/capture.py > verify/RESULTS.md`. If a
-  post and that file disagree, the post is wrong, so commit the regenerated diff. Every other
-  project's figures come from its own test suite; name the command that produces them.
+  [code/05-first-server/](code/05-first-server/) come from a capture script that drives the
+  server through an in-memory client; every other project's figures come from its own test
+  suite. Name the command that produces them, and if a post and its source disagree, the
+  post is wrong.
 - No secrets, no personal paths, no usernames in committed code, configuration, or images.
 
 ## Diagrams
 
-- **The figure a post embeds is hand-edited SVG.** No Mermaid, no screenshots of text. A
-  generated diagram can satisfy every bullet below and still be rejected as the canonical
-  figure.
-- **Hand-drawn Excalidraw companions are welcome** in `posts/NN-slug/diagrams/excalidraw/`,
-  as a `.excalidraw` scene plus a rendered SVG. They are alternates for slides and talks, not
-  the embedded figure. Generate them with
-  the generator under `assets/diagrams/excalidraw-generator/` rather than by hand, so a
-  rebuild stays byte-identical.
-- Follow [templates/diagram-style-guide.md](templates/diagram-style-guide.md) exactly.
+- **The figure a post embeds is generated from a scene file**, not typed by hand into the
+  SVG. Every element carries a seed derived from its index, so a rebuild is byte-identical
+  and a regeneration never shows up as a diff. Nothing depends on a random number. No
+  Mermaid, and no screenshots of text.
+- The editable scene lives beside the figure in `posts/NN-slug/diagrams/excalidraw/` and is
+  not published; the rendered SVG one level up is.
 - Client side blue, server side terracotta.
 - `viewBox` only; no `width` or `height` on the root element.
 - `<title>` and `<desc>` are mandatory, and the `<desc>` is a real description.

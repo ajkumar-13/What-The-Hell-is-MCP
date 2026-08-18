@@ -5,9 +5,9 @@ This repository is dual-licensed.
 ## Prose, diagrams, illustrations
 
 The written content of this series — every `.md` file under `posts/`, every
-top-level prose file (`README.md`, `PLAN.md`, `GLOSSARY.md`, `CHEATSHEET.md`,
+top-level prose file (`README.md`, `GLOSSARY.md`, `CHEATSHEET.md`,
 `REFERENCES.md`, `CONTRIBUTING.md`, `notation_guide.md`), and every diagram
-under `assets/` and `posts/*/diagrams/` — is licensed under the **Creative
+under `posts/*/diagrams/` and `poster/` — is licensed under the **Creative
 Commons Attribution 4.0 International License (CC BY 4.0)**.
 
 You are free to:
