@@ -29,7 +29,7 @@ from pg_analyst.security import MAX_ROWS
 
 needs_database = pytest.mark.skipif(
     not os.getenv("DATABASE_URL"),
-    reason="DATABASE_URL is not set; start sql/docker-compose.yml to run these",
+    reason="DATABASE_URL is not set; start docker-compose.yml to run these",
 )
 
 

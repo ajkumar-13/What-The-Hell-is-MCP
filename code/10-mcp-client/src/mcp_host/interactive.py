@@ -184,7 +184,7 @@ async def call_with_input(
     1. Same tool name and the *same arguments* on every leg. The arguments are
        not "already sent"; each leg is a complete, independent call.
     2. Echo `request_state` back verbatim. It is sealed by the server and is
-       how it recognises the continuation.
+       how it recognizes the continuation.
     3. Key the responses by the same keys the server used in `input_requests`.
     """
     session = getattr(client, "client", client)

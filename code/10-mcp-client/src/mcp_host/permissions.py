@@ -86,7 +86,7 @@ class PermissionPolicy:
     auto_approve_read_only: bool = True
     # Destructive tools prompt every time, even if previously allowed.
     always_prompt_destructive: bool = True
-    # Whether "allow always" is honoured for a destructive tool at all.
+    # Whether "allow always" is honored for a destructive tool at all.
     remember_destructive: bool = False
     # The user's own lists. These beat any annotation.
     allowlist: frozenset[str] = frozenset()
@@ -209,7 +209,7 @@ class PermissionGate:
         if key in policy.allowlist or request.tool in policy.allowlist:
             return Verdict(True, "on the allowlist")
 
-        # 2. Destructive. Prompt every time, and by default do not honour a
+        # 2. Destructive. Prompt every time, and by default do not honor a
         #    remembered allow. This is the rule that makes the gate worth
         #    having, so it sits above the annotation shortcuts below.
         if request.destructive and policy.always_prompt_destructive:
