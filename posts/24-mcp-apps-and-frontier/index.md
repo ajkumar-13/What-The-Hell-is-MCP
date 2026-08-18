@@ -376,7 +376,7 @@ Which leaves the part nobody else can do for you. The server worth building is t
 
 - MCP Apps extension specification, revision 2026-01-26, `ext-apps` repository. Every normative rule quoted here: the tool linkage, the `ui://` resource, the double-iframe sandbox, the CSP defaults, and the thirteen `ui/` methods. <https://github.com/modelcontextprotocol/ext-apps>
 - SEP-1865, *"MCP Apps"* (2025), Extensions Track, Status Stable (2026-01-26).
-- SEP-2133, *"Extensions"* (2025), Status Final. The definition, the naming rule, the opt-in-by-default requirement, the graceful-degradation clause, and the five-step process in section 7. <https://modelcontextprotocol.io/seps/2133-extensions>
+- SEP-2133, *"Extensions"* (2025), Status Final. The definition, the naming rule, the opt-in-by-default requirement, the graceful-degradation clause, and the five-step process in section 7.
 - Specification, *"Versioning"* § extension negotiation, revision 2026-07-28. The authoritative placement of an `extensions` declaration, against the stale `initialize` examples elsewhere.
 - Extensions overview and client support matrix (2026). The official and experimental extension repositories, and which hosts implement Apps. <https://modelcontextprotocol.io/extensions/client-matrix>
 - MCP Apps launch announcement (2026). The hosts supporting it at general availability, which is a much shorter list than the matrix carries six months later. <https://blog.modelcontextprotocol.io/posts/2026-01-26-mcp-apps/>

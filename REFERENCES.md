@@ -98,7 +98,10 @@ more useful than the normative text.
 | SEP-1024 | Client security requirements for local servers |
 | SEP-1766 | Digest-pinned tool versioning (opened 2025-11-05, closed 2026-06-24, no sponsor) |
 
-Index: https://modelcontextprotocol.io/seps
+Index: https://modelcontextprotocol.io/seps — note that the rendered SEP pages do not use
+predictable slugs. Only `/seps/2322-MRTR` was found to resolve; the rest of the SEP text
+cited here was read from the raw markdown in the `modelcontextprotocol` repository, which
+is authoritative. Do not construct a `/seps/NNNN-slug` URL by guessing.
 
 ---
 
