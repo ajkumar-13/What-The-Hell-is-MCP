@@ -91,10 +91,9 @@ identifier is renamed rather than quoted around. Where a post shows a function o
 name, the post and the source move together, so a quoted name is always byte-identical to
 the code it comes from.
 
-The checker flags minority variants of `-ise`/`-ize`, `-isation`/`-ization`,
-`-iser`/`-izer`, `-ised`/`-ized`. It does **not** catch the doubled-consonant family
-(*labelled*, *travelled*, *modelled*) or `-ogue` (*catalogue*), so those are on review.
-Keep to the `z` and single-`l` forms in prose.
+A grep for `-ise`/`-ised`/`-iser`/`-isation` catches most of these mechanically. It will
+not catch the doubled-consonant family (*labelled*, *travelled*, *modelled*) or `-ogue`
+(*catalogue*), so those are on review. Keep to the `z` and single-`l` forms in prose.
 
 ## 5. Numbers, versions, and dates
 
@@ -120,7 +119,7 @@ Keep to the `z` and single-`l` forms in prose.
 | Scalar | italic lower-case | $i$, $\alpha$ |
 
 Canonical symbols, identical across all sibling series. The parenthesized alternatives below
-are banned and the checker enforces them: learning rate is $\alpha$ (never $\eta$), loss is
+are banned: learning rate is $\alpha$ (never $\eta$), loss is
 $L$ (never $\mathcal{L}$), bias is lower-case $\mathbf{b}$ (never $\mathbf{B}$), and the
 small numerical constant is $\epsilon$ (never $\varepsilon$).
 
@@ -132,4 +131,4 @@ small numerical constant is $\epsilon$ (never $\varepsilon$).
 - [ ] Every acronym expanded on first use *in this post*.
 - [ ] American spelling in prose.
 - [ ] No invented numbers or fabricated tool output.
-- [ ] `python <skill>/checks.py --root . --only notation,spelling` passes.
+- [ ] Every relative link resolves, forward slashes only.

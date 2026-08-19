@@ -8,17 +8,9 @@ MCP could read this and never feel lost." Small fixes and large ones are both we
 Open a pull request directly. No issue needed. Spec-drift fixes are especially welcome:
 this series tracks a protocol revision that is young, and pages move.
 
-Run the quality checker before submitting if you can:
-
-```bash
-python <path-to>/blog-quality/checks.py --root .
-```
-
-Exit code 0 means clean. Errors block a merge; warnings are advisory.
-
-The checker is a separate tool and is not vendored here, so you may not have it. You do not
-need it: every rule it fails a build on is written out below, and a change that respects
-them will pass.
+Before submitting, read your change against the rules below. They are the whole review
+standard: nothing is enforced that is not written here, so a change that respects them will
+pass. The ones marked **must** are the ones a reviewer will block on.
 
 ## Larger changes (new posts, new diagrams, code companions)
 
@@ -43,7 +35,7 @@ changes materially, so the numbers stay comparable across the series rather than
 whatever felt right on the day.
 
 `NN` is stable and the slug never changes after publishing, because inbound links break.
-Three more structure rules are hard checker errors: `slug` must equal the directory name,
+Three more structure rules **must** hold: `slug` must equal the directory name,
 `hero` must resolve to a file inside the post directory, and `index.md` must never restate
 the reading time — that field lives only in `frontmatter.yaml`. Post numbers must also run
 contiguously from 01, so a new post is appended at the end of the series. Inserting one
@@ -62,10 +54,10 @@ mid-series means renumbering directories, which is a decision to agree on in the
 - Use the vocabulary in [notation_guide.md](notation_guide.md) exactly. Host, client, and
   server in particular are not interchangeable.
 - **Every post opens with a TL;DR blockquote**, written `> **TL;DR.**`, four sentences or
-  fewer. A post without one fails the checker.
+  fewer. A post without one is incomplete.
 - **Every post has a `## Common pitfalls` section**, four to seven bullets, near the end.
-  A post without one fails the checker.
-- **At most ten em-dashes per post.** The checker enforces this. A comma or a full stop is
+  A post without one is incomplete.
+- **At most ten em-dashes per post.** This one is counted. A comma or a full stop is
   almost always better.
 - **Every relative link must resolve, forward slashes only.** A backslash path is an error,
   not a warning: it breaks on GitHub, and this repository is authored on Windows where a
