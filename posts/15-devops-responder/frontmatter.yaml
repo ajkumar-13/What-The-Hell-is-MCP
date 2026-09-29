@@ -1,7 +1,8 @@
+id: mcp-015
 slug: 15-devops-responder
 title: "15 · Project 2 · A DevOps first responder"
 date: 2026-07-25
 tags: [model-context-protocol, mcp, project, kubernetes, observability, read-only]
 hero: diagrams/01-diagnostic-pipeline.svg
 reading_time: 23
-part: "Part IV — Projects"
+part: "Part IV - Projects"

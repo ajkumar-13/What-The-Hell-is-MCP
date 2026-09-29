@@ -1,0 +1,40 @@
+# Series manifest, family standard 2.2.0 (STANDARD.md Section 5).
+# parts[].posts is the whole locked curriculum in reading order, drafted or not; a post without a
+# directory has an entry under planned. Ids are allocated from next_post_ordinal and never reused.
+# 24 locked posts in 6 parts; generated from plan.md Section 5 by tools/plan_to_manifest.py.
+standard: "2.2.0"
+key: mcp
+code: mcp
+title: What The Hell is MCP?
+status: complete
+author: Ajay
+library: null
+slug_patterns:
+  core: ^[0-9]{2,3}-[a-z0-9-]+$
+next_post_ordinal: 25
+next_project_ordinal: 1
+projects: []
+levels_used: [beginner, intermediate, advanced]
+vocab: {}
+question_policy: {}
+parts:
+- number: 1
+  title: Part I - Foundations
+  posts: [mcp-001, mcp-002, mcp-003, mcp-004]
+- number: 2
+  title: Part II - Building servers
+  posts: [mcp-005, mcp-006, mcp-007, mcp-008, mcp-009]
+- number: 3
+  title: Part III - Clients, hosts, and testing
+  posts: [mcp-010, mcp-011, mcp-012]
+- number: 4
+  title: Part IV - Projects
+  posts: [mcp-013, mcp-014, mcp-015, mcp-016, mcp-017, mcp-018]
+- number: 5
+  title: Part V - Production
+  posts: [mcp-019, mcp-020, mcp-021, mcp-022]
+- number: 6
+  title: Part VI - Interoperability and the frontier
+  posts: [mcp-023, mcp-024]
+retired: []
+gates: []

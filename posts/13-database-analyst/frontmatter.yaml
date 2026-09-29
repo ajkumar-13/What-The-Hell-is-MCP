@@ -1,7 +1,8 @@
+id: mcp-013
 slug: 13-database-analyst
 title: "13 · Project 1 · A secure database analyst"
 date: 2026-07-24
 tags: [model-context-protocol, mcp, project, postgresql, security, sql]
 hero: diagrams/01-defense-in-depth.svg
 reading_time: 24
-part: "Part IV — Projects"
+part: "Part IV - Projects"

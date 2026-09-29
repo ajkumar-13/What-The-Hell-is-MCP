@@ -1,7 +1,8 @@
+id: mcp-023
 slug: 23-multi-client
 title: "23 · Project 4 · One server, every client"
 date: 2026-07-26
 tags: [model-context-protocol, mcp, project, interoperability, configuration, clients]
 hero: diagrams/01-one-server-five-hosts.svg
 reading_time: 21
-part: "Part VI — Interoperability and the frontier"
+part: "Part VI - Interoperability and the frontier"

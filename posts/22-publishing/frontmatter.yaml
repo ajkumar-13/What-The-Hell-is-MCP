@@ -1,7 +1,8 @@
+id: mcp-022
 slug: 22-publishing
 title: "22 · Publishing: the registry, server.json, and MCPB bundles"
 date: 2026-07-26
 tags: [model-context-protocol, mcp, production, registry, distribution, mcpb]
 hero: diagrams/01-distribution-paths.svg
 reading_time: 17
-part: "Part V — Production"
+part: "Part V - Production"

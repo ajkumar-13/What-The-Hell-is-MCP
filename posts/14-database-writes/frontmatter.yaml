@@ -1,7 +1,8 @@
+id: mcp-014
 slug: 14-database-writes
 title: "14 · Project 1 · Writes, transactions, and an audit trail"
 date: 2026-07-24
 tags: [model-context-protocol, mcp, project, postgresql, transactions, audit, elicitation]
 hero: diagrams/01-the-write-path.svg
 reading_time: 21
-part: "Part IV — Projects"
+part: "Part IV - Projects"
