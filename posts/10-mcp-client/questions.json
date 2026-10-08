@@ -1,0 +1,747 @@
+{
+  "standard": "2.1.0",
+  "post": "mcp-010",
+  "next_ordinal": 18,
+  "questions": [
+    {
+      "id": "mcp-010-q01",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "1",
+      "est_minutes": 2,
+      "tags": [
+        "is-error",
+        "exceptions"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A host wraps every `await client.call_tool(name, args)` in `try`/`except Exception`. A model calls `find_process` with a string where the schema wants an integer, and the server rejects the argument. What happens in the host?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The `except` branch runs, because the SDK raises an `MCPError` for the rejected argument.",
+          "correct": false,
+          "feedback": "Nothing raises. The server answers with a successful JSON-RPC response; only transport and protocol failures surface as exceptions."
+        },
+        {
+          "key": "b",
+          "text": "The call returns normally with a result whose `isError` is true, and the `except` branch never runs.",
+          "correct": true,
+          "feedback": "Right. A tool execution failure is a successful response carrying `isError: true` and `resultType: \"complete\"`, so only an explicit check of the flag sees it."
+        },
+        {
+          "key": "c",
+          "text": "The SDK client converts the failure into a `ToolError` and raises it in the host.",
+          "correct": false,
+          "feedback": "`ToolError` is what a server-side tool raises to produce an `isError` result. The client receives the result; it does not re-raise it."
+        },
+        {
+          "key": "d",
+          "text": "The call raises a JSON-RPC `-32602` error, because the arguments did not match the input schema.",
+          "correct": false,
+          "feedback": "Under the pinned SDK, arguments that fail the input schema come back as an `isError` result. `-32602` is what a request whose `arguments` is not an object at all gets."
+        }
+      ],
+      "explanation": "Section 1 shows the result the post 05 server sends for this call: `isError: true`, `resultType: \"complete\"`, and the validation message in a text block. Nothing raised, so the naive client's `except` never fired and its `.text` join handed the error text on as if it were the answer.",
+      "hints": [
+        "Ask whether a tool that ran and failed is a transport problem, a protocol problem, or neither."
+      ]
+    },
+    {
+      "id": "mcp-010-q02",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "3",
+      "est_minutes": 2,
+      "tags": [
+        "client",
+        "stdio"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Given `params = StdioServerParameters(command=\"python\", args=[\"-m\", \"system_info\"])` and `server`, the `MCPServer` object imported from the server's package, which of these arguments make `Client(...)` from the Python SDK, release 2.3.0, start the server as a subprocess and speak to it over standard input and output? Select every one that does.",
+      "select": "multiple",
+      "options": [
+        {
+          "key": "a",
+          "text": "`\"stdio://python -m system_info\"`",
+          "correct": false,
+          "feedback": "A string is always a Streamable HTTP URL. This one fails inside the HTTP library with an unsupported-protocol error; nothing is launched."
+        },
+        {
+          "key": "b",
+          "text": "`params`",
+          "correct": true,
+          "feedback": "Yes. Since release 2.1.0 `Client` accepts the parameters directly and launches the command with `stdio_client`."
+        },
+        {
+          "key": "c",
+          "text": "`server`",
+          "correct": false,
+          "feedback": "A server object connects in process: no subprocess and no socket, which is why tests use it."
+        },
+        {
+          "key": "d",
+          "text": "`stdio_client(params)`",
+          "correct": true,
+          "feedback": "Yes. Anything that is not a server object, a string, or parameters is used as a transport, and `stdio_client(...)` is the stdio transport."
+        },
+        {
+          "key": "e",
+          "text": "`\"python -m system_info\"`",
+          "correct": false,
+          "feedback": "Still a string, so still treated as an HTTP URL. Wrapping a command in a string never launches it."
+        }
+      ],
+      "explanation": "Section 3's table: `Client` decides from the shape of its argument. A server object runs in process, a string is a Streamable HTTP URL, a `StdioServerParameters` is launched as a subprocess, and anything else is used as a transport, which includes `stdio_client(...)`.",
+      "hints": [
+        "Sort the options by type: string, parameters object, server object, transport.",
+        "Only one type is always read as a URL, whatever it contains."
+      ]
+    },
+    {
+      "id": "mcp-010-q03",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "4",
+      "est_minutes": 4,
+      "tags": [
+        "lifetimes",
+        "task-groups"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A class enters `stdio_client(params)` and then `ClientSession(read, write)` by calling `__aenter__` on each inside one task, and its `close()` calls the session's `__aexit__` and then the transport's, from a different task. What does `close()` do?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "It closes both cleanly, because each `__aexit__` is awaited in order.",
+          "correct": false,
+          "feedback": "Order is not the problem the task boundary creates: a task group refuses to be exited by a task that did not enter it."
+        },
+        {
+          "key": "b",
+          "text": "It raises `RuntimeError` about exiting a cancel scope in a different task, and the server subprocess keeps running.",
+          "correct": true,
+          "feedback": "Right. The session's exit raises first, so the transport's exit on the next line never runs and nothing reaps the subprocess."
+        },
+        {
+          "key": "c",
+          "text": "It raises `RuntimeError` about exiting a cancel scope in a different task, but the subprocess is reaped anyway.",
+          "correct": false,
+          "feedback": "That is what the 2.x `Client` alone does, because the SDK unwinds its own layers with an exit stack. Two contexts exited by hand give the leak."
+        },
+        {
+          "key": "d",
+          "text": "It blocks forever, waiting for the server to close its standard output.",
+          "correct": false,
+          "feedback": "The failure is immediate: the cancel-scope check raises as soon as the wrong task tries to exit."
+        }
+      ],
+      "explanation": "Section 4 runs exactly this class in `snippets/lifetimes.py`: `close()` raised `RuntimeError: Attempted to exit cancel scope in a different task than it was entered in`, and the server process was still running afterwards. Two bugs compound: the wrong task, and a second `__aexit__` that never runs once the first raises.",
+      "hints": [
+        "Ask what a task group checks when it is exited.",
+        "If the first of two sequential `__aexit__` calls raises, what happens to the second?"
+      ]
+    },
+    {
+      "id": "mcp-010-q04",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "7",
+      "est_minutes": 3,
+      "tags": [
+        "elicitation",
+        "capabilities"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A host wants to drive every `input_required` round itself, so it connects with `Client(server)` and no `elicitation_callback`, then calls `client.session.call_tool(\"terminate_process\", {\"pid\": 999999}, allow_input_required=True)` on the post 05 server. What comes back?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "An `InputRequiredResult` with the confirmation question, ready to be answered by hand.",
+          "correct": false,
+          "feedback": "The server never gets as far as asking, because the request did not declare the elicitation capability the question needs."
+        },
+        {
+          "key": "b",
+          "text": "A `-32021` error naming the missing form elicitation capability in `requiredCapabilities`.",
+          "correct": true,
+          "feedback": "Right. Without a callback the client declares no elicitation capability, and the server must refuse with `-32021` before it asks."
+        },
+        {
+          "key": "c",
+          "text": "`InputRequiredRoundsExceededError`, because nothing answered the question.",
+          "correct": false,
+          "feedback": "That error ends a loop that the SDK drives when a server keeps asking. Here no round starts at all."
+        },
+        {
+          "key": "d",
+          "text": "A complete result with `isError` false, saying the user declined.",
+          "correct": false,
+          "feedback": "A decline is an answer the client sends. With no capability declared, no question was asked and nothing could be declined."
+        }
+      ],
+      "explanation": "Section 7: passing a callback is what declares the capability. `snippets/mrtr_client.py` prints the refusal, `MCPError(-32021, \"Client did not declare the form elicitation capability ...\", {'requiredCapabilities': {'elicitation': {'form': {}}}})`. The manual path never calls the callback but still needs one as the declaration.",
+      "hints": [
+        "Ask what the request's `_meta` says about elicitation when no callback was given."
+      ]
+    },
+    {
+      "id": "mcp-010-q05",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "6",
+      "est_minutes": 3,
+      "tags": [
+        "unknown-tool",
+        "divergence"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A client sends `tools/call` for `get_sysinfo`, a name the post 05 server does not have, through the Python SDK at release 2.3.0. What does the server send back?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "A JSON-RPC error with code `-32602`, as the Tools page's example for an unknown tool shows.",
+          "correct": false,
+          "feedback": "That is what the specification prints, and a client should accept it from other servers. This SDK answers differently, which the post records as a divergence."
+        },
+        {
+          "key": "b",
+          "text": "A successful result with `isError: true` and the text `Unknown tool: get_sysinfo`.",
+          "correct": true,
+          "feedback": "Right. The SDK raises `ToolError` itself for an unknown name, so the failure arrives as a tool execution error."
+        },
+        {
+          "key": "c",
+          "text": "A JSON-RPC error with code `-32601` (`Method not found`).",
+          "correct": false,
+          "feedback": "`-32601` is for a method the server does not implement. `tools/call` exists; only the tool name inside it is unknown."
+        },
+        {
+          "key": "d",
+          "text": "A successful result with `isError: false` and empty `content`.",
+          "correct": false,
+          "feedback": "The server does report the failure; the flag is set and the text names the unknown tool."
+        }
+      ],
+      "explanation": "Section 6 prints the raw line from `snippets/wire_frames.py`: `\"content\":[{\"text\":\"Unknown tool: get_sysinfo\",\"type\":\"text\"}],\"isError\":true`. The Tools page lists an unknown tool among protocol errors, so a client must read both channels; one that branches on `isError` and on raised errors handles either answer.",
+      "hints": [
+        "The specification and the pinned SDK disagree on this case.",
+        "Ask which exception the SDK's server raises for a name it cannot find, and what that exception turns into."
+      ]
+    },
+    {
+      "id": "mcp-010-q06",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "7",
+      "est_minutes": 3,
+      "tags": [
+        "mrtr",
+        "round-cap"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A server's elicitation question embeds a counter, so its text changes every time it is asked. A client connects to it with `input_required_max_rounds=3` and an elicitation callback that always accepts. How many times is the callback invoked before `call_tool` gives up?",
+      "answer": {
+        "value": 3,
+        "tolerance": 0,
+        "unit": "calls"
+      },
+      "precision_note": "Printed by snippets/mrtr_client.py against mcp==2.3.0: `questions the callback answered: 3`, followed by InputRequiredRoundsExceededError for more than 3 rounds. Each round's answer is matched against a digest of that round's exact question, so none is ever accepted.",
+      "explanation": "The answer recorded in one round is pinned to a digest of that round's question text. A reworded question never matches, so the server asks again every round, the callback answers each time, and the SDK stops after the cap of 3 with `InputRequiredRoundsExceededError`. The default cap is 10.",
+      "hints": [
+        "Every round the server asks a question the previous answer does not match.",
+        "The cap counts rounds, and each round produces exactly one question here."
+      ]
+    },
+    {
+      "id": "mcp-010-q07",
+      "type": "numeric",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "6",
+      "est_minutes": 4,
+      "tags": [
+        "content-blocks"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Run the join from the naive client against the five blocks in the stimulus, built with the `mcp_types` classes of release 2.3.0. How many of the five blocks contribute a line to `text`?",
+      "stimulus": {
+        "kind": "code",
+        "language": "python",
+        "content": "content = [\n    TextContent(text=\"12 processes\"),\n    ImageContent(data=\"A\" * 4096, mime_type=\"image/png\"),\n    AudioContent(data=\"B\" * 1024, mime_type=\"audio/wav\"),\n    ResourceLink(name=\"top\", uri=\"system://processes/top\"),\n    EmbeddedResource(resource=TextResourceContents(uri=\"config://app\", text=\"debug = false\")),\n]\ntext = \"\\n\".join(c.text for c in content if hasattr(c, \"text\")).strip()"
+      },
+      "answer": {
+        "value": 1,
+        "tolerance": 0,
+        "unit": "blocks"
+      },
+      "precision_note": "Checked under mcp==2.3.0: hasattr(block, 'text') is True only for TextContent; the embedded resource keeps its text one level down, in block.resource.text.",
+      "explanation": "Only `TextContent` has a `text` attribute. Image and audio carry `data`, a resource link carries `uri` and `name`, and an embedded resource keeps its text inside the nested `resource`. So the join keeps one line and silently drops the other four blocks, which is section 1's second defect.",
+      "hints": [
+        "Ask which of the five classes defines a field called `text` at the top level.",
+        "The embedded resource does have text, but where does it live?"
+      ]
+    },
+    {
+      "id": "mcp-010-q08",
+      "type": "numeric",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "11",
+      "est_minutes": 2,
+      "tags": [
+        "streamable-http",
+        "redirects"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The post 05 server serves Streamable HTTP at `/mcp`. A hand-written client that does not follow redirects POSTs a `server/discover` request to `/mcp/`, with a trailing slash. What HTTP status code does it receive?",
+      "answer": {
+        "value": 307,
+        "tolerance": 0,
+        "unit": ""
+      },
+      "precision_note": "Printed by snippets/transports.py against the post 05 server under mcp==2.3.0: `POST /mcp/ without following redirects: HTTP 307, Location http://127.0.0.1:PORT/mcp, body 0 bytes`.",
+      "explanation": "The server redirects the slashed path to the mounted one with a 307 and an empty body rather than answering 404. The SDK's own client follows a redirect that keeps the endpoint's origin and the method, so it connects anyway; a client that does not follow redirects sees an empty response.",
+      "hints": [
+        "It is not a 404: the server knows where the endpoint really is.",
+        "Look for the redirect status that keeps a POST a POST."
+      ]
+    },
+    {
+      "id": "mcp-010-q09",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "3",
+      "est_minutes": 2,
+      "tags": [
+        "client",
+        "stdio"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A host author writes `Client(\"stdio://python -m system_info\")`, expecting a scheme-based factory to start the server over standard input and output. In one or two sentences: what does the Python SDK's `Client` do with that argument, and why?",
+      "answer": {
+        "model": "It treats any plain string as a Streamable HTTP URL, so nothing is launched; the HTTP library rejects the `stdio://` scheme with an unsupported-protocol error wrapped in an `ExceptionGroup`.",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|never|isn't|is not|n't|no longer)\\s+(?:(?:be\\s+)?(?:treated|read|interpreted|parsed|taken|handled|used)\\s+)?(?:as\\s+)?(?:an?\\s+)?(?:streamable\\s+)?(?:http|url))(?![\\s\\S]*(?<!not )(?<!never )(?<!n't )(?<!instead of )(?<!rather than )(?<!without )\\b(?:start|starts|launch|launches|spawn|spawns|runs|opens|starting|launching|spawning)\\s+(?:[\\w']+\\s+){0,4}?(?:sub|child\\s+)?process)(?=[\\s\\S]*\\b(?:url|urls|http|https|streamable|web address|endpoint)\\b)(?=[\\s\\S]*\\b(?:treat|treats|treated|means|mean|interpret|interprets|interpreted|parse|parses|parsed|taken|takes|read|reads|assume|assumes|assumed|always|is|as)\\b)[\\s\\S]{20,}$"
+        ]
+      },
+      "explanation": "Section 3: a `str` argument to `Client` always means a Streamable HTTP URL, and there is no `stdio://` form. `snippets/transports.py` prints `UnsupportedProtocol: Request URL has an unsupported protocol 'stdio://'.` inside an `ExceptionGroup`. A stdio server goes in as `StdioServerParameters(...)` or `stdio_client(...)`.",
+      "hints": [
+        "Ask what one type of argument always means to `Client`, whatever text it contains."
+      ]
+    },
+    {
+      "id": "mcp-010-q10",
+      "type": "short",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "4",
+      "est_minutes": 3,
+      "tags": [
+        "exception-groups",
+        "task-groups"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Host code puts `try:` around a whole `async with open_connection(spec) as conn:` block and catches `except ZeroDivisionError:`. The body raises `ZeroDivisionError`, yet the handler never runs. In a sentence or two, why?",
+      "answer": {
+        "model": "The client's task groups re-raise the exception wrapped in an `ExceptionGroup` (two deep here), so a plain `except ZeroDivisionError` does not match; flatten the group, use `except*`, or catch inside the block.",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|never|\\w+n't)\\s+(?:been\\s+|being\\s+|get\\s+|gets\\s+)?(?:wrapped|nested|in(?:side)?\\s+(?:an?\\s+|any\\s+)?(?:\\w+\\s+)?(?:exception\\s*)?group))(?![\\s\\S]*\\bno\\s+(?:base)?exception\\s*group)(?![\\s\\S]*(?<!not )(?<!never )(?<!n't )\\b(?:swallow|suppress|discard)\\w*)(?![\\s\\S]*\\bnever\\s+(?:raised|re-?raised|propagated|escapes)\\s+at\\s+all)(?=[\\s\\S]*(?:exception\\s*group|exceptiongroup|wrap|nest|bundl|aggregat|inside an? (?:\\w+ )?group|group of exceptions|task group re-?raises))[\\s\\S]{15,}$"
+        ]
+      },
+      "explanation": "Section 4: an exception escaping `async with Client(...)` passes through `anyio` task groups, which re-raise it inside an `ExceptionGroup`; `snippets/lifetimes.py` prints `escaped as ExceptionGroup, nested 2 deep; members: ['ZeroDivisionError']`. The test file's `flatten` helper, `except*` on Python 3.11 or newer, or a handler inside the block all see it.",
+      "hints": [
+        "What does a task group do with an exception raised by code running inside it?",
+        "The exception does arrive, just not as itself."
+      ]
+    },
+    {
+      "id": "mcp-010-q11",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "6",
+      "est_minutes": 10,
+      "tags": [
+        "is-error",
+        "result-reader"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`for_model` in the starter takes one parsed JSON-RPC response to a `tools/call` and returns the string a host hands the model. It reads only text blocks and nothing else. Fix it so that: a response with an `error` member returns `\"PROTOCOL ERROR <code>: <message>\"`; a result whose `isError` is true returns `\"TOOL FAILED: \"` followed by its text blocks joined with newlines; any other result returns its text blocks joined with newlines, or, when it has no text blocks, its `structuredContent` serialized with `json.dumps`, or `\"(no content)\"` when it has neither. A result that omits `isError` succeeded. Use only the standard library.",
+      "kind": "fix",
+      "language": "python",
+      "starter": "import json\n\n\ndef for_model(response):\n    \"\"\"Return the string a host hands the model for one tools/call response.\"\"\"\n    result = response[\"result\"]\n    return \"\\n\".join(b[\"text\"] for b in result[\"content\"] if b.get(\"type\") == \"text\")\n",
+      "solution": "import json\n\n\ndef for_model(response):\n    \"\"\"Return the string a host hands the model for one tools/call response.\"\"\"\n    if \"error\" in response:\n        error = response[\"error\"]\n        return f\"PROTOCOL ERROR {error['code']}: {error['message']}\"\n    result = response[\"result\"]\n    text = \"\\n\".join(b[\"text\"] for b in result.get(\"content\", []) if b.get(\"type\") == \"text\")\n    if result.get(\"isError\", False):\n        return f\"TOOL FAILED: {text}\"\n    if text:\n        return text\n    if \"structuredContent\" in result:\n        return json.dumps(result[\"structuredContent\"])\n    return \"(no content)\"\n",
+      "tests": "\nok = json.loads('{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"text\":\"{\\\\n  \\\\\"query\\\\\": \\\\\"zzz\\\\\",\\\\n  \\\\\"total_matches\\\\\": 0\\\\n}\",\"type\":\"text\"}],\"isError\":false,\"resultType\":\"complete\",\"structuredContent\":{\"query\":\"zzz\",\"total_matches\":0},\"_meta\":{\"io.modelcontextprotocol/serverInfo\":{\"name\":\"system-info\",\"version\":\"\"}}}}')\nunknown = json.loads('{\"jsonrpc\":\"2.0\",\"id\":2,\"result\":{\"content\":[{\"text\":\"Unknown tool: get_sysinfo\",\"type\":\"text\"}],\"isError\":true,\"resultType\":\"complete\"}}')\nbad_params = json.loads('{\"jsonrpc\":\"2.0\",\"id\":3,\"error\":{\"code\":-32602,\"message\":\"Invalid request parameters\",\"data\":\"\"}}')\nmixed = json.loads('{\"jsonrpc\":\"2.0\",\"id\":4,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"here is the chart\"},{\"type\":\"image\",\"data\":\"AAAA\",\"mimeType\":\"image/png\"},{\"type\":\"resource_link\",\"uri\":\"file:///data.csv\",\"name\":\"data\"}],\"resultType\":\"complete\"}}')\nonly_structured = json.loads('{\"jsonrpc\":\"2.0\",\"id\":5,\"result\":{\"content\":[],\"structuredContent\":{\"result\":5},\"resultType\":\"complete\"}}')\nnothing = json.loads('{\"jsonrpc\":\"2.0\",\"id\":6,\"result\":{\"content\":[],\"isError\":false,\"resultType\":\"complete\"}}')\n\nassert for_model(ok) == '{\\n  \"query\": \"zzz\",\\n  \"total_matches\": 0\\n}', for_model(ok)\nassert for_model(unknown) == \"TOOL FAILED: Unknown tool: get_sysinfo\", for_model(unknown)\nassert for_model(bad_params) == \"PROTOCOL ERROR -32602: Invalid request parameters\", for_model(bad_params)\nassert for_model(mixed) == \"here is the chart\", for_model(mixed)\nassert for_model(only_structured) == '{\"result\": 5}', for_model(only_structured)\nassert for_model(nothing) == \"(no content)\", for_model(nothing)\ntwo_texts = json.loads('{\"jsonrpc\":\"2.0\",\"id\":7,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"line one\"},{\"type\":\"text\",\"text\":\"line two\"}],\"resultType\":\"complete\"}}')\ntwo_errors = json.loads('{\"jsonrpc\":\"2.0\",\"id\":8,\"result\":{\"content\":[{\"type\":\"text\",\"text\":\"first\"},{\"type\":\"text\",\"text\":\"second\"}],\"isError\":true,\"resultType\":\"complete\"}}')\nzero = json.loads('{\"jsonrpc\":\"2.0\",\"id\":9,\"result\":{\"content\":[],\"structuredContent\":0,\"resultType\":\"complete\"}}')\nassert for_model(two_texts) == \"line one\\nline two\", for_model(two_texts)\nassert for_model(two_errors) == \"TOOL FAILED: first\\nsecond\", for_model(two_errors)\nassert for_model(zero) == \"0\", for_model(zero)\nprint(\"all tests passed\")\n",
+      "explanation": "This is `read_result` and `for_model` from section 6 in miniature, on the wire shapes. Two failure paths, a JSON-RPC error and an `isError` result, must both be labeled, because only one of them raises in a real client; an absent `isError` means false; and `structuredContent` is the fallback when there is no text, serialized as JSON rather than as a Python repr.",
+      "hints": [
+        "Check for the `error` member before touching `result`, since an error response has no `result` at all.",
+        "Read `isError` with a default of false, and keep the structured fallback for the case with no text blocks."
+      ]
+    },
+    {
+      "id": "mcp-010-q12",
+      "type": "order",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "7",
+      "est_minutes": 3,
+      "tags": [
+        "mrtr",
+        "manual-loop"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A host drives one `input_required` exchange by hand for a tool that asks a single question. Put the steps in the order they happen.",
+      "items": [
+        {
+          "key": "a",
+          "text": "Call the same tool again with the same arguments, a new JSON-RPC id, `inputResponses`, and the `requestState` exactly as received."
+        },
+        {
+          "key": "b",
+          "text": "Call `session.call_tool(name, arguments, allow_input_required=True)`."
+        },
+        {
+          "key": "c",
+          "text": "Answer each entry of `inputRequests` and store each answer under that entry's key."
+        },
+        {
+          "key": "d",
+          "text": "Receive a result whose `resultType` is `\"complete\"`."
+        },
+        {
+          "key": "e",
+          "text": "Receive an `InputRequiredResult` carrying `inputRequests` and `requestState`."
+        }
+      ],
+      "answer": [
+        "b",
+        "e",
+        "c",
+        "a",
+        "d"
+      ],
+      "partial_credit": true,
+      "explanation": "Section 7's manual path: the first call asks for the `InputRequiredResult` rather than having it resolved, the result carries the questions and the sealed state, the client answers by the server's keys, and the retry repeats the name and arguments with the answers and the echoed state under a new id, which the server then completes.",
+      "hints": [
+        "The questions cannot be answered before they arrive.",
+        "The retry carries both the answers and the state, so it comes after both exist."
+      ]
+    },
+    {
+      "id": "mcp-010-q13",
+      "type": "match",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "6",
+      "est_minutes": 3,
+      "tags": [
+        "content-blocks"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Match each content a tool result can carry to what the project's `describe_block` does with it before anything reaches the model.",
+      "left": [
+        {
+          "key": "a",
+          "text": "A `text` block"
+        },
+        {
+          "key": "b",
+          "text": "An `image` block with 4,096 characters of base64"
+        },
+        {
+          "key": "c",
+          "text": "A `resource_link` block"
+        },
+        {
+          "key": "d",
+          "text": "An embedded `resource` whose contents are a `blob`"
+        },
+        {
+          "key": "e",
+          "text": "A block whose `type` no revision defines"
+        }
+      ],
+      "right": [
+        {
+          "key": "a",
+          "text": "Uses its text as it stands."
+        },
+        {
+          "key": "b",
+          "text": "Describes an image's media type and payload size, keeps the payload for the host, and never inlines it."
+        },
+        {
+          "key": "c",
+          "text": "Renders a pointer with the name and URI, and leaves following it to the host."
+        },
+        {
+          "key": "d",
+          "text": "Describes its URI, media type and size, without inlining the bytes."
+        },
+        {
+          "key": "e",
+          "text": "Returns a placeholder naming the unsupported type, without raising."
+        },
+        {
+          "key": "f",
+          "text": "Raises, because the content union is closed."
+        },
+        {
+          "key": "g",
+          "text": "Decodes the base64 and inlines the bytes as text."
+        }
+      ],
+      "answer": {
+        "a": "a",
+        "b": "b",
+        "c": "c",
+        "d": "d",
+        "e": "e"
+      },
+      "explanation": "Section 6: text is used as is; image and audio are described by mime type and size while `block.data` keeps the payload; a resource link is a pointer, not content; a blob resource is described like any binary payload; and an unknown type gets the `unsupported content block` placeholder, because the union is versioned and a newer server may send something new. Nothing decodes base64 into the model's context, and nothing raises.",
+      "hints": [
+        "Binary data never goes into the model's context in any form.",
+        "Ask what a newer server could send that this client predates."
+      ]
+    },
+    {
+      "id": "mcp-010-q14",
+      "type": "long",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "4",
+      "est_minutes": 12,
+      "tags": [
+        "lifetimes",
+        "async-exit-stack"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "In this post's runs, the hand-rolled class (transport and session entered by hand in one task, closed by two sequential `__aexit__` calls from another) left the server subprocess running, while the 2.x `Client` alone, entered and exited the same wrong way, raised the same `RuntimeError` but did not leave it running. Explain both results, then explain why `open_connection`, built on one `AsyncExitStack` entered and exited in the same task, does not leak even when the body raises.",
+      "kind": "explain",
+      "solution": "Both versions break the task-group rule: an `anyio` task group (and the cancel scope inside it) must be exited by the task that entered it, so exiting from another task raises `RuntimeError: Attempted to exit cancel scope in a different task than it was entered in`.\n\nThe hand-rolled `close()` then has a second bug. It exits the session first and the transport second, as two separate statements. When the session's exit raises, the next line never runs, so `stdio_client`'s exit, which is what terminates and reaps the subprocess, is skipped. The process survives, and only on the error path.\n\nThe 2.x `Client` holds its layers on its own internal exit stack. When the first layer's exit raises, the stack still calls the remaining exits, passing the exception along, so the stdio transport's cleanup runs and the process is reaped; the error still propagates to the caller.\n\n`open_connection` applies the same idea from the outside and also removes the first bug. One `AsyncExitStack` holds the optional HTTP client and the `Client`; it is entered and exited by the same task because it is an `async with` in one coroutine; and on any exception from the body it unwinds every context it entered, in reverse order, before re-raising. So the connection is closed, the subprocess is gone (the script reads the process table: running inside the block, not after), and the exception arrives wrapped in an `ExceptionGroup` for the caller to handle.",
+      "rubric": [
+        {
+          "criterion": "States the task-group rule and attributes the RuntimeError in both runs to exiting from a different task.",
+          "points": 2
+        },
+        {
+          "criterion": "Explains the leak: the first __aexit__ raises, so the transport's __aexit__ on the next line never runs and nothing reaps the subprocess.",
+          "points": 3
+        },
+        {
+          "criterion": "Explains why the Client alone does not leak: its own exit stack keeps calling the remaining exits after one raises.",
+          "points": 2
+        },
+        {
+          "criterion": "Explains open_connection: one AsyncExitStack in one task unwinds every context in reverse order on the exception path too.",
+          "points": 2
+        },
+        {
+          "criterion": "Notes that the body's exception still escapes, wrapped in an ExceptionGroup.",
+          "points": 1
+        }
+      ],
+      "answer_length": "two or three paragraphs",
+      "explanation": "Section 4 and `snippets/lifetimes.py`: the leak needs both bugs together, the wrong task and a second context exited by hand after one that raised. An exit stack, inside the SDK or in the project, keeps unwinding after a failure, and entering and exiting it in one task removes the first bug as well.",
+      "hints": [
+        "Separate the two bugs: which task exits, and what happens to a second statement after the first raises.",
+        "Ask what an exit stack does with the remaining contexts when one of their exits raises."
+      ]
+    },
+    {
+      "id": "mcp-010-q15",
+      "type": "long",
+      "track": "connect",
+      "difficulty": 4,
+      "outcomes": [
+        "o3",
+        "o1"
+      ],
+      "section": "7",
+      "est_minutes": 12,
+      "tags": [
+        "mrtr",
+        "stateless",
+        "streamable-http"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Post 04 described a stateless server behind a load balancer, where consecutive requests can reach different instances, and post 08 built the server side of the round trip. Using both, explain why the client's retry of an `input_required` call must repeat the tool name and arguments and echo `requestState` exactly, and what the post 05 server did in this post's runs when the state was changed by one character or reused with other arguments. Say what the client gains by connecting over Streamable HTTP rather than stdio, and what it does not.",
+      "kind": "connect",
+      "solution": "In revision 2026-07-28 there is no session, so nothing ties the retry to the first leg except what the retry itself carries. Over Streamable HTTP each POST may be routed to a different server instance, so the instance that receives the retry has never seen the first leg. It can only complete the call if the retry is a complete request on its own: the same method, the same tool name, the same arguments, the answers keyed by the identifiers the server chose, and the `requestState` the server minted. The state is where the server keeps anything the arguments do not say, and the MRTR page requires the client to echo it exactly and never inspect or modify it; the retry also needs a new JSON-RPC id, because it is an independent request.\n\nBecause the state passes through an untrusted client, the server must treat it as attacker-controlled. The SDK's server seals it and binds it to the request it belongs to. In `snippets/mrtr_client.py`, a retry with one character of the state changed, and a retry that reused the state with `pid` 4242 instead of 999999, were both refused with `MCPError(-32602, 'Invalid or expired requestState', {'reason': 'invalid_request_state'})`.\n\nThe transport changes the envelope only: over HTTP the same JSON body is a POST with `Mcp-Method` and `Mcp-Name` headers, and the client code path through `open_connection` is identical. HTTP adds the possibility of a different instance per leg, which is exactly why the rules above exist; it does not add any session or memory that would let the client skip them.",
+      "rubric": [
+        {
+          "criterion": "Explains that without a session the retry must be self-contained because another instance may receive it.",
+          "points": 3
+        },
+        {
+          "criterion": "States the client rules: same name and arguments, answers keyed by the server's ids, requestState echoed exactly, a new JSON-RPC id.",
+          "points": 3
+        },
+        {
+          "criterion": "Reports the observed refusals for a tampered state and for the state reused with other arguments, and ties them to sealing and binding.",
+          "points": 2
+        },
+        {
+          "criterion": "Says the transport changes only the envelope and adds no session, while making the cross-instance case real.",
+          "points": 2
+        }
+      ],
+      "answer_length": "two or three paragraphs",
+      "explanation": "Section 7 shows both legs on the wire and the two refused retries; post 04 supplies why a stateless deployment can send each leg to a different instance, and post 08 why the server puts its state in `requestState` rather than in memory.",
+      "hints": [
+        "Ask what the instance that receives the retry knows about the first leg.",
+        "Ask why a server must distrust a value it gave to the client."
+      ],
+      "connects": [
+        "mcp-004",
+        "mcp-008"
+      ]
+    },
+    {
+      "id": "mcp-010-q16",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "11",
+      "est_minutes": 3,
+      "tags": [
+        "timeouts",
+        "migration"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Code ported from the 1.x SDK constructs `Client(server, read_timeout_seconds=timedelta(seconds=5))` and then calls a tool. What does the 2.3.0 SDK do?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The constructor raises a `TypeError` that names `read_timeout_seconds` and asks for a float.",
+          "correct": false,
+          "feedback": "Nothing checks the type when the `Client` is built; the value is only used when a request needs a deadline."
+        },
+        {
+          "key": "b",
+          "text": "The SDK converts the `timedelta` to a float of five seconds internally, and the call succeeds.",
+          "correct": false,
+          "feedback": "No conversion happens. The 2.x parameter is a float of seconds, and the `timedelta` is used as given."
+        },
+        {
+          "key": "c",
+          "text": "The first request fails: a `TypeError` adding a `float` to a `timedelta`, inside an `ExceptionGroup`.",
+          "correct": true,
+          "feedback": "Right. The failure surfaces inside the timeout arithmetic at the first request and names no parameter at all."
+        },
+        {
+          "key": "d",
+          "text": "The timeout is silently ignored, so the call runs with no deadline at all and still returns.",
+          "correct": false,
+          "feedback": "It is not ignored. The deadline computation adds the value to the current time, which fails for a `timedelta`."
+        }
+      ],
+      "explanation": "Section 11: `snippets/lifetimes.py` prints `escaped as ExceptionGroup; inside it: TypeError: unsupported operand type(s) for +: 'float' and 'datetime.timedelta'`. In 2.x `read_timeout_seconds` is a float of seconds, as section 3 says.",
+      "hints": [
+        "Ask when the timeout value is first used, not when it is stored.",
+        "The deadline is the current time plus the timeout."
+      ]
+    },
+    {
+      "id": "mcp-010-q17",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "7",
+      "est_minutes": 2,
+      "tags": [
+        "mrtr",
+        "request-state"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "An `InputRequiredResult` carries a `requestState` string. In one sentence: what must the client do with it when it retries?",
+      "answer": {
+        "model": "Send it back exactly as received, byte for byte, without inspecting, parsing or modifying it.",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*(?<!not )(?<!never )(?<!n't )(?<!or )(?<!nor )(?<!without )\\b(?:decod(?:e|es|ing)|pars(?:e|es|ing)|inspect(?:s|ing)?|edit(?:s|ing)?|modif(?:y|ies|ying)|chang(?:e|es|ing)|updat(?:e|es|ing)|refresh(?:es|ing)?|regenerat(?:e|es|ing)|alter(?:s|ing)?)\\s+(?:it\\b|the\\s+\\w+|requeststate\\b|this\\b))(?![\\s\\S]*\\b(?:no need|need not|don't|do not|doesn't|does not|never|not)\\s+(?:have to\\s+|need to\\s+)?(?:echo|send|return|include|pass|copy)\\w*)(?=[\\s\\S]*\\b(?:echo|echoes|echoed|echoing|send|sends|sent|sending|return|returns|returned|include|includes|included|pass|passes|passed|copy|copies|copied|repeat|repeats|attach|attaches|attached)\\b)(?=[\\s\\S]*\\b(?:exact|exactly|verbatim|unchanged|unmodified|as[- ]is|byte[- ]for[- ]byte|untouched|identical|same|without (?:any )?(?:change|changing|modification|modifying|alteration|touching|inspect))\\w*)[\\s\\S]{15,}$"
+        ]
+      },
+      "explanation": "Section 7, from the MRTR page: the client MUST echo the exact value when retrying and MUST NOT inspect, parse, modify, or make assumptions about it. The post 05 server seals it, so `snippets/mrtr_client.py` shows a one-character change refused with `-32602`.",
+      "hints": [
+        "The string is meaningful only to the server."
+      ]
+    }
+  ]
+}

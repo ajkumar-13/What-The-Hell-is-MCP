@@ -1,8 +1,24 @@
 id: mcp-010
 slug: 10-mcp-client
-title: "10 · Building your own MCP client"
+title: "10 - Building your own MCP client"
+summary: "Builds an MCP client that reaches a server over stdio, Streamable HTTP or in memory through one code path, reads tool failures that arrive as successful results, answers mid-call questions, and closes without leaking a subprocess."
 date: 2026-07-24
-tags: [model-context-protocol, mcp, clients, hands-on, python-sdk]
-hero: diagrams/01-client-internals.svg
-reading_time: 29
+updated: 2026-10-09
+status: complete
 part: "Part III - Clients, hosts, and testing"
+level: intermediate
+reading_time: 42
+tags: [mcp, clients, python-sdk, transports, tool-results, mrtr]
+hero: diagrams/01-client-internals.svg
+prerequisites: [mcp-005]
+code: required
+outcomes:
+  - id: o1
+    text: "Connect to a server over standard input and output, Streamable HTTP, or in memory, through one code path."
+  - id: o2
+    text: "Read every content block type a tool can return, and branch on isError rather than on exceptions."
+  - id: o3
+    text: "Answer a server that asks a question mid-call, both automatically through a callback and by hand."
+  - id: o4
+    text: "Tear a connection down without leaking the subprocess it held, even when the code inside the connection raises."
+recommended: [mcp-004, mcp-009]
