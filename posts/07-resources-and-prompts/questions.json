@@ -1,0 +1,773 @@
+{
+  "standard": "2.1.0",
+  "post": "mcp-007",
+  "next_ordinal": 18,
+  "questions": [
+    {
+      "id": "mcp-007-q01",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 1,
+      "tags": [
+        "primitives",
+        "control"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The specification describes each of the three server primitives with one word for who controls it. Which word does it use for resources?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Model-controlled",
+          "correct": false,
+          "feedback": "That is the word for tools: the model decides, mid-conversation, to call one."
+        },
+        {
+          "key": "b",
+          "text": "Application-driven",
+          "correct": true,
+          "feedback": "Right. The host application decides when to read a resource, often because a user attached it."
+        },
+        {
+          "key": "c",
+          "text": "User-controlled",
+          "correct": false,
+          "feedback": "That is the word for prompts, which a person picks from a menu or types as a command."
+        },
+        {
+          "key": "d",
+          "text": "Client-controlled, by the connection object",
+          "correct": false,
+          "feedback": "The client is the per-server connection object inside the host, not the party that decides; the specification's word names the application."
+        }
+      ],
+      "explanation": "Section 2 gives the specification's three words: model-controlled for tools, application-driven for resources, and user-controlled for prompts. The application, meaning the host, decides when a resource is read.",
+      "hints": [
+        "Ask which party, other than the model and the user, can decide to fetch something."
+      ]
+    },
+    {
+      "id": "mcp-007-q02",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "1",
+      "est_minutes": 2,
+      "tags": [
+        "primitives",
+        "design"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A host shows the user a picker over a team wiki, and the user selects one page to attach to the conversation. Through which primitive should the wiki server expose that page?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "A tool `get_page(slug)` with a careful description, so the model can fetch the page as soon as it reads the user's message",
+          "correct": false,
+          "feedback": "The decision is already made by the user. A tool routes it through the model, which must now guess a call it had no reason to make."
+        },
+        {
+          "key": "b",
+          "text": "A resource template such as `wiki://pages/{slug}`, which the host reads when the user picks a page",
+          "correct": true,
+          "feedback": "Right. The read is application-driven, addressable by URI, cacheable, subscribable, and the slug can be completed."
+        },
+        {
+          "key": "c",
+          "text": "A prompt with a `slug` argument, since the user is the one who chose",
+          "correct": false,
+          "feedback": "A prompt is an entry point that expands into opening messages; attaching a document is a read of data with a stable identity, which is a resource."
+        },
+        {
+          "key": "d",
+          "text": "A tool that returns a `resource_link`, so the host can fetch the page afterwards",
+          "correct": false,
+          "feedback": "The link still has to be produced by a tool call the model decides to make. The bridge is for data the model also needs mid-turn, not a substitute for the resource."
+        }
+      ],
+      "explanation": "Section 1 builds the wiki example: when somebody has already decided which document is meant, routing the read through the model adds a guess. A resource is what the application reads on the user's behalf, and section 10 keeps the thin tool returning `resource_link` only for when the model also needs a door.",
+      "hints": [
+        "Ask who has already made the decision in this scenario.",
+        "Then pick the primitive whose trigger that party pulls."
+      ]
+    },
+    {
+      "id": "mcp-007-q03",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "6",
+      "est_minutes": 3,
+      "tags": [
+        "caching",
+        "ttl"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Which of these methods return a complete result that must carry `ttlMs` and `cacheScope` under revision 2026-07-28? Select every one that does.",
+      "select": "multiple",
+      "options": [
+        {
+          "key": "a",
+          "text": "`resources/read`",
+          "correct": true,
+          "feedback": "Yes. A read is one of the six cacheable methods, which is a main reason data with a stable identity belongs behind a resource."
+        },
+        {
+          "key": "b",
+          "text": "`tools/list`",
+          "correct": true,
+          "feedback": "Yes. The list of tools is cacheable, even though the result of calling a tool is not."
+        },
+        {
+          "key": "c",
+          "text": "`prompts/get`",
+          "correct": false,
+          "feedback": "No. `GetPromptResult` extends plain `Result`, which is what lets a prompt embed a live reading every time it is expanded."
+        },
+        {
+          "key": "d",
+          "text": "`tools/call`",
+          "correct": false,
+          "feedback": "No. A tool result carries neither field, so the protocol gives a client no freshness hint for it."
+        },
+        {
+          "key": "e",
+          "text": "`completion/complete`",
+          "correct": false,
+          "feedback": "No. A `CompleteResult` is neither cacheable nor allowed to be `input_required`."
+        },
+        {
+          "key": "f",
+          "text": "`server/discover`",
+          "correct": true,
+          "feedback": "Yes. The Caching page lists `server/discover` first among the six methods."
+        }
+      ],
+      "explanation": "Section 6 lists the six methods whose complete results must carry both fields: `server/discover`, `tools/list`, `prompts/list`, `resources/list`, `resources/templates/list`, and `resources/read`. `prompts/get`, `tools/call`, and `completion/complete` carry neither.",
+      "hints": [
+        "The cacheable set is the discovery result, the four lists, and one read.",
+        "A list being cacheable says nothing about the call or expansion that follows it."
+      ]
+    },
+    {
+      "id": "mcp-007-q04",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "6",
+      "est_minutes": 2,
+      "tags": [
+        "caching"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "From this list of ten methods, how many must put `ttlMs` and `cacheScope` on a `resultType: \"complete\"` result? `server/discover`, `tools/list`, `tools/call`, `prompts/list`, `prompts/get`, `resources/list`, `resources/templates/list`, `resources/read`, `completion/complete`, `subscriptions/listen`.",
+      "answer": {
+        "value": 6,
+        "tolerance": 0,
+        "unit": ""
+      },
+      "precision_note": "Closed form from the specification's Caching page as section 6 quotes it: server/discover, tools/list, prompts/list, resources/list, resources/templates/list and resources/read. The SDK's CACHEABLE_METHODS set in mcp 2.3.0 holds the same six.",
+      "explanation": "The Caching page names six methods, and all six are in the list: discovery, the four list methods, and `resources/read`. `tools/call`, `prompts/get`, `completion/complete`, and `subscriptions/listen` carry no caching hints.",
+      "hints": [
+        "Start from discovery and the list methods, then ask which single read is cacheable."
+      ]
+    },
+    {
+      "id": "mcp-007-q05",
+      "type": "numeric",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "3",
+      "est_minutes": 4,
+      "tags": [
+        "uri-templates",
+        "security"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`snippets/template_refusals.py` reads the first server's `system://disk/{disk}` template with the four URIs below. Under `mcp==2.3.0` with the default `ResourceSecurity` policy, how many of the reads enter the `disk_usage` handler, and how many are refused by `ResourceSecurity` after the matcher has bound a value?",
+      "stimulus": {
+        "kind": "code",
+        "language": "text",
+        "content": "system://disk/etc\nsystem://disk/../../etc/passwd\nsystem://disk/..%2F..%2Fetc%2Fpasswd\nsystem://disk/.."
+      },
+      "answer": {
+        "parts": [
+          {
+            "label": "reads that enter disk_usage",
+            "value": 1,
+            "tolerance": 0,
+            "unit": ""
+          },
+          {
+            "label": "reads refused by ResourceSecurity",
+            "value": 2,
+            "tolerance": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "precision_note": "Printed by snippets/template_refusals.py: part 1 shows only system://disk/etc reaching the allowlist message; part 2 shows the literal traversal string with no match and the percent-encoded string and the bare .. both bound and rejected by ResourceSecurity.",
+      "explanation": "Only `etc` binds, passes the policy, and reaches the handler, where the allowlist refuses it. The literal traversal string never matches a simple `{disk}` expansion because it contains slashes. The percent-encoded form is decoded and bound as `../../etc/passwd`, and the bare `..` binds as itself; the default policy rejects both as path traversal before the handler runs.",
+      "hints": [
+        "Ask, for each URI, whether a simple `{disk}` expansion can bind it at all.",
+        "For the ones that bind, ask whether the bound value contains a `..` path component."
+      ]
+    },
+    {
+      "id": "mcp-007-q06",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "3",
+      "est_minutes": 1,
+      "tags": [
+        "uri-templates",
+        "sdk"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "With the Python SDK's `@mcp.resource(...)`, what decides whether the function is registered as a static resource or as a resource template?",
+      "answer": {
+        "model": "Whether the URI string contains `{...}` template variables: with variables it is a template, without them a static resource.",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|never|isn't|is not|doesn't|does not|don't|do not)\\b[^.;]{0,15}(?:braces?|curly|\\{|variables?|placeholders?)\\b)(?![\\s\\S]*(?:braces?|curly|variables?|placeholders?)[^.;]{0,20}\\b(?:do not|don't|does not|doesn't|never)\\b[^.;]{0,12}(?:matter|decide|determine|affect))(?![\\s\\S]*\\b(?:a flag|the flag|separate decorator|different decorator|a keyword|keyword argument|the return type|parameters? of the (?:function|handler))\\b[^.;]{0,20}(?:decides|determines))(?!\\W*(?:(?:whether|if|by|on|it is|it's)\\s+)?(?:the\\s+)?(?:decorated\\s+)?(?:function|handler)(?:'s)?\\s+(?:declares|has|takes|accepts|parameters|arguments|signature))(?![\\s\\S]*(?<!no )(?<!without )(?<!without any )\\b(?:braces|variables|placeholders)\\b[^.;,]{0,25}\\bstatic\\b)(?=[\\s\\S]*(?:\\{|brace|curly|template variables?|uri variables?|placeholders?|rfc 6570 variables?|\\bvariables?\\b))(?=[\\s\\S]*(?:uri|string|address|first argument|template))(?=(?:\\W*\\b\\w+\\b){4})[\\s\\S]{8,}$"
+        ]
+      },
+      "explanation": "Section 3 states the rule: static versus template is decided purely by whether the URI contains `{...}` variables. There is no flag and no separate decorator; the SDK parses the string as an RFC 6570 template when the decorator runs.",
+      "hints": [
+        "Look at the one argument every `@mcp.resource` call has."
+      ]
+    },
+    {
+      "id": "mcp-007-q07",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "4",
+      "est_minutes": 2,
+      "tags": [
+        "completion"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A server's allowlist holds `root`, `data`, and `backup`. Its completion handler for the `disk` variable returns `Completion(values=sorted(ALLOWED))` and never looks at `argument.value`. A user types `b`. How many values does the host offer?",
+      "answer": {
+        "value": 3,
+        "tolerance": 0,
+        "unit": ""
+      },
+      "precision_note": "Closed form: the SDK passes the handler's list through unchanged (section 4), so the count is the size of the allowlist, 3. The correct handler would offer 1.",
+      "explanation": "The SDK does not filter completions. Whatever list the handler returns is the list the user sees, so all three disks are offered for the prefix `b`. A handler that applied `startswith` would offer only `backup`.",
+      "hints": [
+        "Ask which side of the exchange is responsible for applying the prefix."
+      ]
+    },
+    {
+      "id": "mcp-007-q08",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "5",
+      "est_minutes": 3,
+      "tags": [
+        "subscriptions"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A server built with `MCPServer(...)` declares `listChanged: true` for resources. A client opens `subscriptions/listen` with `resourceSubscriptions: [\"notes://today\"]` and nothing else in the filter. A tool then calls `ctx.notify_resource_updated(\"notes://today\")` and `ctx.notify_resources_changed()`. What reaches the client on that stream after the acknowledgment?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Both the update and `notifications/resources/list_changed`, because the server declared `listChanged`",
+          "correct": false,
+          "feedback": "The capability says the server can send list changes; only a filter with `resourcesListChanged: true` asks for them. Nothing is broadcast."
+        },
+        {
+          "key": "b",
+          "text": "Only `notifications/resources/list_changed`, since a list change supersedes an update",
+          "correct": false,
+          "feedback": "No notification supersedes another, and the list change was never requested on this stream."
+        },
+        {
+          "key": "c",
+          "text": "One `notifications/resources/updated` naming `notes://today`, and nothing else",
+          "correct": true,
+          "feedback": "Right. The client asked for updates to that URI only, and the server must not send notification types the client did not request."
+        },
+        {
+          "key": "d",
+          "text": "The update together with the new text of `notes://today`",
+          "correct": false,
+          "feedback": "The update names the URI and nothing else; the new content arrives only with a fresh `resources/read`."
+        }
+      ],
+      "explanation": "Section 5 quotes the rule that the server MUST NOT send notification types the client has not explicitly requested, and `snippets/listen_and_cache.py` prints exactly one `ResourceUpdated` event and no second event for the unrequested list change. The update carries only the URI.",
+      "hints": [
+        "Compare what the filter asked for with what the tool announced.",
+        "Then recall what an update notification carries."
+      ]
+    },
+    {
+      "id": "mcp-007-q09",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "7",
+      "est_minutes": 2,
+      "tags": [
+        "pagination",
+        "sdk"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A server built on the high-level `MCPServer` registers 5,000 static resources with `@mcp.resource`. A client sends `resources/list` with a cursor value the server never issued. Under `mcp==2.3.0`, what does the client get back?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "An empty list, since an unknown cursor points past the end",
+          "correct": false,
+          "feedback": "The cursor is ignored entirely; nothing in the high-level server interprets it as a position."
+        },
+        {
+          "key": "b",
+          "text": "A first page of a default size, with a `nextCursor` for the rest",
+          "correct": false,
+          "feedback": "The high-level server has no page size and never sets `nextCursor`; real pages need a list handler on the low-level `Server`."
+        },
+        {
+          "key": "c",
+          "text": "A `-32602` error, because an invalid cursor should be refused",
+          "correct": false,
+          "feedback": "That is the specification's SHOULD, but the high-level server never reads the cursor, so it cannot tell that it is invalid."
+        },
+        {
+          "key": "d",
+          "text": "All 5,000 resources in one result, with no `nextCursor`",
+          "correct": true,
+          "feedback": "Right. Every high-level list handler ignores the cursor and returns the whole set."
+        }
+      ],
+      "explanation": "Section 7 shows `snippets/resource_surface.py` sending a `resources/list` with the cursor `page-2` and getting the whole list back with `nextCursor=None`. That is legal, since page size is the server's business, but a large set needs `on_list_resources` on the low-level `Server`.",
+      "hints": [
+        "Ask whether the high-level list handler reads the cursor at all.",
+        "If the cursor is never read, ask what the handler can do besides returning everything it has."
+      ]
+    },
+    {
+      "id": "mcp-007-q10",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "12",
+      "est_minutes": 3,
+      "tags": [
+        "testing",
+        "errors"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A test wants to prove the allowlist refuses `etc`. It is written as `try:` around the whole `async with Client(mcp) as c: await c.read_resource(\"system://disk/etc\")` block, with `except MCPError as e: assert e.error.code == -32602`. The test fails with an unhandled exception. Why?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "`MCPError` is raised only by clients connected over stdio or HTTP, never by the in-memory `Client(mcp)` the test uses",
+          "correct": false,
+          "feedback": "The in-memory client raises the same `MCPError`, with the code, message and data printed in section 3."
+        },
+        {
+          "key": "b",
+          "text": "The allowlist refusal is `-32603`, not `-32602`, so the assertion fails",
+          "correct": false,
+          "feedback": "`ResourceNotFoundError` becomes `-32602`, and the test never reaches its assertion: the except clause does not match at all."
+        },
+        {
+          "key": "c",
+          "text": "`read_resource` returns an empty `contents` array instead of raising",
+          "correct": false,
+          "feedback": "The server raises, as the specification requires; an empty array for a missing resource is forbidden as ambiguous."
+        },
+        {
+          "key": "d",
+          "text": "Outside the block the `MCPError` arrives wrapped in an `ExceptionGroup`, which `except MCPError` does not match",
+          "correct": true,
+          "feedback": "Right. Inside the block the read raises `MCPError`; once it escapes, the client's task groups have wrapped it two levels deep."
+        }
+      ],
+      "explanation": "Section 12 prints what `snippets/template_refusals.py` catches when the refusal escapes the block: an `ExceptionGroup` with the `MCPError` two group levels down. Catching inside the block, next to the call, or using `except*` outside, fixes the test.",
+      "hints": [
+        "Ask what the client's `async with` does to an exception raised inside it on the way out.",
+        "Then ask whether `except MCPError` matches that wrapper."
+      ]
+    },
+    {
+      "id": "mcp-007-q11",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "5",
+      "est_minutes": 2,
+      "tags": [
+        "subscriptions",
+        "stdio"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A client on a stdio connection holds two open `subscriptions/listen` streams at once. When a `notifications/resources/updated` arrives, how does the client tell which stream it belongs to?",
+      "answer": {
+        "model": "By the `io.modelcontextprotocol/subscriptionId` key in the notification's `_meta`, whose value is the JSON-RPC id of the `subscriptions/listen` request that opened that stream.",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|never|no|isn't|doesn't|does not|cannot|can't)\\b[^.;]{0,25}(?:subscriptionid|subscription id|subscription_id))(?![\\s\\S]*(?<!not by )(?<!not by a )(?<!not by the )(?<!not a )(?<!not the )(?<!not )(?<!no )(?:mcp-session-id|session id|session header))(?![\\s\\S]*\\b(?:unrelated|independent of)\\b)(?![\\s\\S]*\\b(?:server|it)\\s+(?:\\w+\\s+){0,2}(?:mints|generates|creates|assigns|picks|chooses|allocates)\\b)(?![\\s\\S]*(?<!not a )(?<!no )(?<!rather than a )\\b(?:fresh|new|separate|random|server-generated|generated)\\s+(?:uuid|identifier|id)\\b)(?![\\s\\S]*\\bid of the notification\\b)(?=[\\s\\S]*(?:subscriptionid|subscription id|subscription_id|io\\.modelcontextprotocol/subscriptionid))(?=[\\s\\S]*(?:\\bids?\\b|identifier)[^.;]{0,60}(?:listen|request)|[\\s\\S]*(?:listen|request)[^.;]{0,40}(?:\\bids?\\b|identifier))(?=(?:\\W*\\b\\w+\\b){4})[\\s\\S]{10,}$"
+        ]
+      },
+      "explanation": "Section 5: every notification on a stream carries `_meta[\"io.modelcontextprotocol/subscriptionId\"]`, and its value is the JSON-RPC `id` of the listen request. On stdio every subscription shares one channel, so that field is the only way to demultiplex.",
+      "hints": [
+        "Look in the notification's `_meta`.",
+        "Ask which existing identifier the server reuses rather than minting a new one."
+      ]
+    },
+    {
+      "id": "mcp-007-q12",
+      "type": "long",
+      "track": "workout",
+      "difficulty": 4,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "10",
+      "est_minutes": 12,
+      "tags": [
+        "design",
+        "primitives"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A ticketing server exposes five tools: `get_ticket(id)`, `search_tickets(query)`, `get_sla_policy()` (the same text for every user, revised each quarter), `close_ticket(id)`, and `triage_guide()`, which returns a block of instructions that users paste in to start a triage session. Redesign the surface primitive by primitive. For each of the five, say which primitive it belongs behind, justify the choice by who should decide to fetch or run it, and name one concrete protocol mechanism the choice gains or keeps.",
+      "kind": "design",
+      "solution": "1. `get_ticket(id)` becomes a resource template, `tickets://{id}`. A ticket has a stable identity, and the decision to look at a specific one is usually already made by a person or the host, so it is application-driven. It gains a cacheable `resources/read`, per-item change notification through `resourceSubscriptions`, and completion of `id` through `ref/resource`.\n\n2. `search_tickets(query)` stays a tool. The query is the model's to invent and the result is not addressable in advance, so the model must decide. It keeps typed JSON Schema arguments, which a template variable or a prompt argument could not offer.\n\n3. `get_sla_policy()` becomes a static resource, `tickets://policy/sla`. Nobody needs the model's judgment to read it. It gains caching: because the text is the same for every user it can be served with `cacheScope: \"public\"` and a long `ttlMs` (on the Python SDK, through `cache_hints` for `resources/read`), and a subscription cuts the TTL short when the quarterly revision lands.\n\n4. `close_ticket(id)` stays a tool. It changes the world, and the model must be able to reach it mid-task; the host's permission prompt guards it.\n\n5. `triage_guide()` becomes a prompt, `triage_ticket`, with a string argument such as `ticket_id`. The user chooses to start a triage session, so it is user-controlled. It gains a slash command or menu entry in the host, argument completion through `ref/prompt`, and a handler that can embed live data, such as the ticket's current state, because a prompt expansion is never cached.\n\nIf the model also needs to reach a ticket mid-turn, a thin tool returning a `resource_link` to `tickets://{id}` keeps one definition of the data with two doors.",
+      "rubric": [
+        {
+          "criterion": "Turns get_ticket into a resource template and get_sla_policy into a static resource, justified by the decision already being made outside the model.",
+          "points": 3
+        },
+        {
+          "criterion": "Keeps search_tickets and close_ticket as tools, justified by the model having to invent the query or act mid-task.",
+          "points": 2
+        },
+        {
+          "criterion": "Turns triage_guide into a prompt, justified by the user choosing to start it.",
+          "points": 2
+        },
+        {
+          "criterion": "Names a correct mechanism for each of the five: cacheable reads with a sensible cacheScope, subscriptions, completion references, a never-cached prompt expansion, or the typed JSON Schema arguments a kept tool retains.",
+          "points": 3
+        }
+      ],
+      "answer_length": "five short paragraphs",
+      "explanation": "Section 10's table turns on who should decide: data with a stable identity whose read somebody has already decided goes behind a resource, a query the model invents or an action it takes stays a tool, and an entry point a person starts is a prompt. Sections 4, 5, and 6 supply the mechanisms each move gains.",
+      "hints": [
+        "Sort the five by who should pull the trigger: the model, the application, or the user.",
+        "For each resource, ask what caching and subscription give it; for the prompt, ask what a never-cached expansion allows."
+      ]
+    },
+    {
+      "id": "mcp-007-q13",
+      "type": "long",
+      "track": "connect",
+      "difficulty": 4,
+      "outcomes": [
+        "o2",
+        "o4"
+      ],
+      "section": "6",
+      "est_minutes": 12,
+      "tags": [
+        "design",
+        "caching",
+        "security"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The database analyst of post 13 (`mcp-013`) exposes the database's schema as a resource beside its query tool. Suppose the schema read is filtered by the caller's database role, so two users can see different tables, and suppose it is served from a template `db://schema/{table}`. Using this post, explain which `cacheScope` its reads must carry and why, what must stand between the `{table}` variable and the catalog query, and what the high-level Python server would and would not give it for listing a schema with thousands of tables.",
+      "kind": "connect",
+      "solution": "Because the result depends on the caller's role, it is private data: every `resources/read` of the schema must carry `cacheScope: \"private\"`, which forbids sharing a cached response across authorization contexts. Marking it `\"public\"` would let a gateway or shared cache serve one user's table list to another, and the specification warns that a server must not rely on `cacheScope` alone, so the role check itself stays in the handler. The default from `MCPServer` is already zero and private; a `cache_hints` entry for `resources/read` could raise `ttlMs` but must keep the private scope.\n\nThe `{table}` variable is untrusted input. Neither the template matcher nor the SDK's default `ResourceSecurity` policy is the defense: they reject slashes and `..`, not a table name the caller may not see, and a widened or exempted template lets anything through. The handler must check the value against an allowlist built from what the caller's role may see, and refuse anything else with `ResourceNotFoundError`, so the client gets `-32602` and the catalog query never runs on an unvetted name.\n\nFor thousands of tables, the high-level server does not paginate: every `resources/list` returns the whole set with no `nextCursor`, whatever cursor is sent. Using a template keeps the list small (one template instead of thousands of static resources), and a completion handler can offer table names, filtered by prefix and by the caller's role, since completion values are a disclosure surface. Real pages would need `on_list_resources` on the low-level `Server`.",
+      "rubric": [
+        {
+          "criterion": "Requires cacheScope private for a role-dependent read and explains the cross-user leak that public would allow, keeping access control in the handler.",
+          "points": 3
+        },
+        {
+          "criterion": "Treats the table variable as untrusted and puts a role-derived allowlist in the handler, refusing with ResourceNotFoundError and -32602.",
+          "points": 3
+        },
+        {
+          "criterion": "Explains why the matcher and the default ResourceSecurity policy are not the defense here.",
+          "points": 2
+        },
+        {
+          "criterion": "States that the high-level server ignores cursors and returns everything, and offers the template, role-filtered completion, or a low-level list handler as the remedy.",
+          "points": 2
+        }
+      ],
+      "answer_length": "three paragraphs",
+      "explanation": "Section 6 makes `cacheScope` the security half of caching and forbids sharing private results across authorization contexts; section 3 makes the allowlist in the handler the defense for a template variable; section 7 shows the high-level server ignoring cursors; section 4 warns that completions disclose. Post 13 applies the same reasoning to a real database server.",
+      "hints": [
+        "Start from what changes between two callers' reads, and what that means for a shared cache.",
+        "Then ask which layer knows which table names a caller may see."
+      ],
+      "connects": [
+        "mcp-013"
+      ]
+    },
+    {
+      "id": "mcp-007-q14",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "4",
+      "est_minutes": 8,
+      "tags": [
+        "completion",
+        "python"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The completion handler below is the core of a `@mcp.completion()` handler with the SDK types stripped away: `value` is what the user has typed (a string, or `None` when nothing has been typed), and `candidates` is the allowlist. As written it offers every candidate whatever the user types. Fix `suggest` so it returns, in sorted order, only the candidates that start with the typed prefix, compared case-insensitively but returned in their own spelling, and never more than the 100 values the schema allows.",
+      "kind": "fix",
+      "language": "python",
+      "starter": "def suggest(value, candidates):\n    \"\"\"Return the completion values for what the user has typed so far.\"\"\"\n    return sorted(candidates)\n",
+      "solution": "MAX_VALUES = 100  # the schema caps completion.values at 100 items\n\n\ndef suggest(value, candidates):\n    \"\"\"Return the completion values for what the user has typed so far.\"\"\"\n    prefix = (value or \"\").lower()\n    matches = sorted(c for c in candidates if c.lower().startswith(prefix))\n    return matches[:MAX_VALUES]\n",
+      "tests": "disks = {\"root\", \"data\", \"backup\"}\nsymptoms = [\"general slowness\", \"high fan noise\", \"slow disk access\", \"unresponsive windows\"]\n\nassert suggest(\"r\", disks) == [\"root\"], suggest(\"r\", disks)\nassert suggest(\"zzz\", disks) == [], \"a prefix that matches nothing must offer nothing, not everything\"\nassert suggest(\"\", disks) == [\"backup\", \"data\", \"root\"], suggest(\"\", disks)\nassert suggest(None, disks) == [\"backup\", \"data\", \"root\"], \"a missing value means nothing typed yet\"\nassert suggest(\"H\", symptoms) == [\"high fan noise\"], \"compare case-insensitively\"\nassert suggest(\"s\", symptoms) == [\"slow disk access\"], \"a prefix match, not a substring match\"\nassert suggest(\"d\", [\"disk\", \"Data\"]) == [\"Data\", \"disk\"], \"keep each candidate's own spelling\"\nmany = [f\"item{i:03d}\" for i in range(150)]\nresult = suggest(\"item\", many)\nassert len(result) == 100, f\"completion.values holds at most 100 items, got {len(result)}\"\nassert result == many[:100], \"keep the first 100 in sorted order\"\nassert suggest(\"item\", many[::-1]) == many[:100], \"sort before cutting to 100\"\nprint(\"all suggest tests passed\")\n",
+      "entry": "python -c \"exec(open('solution.py').read()); exec(open('tests.py').read())\"",
+      "expected_output": "all suggest tests passed\n",
+      "explanation": "The SDK passes the handler's list through unchanged, so the prefix match is the handler's job, as section 4 says. Lowering both sides makes `H` match `high fan noise`, `startswith` rather than `in` keeps `s` from matching every symptom containing an s, `None` is treated as nothing typed, and the slice keeps the result within the schema's 100-item cap.",
+      "hints": [
+        "The SDK will not filter for the handler; the comparison has to happen here.",
+        "Normalize the case of both the typed value and each candidate before comparing, and handle `None`.",
+        "Sort the matches, then keep at most the first 100."
+      ]
+    },
+    {
+      "id": "mcp-007-q15",
+      "type": "order",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "5",
+      "est_minutes": 2,
+      "tags": [
+        "subscriptions"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Put these messages and events of one resource subscription in the order they happen, starting from a client that wants to know when `notes://today` changes, where the tool that changes it runs only after the subscription is confirmed.",
+      "answer": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f"
+      ],
+      "items": [
+        {
+          "key": "a",
+          "text": "The client sends `subscriptions/listen` with `resourceSubscriptions: [\"notes://today\"]`."
+        },
+        {
+          "key": "b",
+          "text": "The server sends `notifications/subscriptions/acknowledged` with the honored filter."
+        },
+        {
+          "key": "c",
+          "text": "A tool on the server rewrites the note and calls `ctx.notify_resource_updated(\"notes://today\")`."
+        },
+        {
+          "key": "d",
+          "text": "The server sends `notifications/resources/updated` carrying only the URI."
+        },
+        {
+          "key": "e",
+          "text": "The client sends `resources/read` for `notes://today`."
+        },
+        {
+          "key": "f",
+          "text": "The server returns the new contents with `ttlMs` and `cacheScope`."
+        }
+      ],
+      "partial_credit": true,
+      "explanation": "Section 5: the acknowledgment must come before any other notification on the subscription, the update follows the change that caused it and names only the URI, and the content arrives with the fresh read, whose result carries the caching fields like every complete `resources/read`.",
+      "hints": [
+        "The acknowledgment is always the first message on the stream.",
+        "The notification carries no content, so something must fetch it afterwards."
+      ]
+    },
+    {
+      "id": "mcp-007-q16",
+      "type": "match",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "3",
+      "est_minutes": 4,
+      "tags": [
+        "uri-templates",
+        "security"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Each URI is read from the first server's `system://disk/{disk}` template under `mcp==2.3.0` with the default policy. Match each one to the layer that decides its outcome.",
+      "answer": {
+        "a": "c",
+        "b": "e",
+        "c": "a",
+        "d": "d"
+      },
+      "left": [
+        {
+          "key": "a",
+          "text": "`system://disk/root`"
+        },
+        {
+          "key": "b",
+          "text": "`system://disk/etc`"
+        },
+        {
+          "key": "c",
+          "text": "`system://disk/../../etc/passwd`"
+        },
+        {
+          "key": "d",
+          "text": "`system://disk/..%2F..%2Fetc%2Fpasswd`"
+        }
+      ],
+      "right": [
+        {
+          "key": "a",
+          "text": "The template matcher, which finds no match"
+        },
+        {
+          "key": "b",
+          "text": "The client, which refuses to send the request"
+        },
+        {
+          "key": "c",
+          "text": "Nothing refuses it; the handler returns the disk's usage"
+        },
+        {
+          "key": "d",
+          "text": "The default `ResourceSecurity` policy, after the matcher has bound a value"
+        },
+        {
+          "key": "e",
+          "text": "The allowlist inside `disk_usage`, with a message naming the known disks"
+        }
+      ],
+      "explanation": "Section 3 prints all of these. `root` is on the allowlist and reads normally; `etc` binds and reaches the handler, where the allowlist refuses it with `Unknown disk 'etc'. Known disks: root.`; the literal traversal string contains slashes and never matches `{disk}`; the percent-encoded one is decoded and bound as `../../etc/passwd`, then rejected by `ResourceSecurity`. The client sends every one of them.",
+      "hints": [
+        "First ask which of the four a simple `{disk}` expansion cannot bind.",
+        "Then ask which bound value contains a `..` component."
+      ]
+    },
+    {
+      "id": "mcp-007-q17",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "6",
+      "est_minutes": 2,
+      "tags": [
+        "caching",
+        "sdk"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A server built on `MCPServer` with `mcp==2.3.0` wants every `resources/read` it answers to be fresh for one minute and shareable across users. Which change does that?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Pass `ttl_ms=60000` and `cache_scope=\"public\"` to every `@mcp.resource(...)` decorator in the server's code",
+          "correct": false,
+          "feedback": "The decorator accepts `name`, `title`, `description`, `mime_type`, `icons`, `annotations`, `meta`, and `security`, and nothing about caching."
+        },
+        {
+          "key": "b",
+          "text": "Construct the server with `cache_hints={\"resources/read\": CacheHint(ttl_ms=60_000, scope=\"public\")}`",
+          "correct": true,
+          "feedback": "Right. The hint applies to every result of that method; `snippets/listen_and_cache.py` prints `ttlMs=60000 'public'` on the read and leaves the list at zero and private."
+        },
+        {
+          "key": "c",
+          "text": "Return a dict carrying `ttlMs` and `cacheScope` keys from each resource function, next to its text",
+          "correct": false,
+          "feedback": "A resource function returns the content: a returned dict is serialized as the JSON text of the resource, and the result still says ttlMs 0, private."
+        },
+        {
+          "key": "d",
+          "text": "Nothing: the SDK already sends a one-minute TTL by default",
+          "correct": false,
+          "feedback": "The default on every cacheable result is `ttlMs` 0 and `cacheScope` private, the conservative answer section 6 prints."
+        }
+      ],
+      "explanation": "Section 6 shows that the high-level decorator has no caching parameters and that the default is zero and private; a real TTL is set per method with `MCPServer(cache_hints=...)`, and a per-resource value needs an `on_read_resource` handler on the low-level `Server`.",
+      "hints": [
+        "The setting is per method, not per resource.",
+        "Look at what the server constructor accepts."
+      ]
+    }
+  ]
+}

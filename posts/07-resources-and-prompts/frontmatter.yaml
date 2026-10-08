@@ -1,8 +1,23 @@
 id: mcp-007
 slug: 07-resources-and-prompts
-title: "07 · Resources and prompts: the primitives that are not tools"
+title: "07 - Resources and prompts: the primitives that are not tools"
+summary: "When a server should expose data as a resource or a prompt instead of a tool, with an allowlisted URI template, a prompt, a completion handler, and what listen streams, caching fields and cursors give a client."
 date: 2026-07-23
-tags: [model-context-protocol, mcp, servers, resources, prompts, uri-templates]
-hero: diagrams/01-three-primitives.svg
-reading_time: 32
+updated: 2026-10-09
+status: complete
 part: "Part II - Building servers"
+level: intermediate
+reading_time: 42
+tags: [mcp, resources, prompts, uri-templates, completions, subscriptions, caching]
+hero: diagrams/01-three-primitives.svg
+prerequisites: [mcp-006]
+code: included
+outcomes:
+  - id: o1
+    text: "Decide for any piece of data whether it belongs behind a tool, a resource, or a prompt, by naming who should decide to fetch it."
+  - id: o2
+    text: "Register a URI template and defend its variables as untrusted input with an allowlist that the handler enforces."
+  - id: o3
+    text: "Write a completion handler that does the prefix match itself, since the SDK returns whatever the handler returns."
+  - id: o4
+    text: "State what subscriptions/listen, ttlMs with cacheScope, and pagination give a client, and what the high-level Python server leaves out."
