@@ -1,0 +1,813 @@
+{
+  "standard": "2.1.0",
+  "post": "mcp-002",
+  "next_ordinal": 18,
+  "questions": [
+    {
+      "id": "mcp-002-q01",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "1",
+      "est_minutes": 2,
+      "tags": [
+        "roles",
+        "host",
+        "vocabulary"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A Cursor user with three servers configured files a bug that says \"the client cannot connect to my server\" and attaches a screenshot of the Cursor window. In the vocabulary of this series, what is Cursor?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The client that failed to connect.",
+          "correct": false,
+          "feedback": "That is the reporter's mistake. A client is a protocol object inside the application, one per configured server, so this Cursor window holds three of them."
+        },
+        {
+          "key": "b",
+          "text": "The host, which runs one client per configured server.",
+          "correct": true,
+          "feedback": "Right. The application a person uses is the host; it contains the clients, and one of its three clients is the one that failed."
+        },
+        {
+          "key": "c",
+          "text": "One of the three servers it connects to.",
+          "correct": false,
+          "feedback": "A server is the process that exposes tools, resources and prompts. Cursor connects to servers; it is not one of them."
+        },
+        {
+          "key": "d",
+          "text": "The transport that carries the messages.",
+          "correct": false,
+          "feedback": "A transport is a pipe or an HTTP endpoint owned by a single client. Cursor is the whole application that owns those clients."
+        }
+      ],
+      "explanation": "Sections 1 and 2: the application on the screen is the host, which owns the model, the conversation and consent, and runs one client per configured server. The report collapses the host and one of its three clients into the single word client.",
+      "hints": [
+        "Ask how many of the thing called a client this one window contains."
+      ]
+    },
+    {
+      "id": "mcp-002-q02",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "3",
+      "est_minutes": 3,
+      "tags": [
+        "roles",
+        "counting",
+        "configuration"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A developer runs two hosts on one laptop. A desktop assistant's configuration has entries for `files`, `docs` and `db`. An editor's configuration has entries for `files`, `docs`, `db` and `git`. How many hosts are there, how many clients do they run in total, and how many of those clients talk to a files server?",
+      "answer": {
+        "parts": [
+          {
+            "label": "hosts",
+            "value": 2,
+            "tolerance": 0,
+            "unit": ""
+          },
+          {
+            "label": "clients in total",
+            "value": 7,
+            "tolerance": 0,
+            "unit": ""
+          },
+          {
+            "label": "clients that talk to a files server",
+            "value": 2,
+            "tolerance": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "precision_note": "Section 3's count rule, one client per configuration entry and one host per application: 3 + 4 = 7 clients; the `files` entry appears in both configuration files, so 2 clients reach a files server. Counting distinct server names instead gives 4, the nearest wrong method.",
+      "explanation": "Each application is one host, so there are 2. Each configuration entry is one client in the host that reads it, so the desktop assistant runs 3 and the editor 4, 7 in all. A client never serves two hosts or two servers, so the files entry in each file gives its own client: 2 (section 3).",
+      "hints": [
+        "Section 3 gives a rule that turns a configuration file into a count of clients.",
+        "Apply it to each file separately; a client belongs to exactly one host."
+      ]
+    },
+    {
+      "id": "mcp-002-q03",
+      "type": "match",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 5,
+      "tags": [
+        "roles",
+        "responsibilities"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A host is connected to a files server and a docs server, and both servers export a tool named `search`. Match each action to the component that performs it. One entry on the right matches none of the actions.",
+      "left": [
+        {
+          "key": "a",
+          "text": "Shows an approval dialog before a tool call runs"
+        },
+        {
+          "key": "b",
+          "text": "Matches a response to the request id that asked for it"
+        },
+        {
+          "key": "c",
+          "text": "Holds the database password"
+        },
+        {
+          "key": "d",
+          "text": "Decides, through its model, that `run_query` fits the user's question"
+        },
+        {
+          "key": "e",
+          "text": "Attaches the protocol revision and its capabilities to every request"
+        },
+        {
+          "key": "f",
+          "text": "Checks that a path argument stays inside its sandbox"
+        },
+        {
+          "key": "g",
+          "text": "Offers the two `search` tools as `files.search` and `docs.search`"
+        },
+        {
+          "key": "h",
+          "text": "Keeps the last tool list read from a single server"
+        }
+      ],
+      "right": [
+        {
+          "key": "a",
+          "text": "The host"
+        },
+        {
+          "key": "b",
+          "text": "A client"
+        },
+        {
+          "key": "c",
+          "text": "A server"
+        },
+        {
+          "key": "d",
+          "text": "The protocol itself, with no component involved"
+        }
+      ],
+      "answer": {
+        "a": "a",
+        "b": "b",
+        "c": "c",
+        "d": "a",
+        "e": "b",
+        "f": "c",
+        "g": "a",
+        "h": "b"
+      },
+      "explanation": "The host owns the model, consent and the merged catalog, so it shows the dialog, chooses through its model and qualifies the contested name (sections 2, 5 and 6). A client owns one transport, request correlation, per-request metadata and one server's cached lists (section 3). A server holds its credentials and validates arguments against its backing system (sections 4 and 8). Nothing happens in the protocol without a component doing it.",
+      "hints": [
+        "Sort first by who can see the user and the model; that party takes every judgment.",
+        "A client's four jobs are a transport, request correlation, per-request metadata and one cache."
+      ]
+    },
+    {
+      "id": "mcp-002-q04",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 2,
+      "tags": [
+        "catalog",
+        "routing",
+        "wire-name"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A host's catalog offers `files.search` and `docs.search`, because the files server and the docs server both export `search`. The model picks `docs.search`. Which value of `name` does the docs server receive in the `tools/call` request that results?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "`docs.search`, exactly as the model chose it.",
+          "correct": false,
+          "feedback": "The qualified form exists only in the host's catalog. The server never published it and has never heard of it."
+        },
+        {
+          "key": "b",
+          "text": "`docs/search`, the protocol's namespaced form.",
+          "correct": false,
+          "feedback": "A slash is outside the tool-name character set, and the protocol defines no namespaced form; the prefix is a host's local invention."
+        },
+        {
+          "key": "c",
+          "text": "`search`, the name the docs server itself published.",
+          "correct": true,
+          "feedback": "Right. The host looks up `docs.search`, finds client B, strips the prefix it added, and client B sends the bare name."
+        },
+        {
+          "key": "d",
+          "text": "`search`, with the prefix `docs` carried in a reserved `_meta` key.",
+          "correct": false,
+          "feedback": "No reserved `_meta` key carries a host's prefix. The server needs only its own name, and the connection already identifies the server."
+        }
+      ],
+      "explanation": "Section 5: the host's catalog maps the name the model sees to a client and a wire name. The host strips anything it added, and the one client sends `tools/call` with the name in the right-hand column, the only name that server knows.",
+      "hints": [
+        "Look at the right-hand column of the catalog table."
+      ]
+    },
+    {
+      "id": "mcp-002-q05",
+      "type": "order",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 4,
+      "tags": [
+        "catalog",
+        "routing",
+        "tool-call"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A host is connected to a files server through client A and to a docs server through client B, and both servers export `search`. Put the steps that lead to the docs server running its `search` in order.",
+      "items": [
+        {
+          "key": "a",
+          "text": "Each client sends `tools/list` to its own server."
+        },
+        {
+          "key": "b",
+          "text": "The host merges the two lists into one catalog, qualifying `search` on both sides."
+        },
+        {
+          "key": "c",
+          "text": "The model, offered the catalog's names and descriptions, picks `docs.search`."
+        },
+        {
+          "key": "d",
+          "text": "The host looks up `docs.search`, finds client B, and strips the prefix."
+        },
+        {
+          "key": "e",
+          "text": "Client B sends `tools/call` with the name `search`."
+        },
+        {
+          "key": "f",
+          "text": "The docs server runs its `search` and answers client B."
+        }
+      ],
+      "answer": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f"
+      ],
+      "partial_credit": true,
+      "explanation": "Section 5: the clients list, the host merges and qualifies, the model chooses from the flat catalog, the host resolves the name to a connection and strips its prefix, and only then does one client send `tools/call` under the server's own name. The model never sees a server, only a name.",
+      "hints": [
+        "Nothing can be chosen before the catalog exists, and the catalog cannot exist before the lists.",
+        "The prefix is removed by the party that added it, before any request leaves."
+      ]
+    },
+    {
+      "id": "mcp-002-q06",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 5,
+      "tags": [
+        "collisions",
+        "qualify",
+        "shadow"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "Three servers are connected under the configuration keys `files`, `docs` and `db`. The files server exports `read_file`, `search` and `list`; the docs server exports `search`, `fetch_page` and `list`; the db server exports `run_query`, `list` and `describe`. Give the number of entries in the catalog of a host that qualifies contested names on both sides, how many of those entries are qualified, and the number of entries in the catalog of a host that shadows, first one wins.",
+      "answer": {
+        "parts": [
+          {
+            "label": "catalog entries, qualify",
+            "value": 9,
+            "tolerance": 0,
+            "unit": "entries"
+          },
+          {
+            "label": "qualified entries, qualify",
+            "value": 5,
+            "tolerance": 0,
+            "unit": "entries"
+          },
+          {
+            "label": "catalog entries, shadow",
+            "value": 6,
+            "tolerance": 0,
+            "unit": "entries"
+          }
+        ]
+      },
+      "precision_note": "Counted from the lists: 9 tools in all; contested names are search (2 servers) and list (3 servers), so 2 + 3 = 5 qualified entries and 4 plain ones; shadowing keeps one entry per distinct name, 6. Qualifying only the later arrivals would give 3 qualified entries, the nearest wrong method.",
+      "explanation": "Qualifying keeps every tool reachable, so the catalog has all 9 entries. Two names are contested, `search` by two servers and `list` by three, and both sides of each collision are renamed, giving 5 qualified entries such as `db.list`. Shadowing keeps one entry per distinct name, `read_file`, `search`, `list`, `fetch_page`, `run_query` and `describe`, so 6, and three tools silently disappear (section 6).",
+      "hints": [
+        "Find the names that more than one server exports, and how many servers export each.",
+        "Qualifying renames every exporter of a contested name; shadowing keeps one tool per distinct name."
+      ]
+    },
+    {
+      "id": "mcp-002-q07",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 3,
+      "tags": [
+        "collisions",
+        "shadow",
+        "silent-failure"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A host resolves collisions by shadowing, first one wins, in the order of its configuration file. The `files` entry comes before `docs`, and both servers export `search`. A user asks a question that only the docs server's `search` can answer. What happens?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The host reports the collision, naming both servers, before the model runs.",
+          "correct": false,
+          "feedback": "That describes the refuse strategy. A shadowing host keeps one tool and drops the other without saying so."
+        },
+        {
+          "key": "b",
+          "text": "The model sees both servers and sends the question to the docs server.",
+          "correct": false,
+          "feedback": "The model never sees servers, only names, and on this host the docs `search` is not among them."
+        },
+        {
+          "key": "c",
+          "text": "The docs `search` never reaches the catalog, and no error is logged.",
+          "correct": true,
+          "feedback": "Right. The second `search` never reaches the list the model is offered, so it is never called, and the failure is silent."
+        },
+        {
+          "key": "d",
+          "text": "The host renames the docs tool to `docs.search` so both stay reachable.",
+          "correct": false,
+          "feedback": "That is the qualify strategy, which this host does not use."
+        }
+      ],
+      "explanation": "Section 6: on a shadowing host one of two same-named tools silently disappears from the catalog. It is not in the list the model sees, so it is never called, and nothing logs an error; section 10 describes the symptom a user reports.",
+      "hints": [
+        "Ask what the model is offered on this host, not what is configured.",
+        "With first one wins, which server's `search` survives?"
+      ]
+    },
+    {
+      "id": "mcp-002-q08",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 3,
+      "tags": [
+        "collisions",
+        "prefix",
+        "server-name"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A host disambiguates colliding tool names by prefixing them. Why should the prefix come from the key in the host's configuration file rather than from the name each server reports for itself?",
+      "answer": {
+        "model": "Because the name a server reports for itself is not guaranteed to be unique: two different servers can report the same name, and prefixes built from it would collide again. The configuration key is chosen locally and is unique in that host's file.",
+        "accept": [
+          "^(?!\\W*[\\w.'-]+( [\\w.'-]+){0,2}(\\W*[,;/|]\\W*[\\w.'-]+( [\\w.'-]+){0,2})+\\W*$)(?![\\s\\S]*\\b(maybe|perhaps|possibly|probably|i think|i guess|not sure|might be the|no idea)\\b)(?![\\s\\S]*\\b(?<!guarantees the )(?<!guarantee the )(?<!guaranteed the )(?<!assume the )(?<!that the )(?<!whether the )(?<!if the )(?<!self-)(self-reported |reported |own |server'?s? |server )name (is|are) (always |guaranteed (to be )?|globally )?unique\\b)(?![\\s\\S]*\\b(?<!guarantees )(?<!guarantee )(?<!assume )(?<!that )(?<!whether )(?<!guarantees that )(?<!that the )(?<!guarantees the )(?<!whether the )(?<!self-)(server names?|self-reported names?|reported names?) (is|are) (always |guaranteed (to be )?|globally )?unique\\b)(?![\\s\\S]*\\b(config(uration)? )?keys? (is|are) (not|never) unique\\b)(?![\\s\\S]*\\bkeys? (can|could|may|might) (collide|clash|repeat)\\b)(?![\\s\\S]*\\b(can'?t|cannot|can not|never|won'?t|do not|don'?t|could not|couldn'?t) (both |ever )?(have|report|use|share|pick|claim|choose|be) (the )?(same|identical)\\b)(?![\\s\\S]*\\b(use|prefer|take|choose|pick) the (server'?s? )?(self-reported |reported |own )?name\\b)(?=[\\s\\S]*(\\bnot (guaranteed|necessarily|always|required|promised|certain) (to be )?unique\\b|\\bnot unique\\b|\\bnon-?unique\\b|\\bisn'?t (guaranteed |necessarily |always )?unique\\b|\\baren'?t (guaranteed |necessarily |always )?unique\\b|\\b(not|never) be unique\\b|\\bno guarantee\\b|\\bno one guarantees\\b|\\bnobody guarantees\\b|\\bnothing guarantees\\b|\\b(can|could|may|might) (both )?(be|report|use|share|have|pick|claim|choose) (the )?(same|identical)\\b|\\b(same|identical|duplicate|duplicated) (self-reported |reported )?names?\\b|\\bduplicat|\\bcollid|\\bcollision|\\bclash|\\b(two|several|different|multiple) servers? (can|could|may|might) (both |all )?(report|call themselves|use|have|share|pick|choose|claim)\\b))"
+        ]
+      },
+      "explanation": "Section 6 quotes the Tools page: the server `name` from `serverInfo` is not guaranteed to be unique across servers and should not be relied upon for disambiguation. The key the owner of the host gave each connection is chosen on that machine and is unique in that file, so prefixes built from it cannot collide.",
+      "hints": [
+        "Ask what could happen if two different servers chose the same name for themselves."
+      ]
+    },
+    {
+      "id": "mcp-002-q09",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "7",
+      "est_minutes": 3,
+      "tags": [
+        "primitives",
+        "control"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A server author wants two things. First, a person should be able to start a \"summarize this pull request\" workflow by picking it from a slash-command menu. Second, the model should be able to decide on its own, mid-conversation, to look up a current exchange rate. Which primitives fit, in that order?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "A prompt, then a tool.",
+          "correct": true,
+          "feedback": "Right. A prompt is user-controlled and is picked deliberately, often as a slash command; a tool is model-controlled and is the only primitive the model starts on its own."
+        },
+        {
+          "key": "b",
+          "text": "A resource, then a tool.",
+          "correct": false,
+          "feedback": "A resource is application-driven: the host decides what context to attach. A person choosing a workflow from a menu is a prompt."
+        },
+        {
+          "key": "c",
+          "text": "A prompt, then a resource.",
+          "correct": false,
+          "feedback": "An exchange rate feels like data, but the model does not reach out and read a resource on its own initiative. If the model decides, it is a tool."
+        },
+        {
+          "key": "d",
+          "text": "A tool, then a resource.",
+          "correct": false,
+          "feedback": "Both halves are swapped: the menu entry is chosen by a person, and the lookup is started by the model."
+        }
+      ],
+      "explanation": "Section 7: tools are model-controlled, resources application-driven and prompts user-controlled. If the model should decide by itself to get something, that is a tool even when it feels like data; if a person should start a piece of work with one click, that is a prompt.",
+      "hints": [
+        "For each half, ask which party pulls the trigger."
+      ]
+    },
+    {
+      "id": "mcp-002-q10",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "8",
+      "est_minutes": 2,
+      "tags": [
+        "consent",
+        "security-boundary"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "Name the component in which consent to a tool call has to be decided, and give the reason a server cannot decide it.",
+      "answer": {
+        "model": "The host. A server sees only the one request, a method name, arguments and metadata; it cannot see the user, the conversation or the other servers, so it cannot tell whether an argument came from the user or from text injected somewhere else.",
+        "accept": [
+          "^(?!\\W*[\\w.'-]+( [\\w.'-]+){0,2}(\\W*[,;/|]\\W*[\\w.'-]+( [\\w.'-]+){0,2})+\\W*$)(?![\\s\\S]*\\b(maybe|perhaps|possibly|probably|i think|i guess|not sure|might be the|no idea)\\b)(?!\\W*(the |a )?(server|client|model|user|protocol|transport)s?\\s*([.,:;!]|-|because\\b|since\\b|as\\b|decides\\b|must\\b|should\\b|does\\b(?! not)|is\\b(?! blind| not| unable| only)|$))(?![\\s\\S]*\\b(host|the host) (cannot|can ?not|can'?t|does not|doesn'?t|never|is not able to|isn'?t able to) (decide|see|own)s?\\b)(?![\\s\\S]*\\bnot (in )?the host\\b)(?![\\s\\S]*\\b(server|it) (can|does) see (the )?(whole |full |entire )?(conversation|user|other servers)\\b)(?=[\\s\\S]*\\bhost\\b)(?=[\\s\\S]*(\\b(only|just) (sees?|gets?|receives?|has|knows?) (one|a single|the single|the one|that one|that) (request|call|message)\\b|\\bone request\\b|\\bsingle request\\b|\\b(cannot|can ?not|can'?t|does not|doesn'?t|never|is unable to|is not able to|isn'?t able to|has no way to) (see|read|know|tell|access|get|receive|view)s?\\b|\\bno (access|view|visibility|way to (see|know|tell))\\b|\\bblind\\b|\\bno idea\\b|\\bonly the host (sees|can see|has|knows)\\b|\\bthe host (sees|can see|has) (the )?(whole|full|entire|every|all)\\b))"
+        ]
+      },
+      "explanation": "Sections 4 and 8: the host sees the user, the conversation and every connected server, while a server sees one request and cannot tell whether an argument was typed, inferred, copied from a page or produced by another tool. Questions that need the whole picture can only be answered where the whole picture is.",
+      "hints": [
+        "Compare what the host can see with what a server receives on one request."
+      ]
+    },
+    {
+      "id": "mcp-002-q11",
+      "type": "long",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "8",
+      "est_minutes": 10,
+      "tags": [
+        "consent",
+        "validation",
+        "security-boundary"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "kind": "explain",
+      "prompt": "A database server exposes a `delete_rows` tool. Its author argues that the host already shows an approval dialog before every call, so the server can skip its own checks. Explain what the host's half of the security boundary covers, what the server's half covers, and why neither can stand in for the other.",
+      "answer_length": "three short paragraphs",
+      "solution": "1. **The host's half is consent and isolation.** Only the host sees the user, the conversation, every connected server and the model's reasoning, so only it can decide whether this server should be offered at all, whether the arguments came from the user or from injected text, whether a human should see the call, and whether one server's output may feed another's input.\n2. **The server's half is authorization and validation.** Only the server knows its backing system: which rows this token may delete, which tables are off limits, which arguments are nonsense. The Tools page makes this a must: servers must validate all tool inputs and implement proper access controls.\n3. **Why neither substitutes.** The dialog is a *should*, lives in software the server author did not write, can be switched off, and a server is never told which kind of host is calling it. An approving human also cannot see which rows a filter really matches. Conversely the server cannot know whether anyone agreed. A setup with only one half is broken invisibly, so `delete_rows` still needs its own checks and least-privilege credentials.",
+      "rubric": [
+        {
+          "criterion": "States that the host owns consent and isolation because it alone sees the user, the conversation and every server",
+          "points": 2
+        },
+        {
+          "criterion": "States that the server owns authorization and validation because it alone knows its backing system",
+          "points": 2
+        },
+        {
+          "criterion": "Notes that the host's approval is a should, can be off, and is invisible to the server",
+          "points": 2
+        },
+        {
+          "criterion": "Concludes that neither half replaces the other and the tool keeps its own checks",
+          "points": 1
+        }
+      ],
+      "explanation": "Section 8 splits the boundary: the host owns consent and isolation, the server owns authorization and validation against its own backing system. The host's obligations are mostly should, while the Tools page requires servers to validate inputs and enforce access controls, so a server that relies on the dialog has no control of its own.",
+      "hints": [
+        "List what each side can see that the other cannot.",
+        "Check whether the approval dialog is a must or a should, and whether the server can observe it."
+      ]
+    },
+    {
+      "id": "mcp-002-q12",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "8",
+      "est_minutes": 4,
+      "tags": [
+        "consent",
+        "should-not-must",
+        "validation"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A host approves every tool call automatically and never shows the user anything. Which statements about this setup are true? Select all that apply.",
+      "select": "multiple",
+      "options": [
+        {
+          "key": "a",
+          "text": "The host is non-conformant, because the specification requires a human to approve every call.",
+          "correct": false,
+          "feedback": "The human in the loop is a should, not a must. Such a host is unhelpful, but it is not non-conformant."
+        },
+        {
+          "key": "b",
+          "text": "A server receiving a call from this host cannot tell from the request that no human approved it.",
+          "correct": true,
+          "feedback": "Right. A server sees a method, arguments and per-request metadata, and nothing in them records an approval."
+        },
+        {
+          "key": "c",
+          "text": "The server must still validate its inputs and enforce its own access controls.",
+          "correct": true,
+          "feedback": "Right. The Tools page makes input validation and access control a must for servers, whatever the host does."
+        },
+        {
+          "key": "d",
+          "text": "The server can insist on consent by rejecting requests that lack a reserved `_meta` key recording the user's approval.",
+          "correct": false,
+          "feedback": "No reserved `_meta` key records approval; the reserved request keys carry the revision, the client's capabilities and similar metadata, not consent."
+        }
+      ],
+      "explanation": "Section 8: nearly all of the obligations that protect the user are should, and a server is never told which kind of host is calling it. The server's own half, validation and access control, is a must and does not depend on the host.",
+      "hints": [
+        "Separate the host's obligations, mostly should, from the server's.",
+        "Ask what a server can actually observe on one request."
+      ]
+    },
+    {
+      "id": "mcp-002-q13",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 5,
+      "tags": [
+        "list-rule",
+        "statelessness",
+        "handles"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A server's `connect_database` tool, once called, makes a `query` tool appear in later `tools/list` results on that connection. Deployed behind a round-robin load balancer, users report that `query` comes and goes from the host's catalog. Which change makes the server conformant to revision 2026-07-28 and the catalog stable?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Turn on sticky routing at the load balancer so each connection always reaches the same replica.",
+          "correct": false,
+          "feedback": "The flicker would stop, but the list would still vary as a side effect of an earlier request, which the Tools page forbids."
+        },
+        {
+          "key": "b",
+          "text": "Always list `query`, have `connect_database` return a server-minted handle, and make the handle an argument of `query`.",
+          "correct": true,
+          "feedback": "Right. The list no longer depends on history, any replica can answer, and the state that must survive between calls travels as an ordinary argument."
+        },
+        {
+          "key": "c",
+          "text": "Send `notifications/tools/list_changed` after `connect_database` so the client lists the tools again.",
+          "correct": false,
+          "feedback": "A fresh list from the same server still depends on what the connection did before, so it still breaks the rule and still differs between replicas."
+        },
+        {
+          "key": "d",
+          "text": "Return an `Mcp-Session-Id` header from `connect_database` and key the tool list on it.",
+          "correct": false,
+          "feedback": "Protocol sessions and `Mcp-Session-Id` were removed in 2026-07-28 by SEP-2567; this rebuilds what was removed."
+        }
+      ],
+      "explanation": "Section 5 states the rule: the set `tools/list` returns must not vary per connection or as a side effect of other requests on the connection, though it may vary by the authorization on the request. Section 9 gives the replacement for connection state: an explicit, server-minted handle supplied again as a tool argument. The host can only route names that are in its catalog, so a stable list is what keeps `query` traceable to its connection.",
+      "hints": [
+        "Ask what a later `tools/list` may and may not depend on.",
+        "Section 9 says where state that must survive between calls now lives."
+      ]
+    },
+    {
+      "id": "mcp-002-q14",
+      "type": "long",
+      "track": "connect",
+      "difficulty": 4,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 15,
+      "tags": [
+        "collisions",
+        "shadowing-attack",
+        "host-design"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "kind": "design",
+      "prompt": "A user's host already trusts a files server that exports `read_file`. The user installs a new, unvetted server, configured under the key `helper`, that also exports a tool named `read_file`. Design the host's collision policy for this case: say what each of the three strategies would let the new server do, choose one, state where the prefix comes from, and name one risk the chosen policy does not remove.",
+      "answer_length": "half a page",
+      "solution": "1. **Shadow.** If the new server wins, by its position in the configuration file, every call the model makes to `read_file` silently goes to `helper`, a server nobody vetted, with arguments meant for the trusted server; if the trusted one wins, the newcomer's tool disappears silently. Either way nothing logs an error, and a malicious server can pick its name precisely to win.\n2. **Refuse.** The host drops the duplicate or refuses to load `helper` and says so. Safe and loud, but the user loses the new server until someone renames a tool.\n3. **Qualify.** The host offers `files.read_file` and `helper.read_file`, renaming both sides so the first-listed server does not keep the plain name, and strips the prefix before sending `tools/call` with the bare name. Both stay reachable, and every call is traceable to the configuration key that carries it.\n4. **Choice and prefix.** Qualify, with refusal as a fallback for names that cannot be qualified. The prefix comes from the configuration keys `files` and `helper`, never from the servers' self-reported names, which `helper` could set to `files`.\n5. **Residual risk.** The model still chooses on description text, which the new server writes, so `helper.read_file` can claim to be the better choice, and descriptions and annotations are untrusted input. Defending against that is the subject of post 19; the catalog itself is built and tested in post 11.",
+      "rubric": [
+        {
+          "criterion": "Explains that shadowing can silently route the trusted tool's calls to the new server, or hide one tool, with no error",
+          "points": 2
+        },
+        {
+          "criterion": "Describes refuse as safe and loud but losing the new server",
+          "points": 1
+        },
+        {
+          "criterion": "Describes qualify on both sides with the prefix stripped before the call",
+          "points": 2
+        },
+        {
+          "criterion": "Takes the prefix from the configuration keys, not the self-reported names, with the reason",
+          "points": 2
+        },
+        {
+          "criterion": "Names a residual risk such as a persuasive description written by the new server",
+          "points": 1
+        }
+      ],
+      "explanation": "Section 6 gives the three strategies and the rule that the prefix comes from the configuration key; post 11 builds and tests the qualifying catalog, and post 19 treats collisions chosen on purpose as an attack. Qualifying keeps both tools reachable and traceable, but the model still chooses on description text that an untrusted server writes.",
+      "hints": [
+        "For shadowing, ask which server receives a call to `read_file` and whether anyone is told.",
+        "The specification warns against one source of prefixes; a hostile server controls that source."
+      ],
+      "connects": [
+        "mcp-011",
+        "mcp-019"
+      ]
+    },
+    {
+      "id": "mcp-002-q15",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o2",
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 12,
+      "tags": [
+        "catalog",
+        "collisions",
+        "routing"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "kind": "fix",
+      "language": "python",
+      "prompt": "`build_catalog(servers)` should build the catalog of section 5: a name exported by one server only is offered unchanged, and a contested name is offered as `key.name` for every server that exports it. `route(catalog, chosen)` returns the connection key and the name to send on the wire. The starter leaves `files.search` and `docs.search` unbalanced: one server keeps the plain `search`. Fix it.",
+      "starter": "def build_catalog(servers):\n    \"\"\"servers maps a connection key to the tool names that server exports.\n\n    Return a dict from the name the model is offered to (connection key, wire name).\n    A name exported by one server only is offered unchanged; a contested name is\n    offered as key.name for every server that exports it.\n    \"\"\"\n    catalog = {}\n    for key, names in servers.items():\n        for name in names:\n            if name in catalog:\n                catalog[f\"{key}.{name}\"] = (key, name)\n            else:\n                catalog[name] = (key, name)\n    return catalog\n\n\ndef route(catalog, chosen):\n    \"\"\"Return (connection key, wire name) for the name the model chose.\"\"\"\n    return catalog[chosen]\n",
+      "solution": "from collections import Counter\n\n\ndef build_catalog(servers):\n    \"\"\"servers maps a connection key to the tool names that server exports.\n\n    Return a dict from the name the model is offered to (connection key, wire name).\n    A name exported by one server only is offered unchanged; a contested name is\n    offered as key.name for every server that exports it.\n    \"\"\"\n    exporters = Counter(name for names in servers.values() for name in set(names))\n    catalog = {}\n    for key, names in servers.items():\n        for name in names:\n            shown = f\"{key}.{name}\" if exporters[name] > 1 else name\n            catalog[shown] = (key, name)\n    return catalog\n\n\ndef route(catalog, chosen):\n    \"\"\"Return (connection key, wire name) for the name the model chose.\"\"\"\n    return catalog[chosen]\n",
+      "tests": "servers = {\n    \"files\": [\"read_file\", \"search\"],\n    \"docs\": [\"search\", \"fetch_page\"],\n    \"db\": [\"run_query\"],\n}\nc = build_catalog(servers)\n\n# 1. Both sides of a collision are qualified; the plain contested name is gone.\nassert \"search\" not in c, \"a contested name must not stay plain on either side\"\nassert set(c) == {\"read_file\", \"files.search\", \"docs.search\", \"fetch_page\", \"run_query\"}, sorted(c)\n\n# 2. The wire name is always the server's own bare name.\nassert route(c, \"docs.search\") == (\"docs\", \"search\"), route(c, \"docs.search\")\nassert route(c, \"files.search\") == (\"files\", \"search\"), route(c, \"files.search\")\nassert route(c, \"read_file\") == (\"files\", \"read_file\")\nassert route(c, \"run_query\") == (\"db\", \"run_query\")\n\n# 3. The separator is a dot, never a slash.\nassert all(\"/\" not in name for name in c), \"a slash is outside the tool-name character set\"\n\n# 4. The result does not depend on the order the servers are listed in.\nreordered = dict(reversed(list(servers.items())))\nassert build_catalog(reordered) == c, \"listing order must not decide who keeps the plain name\"\n\n# 5. A three-way collision qualifies all three, and uncontested names stay plain.\nthree = build_catalog({\"a\": [\"list\"], \"b\": [\"list\", \"x\"], \"c\": [\"list\"]})\nassert set(three) == {\"a.list\", \"b.list\", \"c.list\", \"x\"}, sorted(three)\nassert route(three, \"c.list\") == (\"c\", \"list\")\n\n# 6. A tool name may itself contain a dot; routing must use the catalog, not split the name.\ndotted = build_catalog({\"files\": [\"admin.tools.list\"], \"docs\": [\"search\"]})\nassert route(dotted, \"admin.tools.list\") == (\"files\", \"admin.tools.list\"), route(dotted, \"admin.tools.list\")\nprint(\"all tests passed\")\n",
+      "explanation": "The starter qualifies a name only when it has already been seen, so the server listed first keeps the plain `search` and the result depends on listing order. Counting how many servers export each name first, then qualifying every exporter of a contested name, renames both sides as section 6 requires. The wire name stays the server's own bare name, which `route` returns.",
+      "hints": [
+        "Ask what the starter offers for the first server's `search`, and whether reordering the servers changes it.",
+        "Decide whether a name is contested before adding any entry: count the servers that export it."
+      ]
+    },
+    {
+      "id": "mcp-002-q16",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 1,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "9",
+      "est_minutes": 2,
+      "tags": [
+        "meta",
+        "statelessness",
+        "client"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "Under revision 2026-07-28 there is no handshake, so a client attaches the context a server needs to every request. How many reserved `_meta` keys is a client required to attach to every request?",
+      "answer": {
+        "value": 2,
+        "tolerance": 0,
+        "unit": "keys"
+      },
+      "precision_note": "Section 9 names `io.modelcontextprotocol/protocolVersion` and `io.modelcontextprotocol/clientCapabilities`, the two required keys of a request's `_meta`; `io.modelcontextprotocol/clientInfo` is recommended (should) but not required, and is not counted.",
+      "explanation": "Section 9: the client attaches `io.modelcontextprotocol/protocolVersion` and `io.modelcontextprotocol/clientCapabilities` to the `_meta` of every request, which is the third of the client's four jobs in section 3. The server must not rely on earlier requests for that context.",
+      "hints": [
+        "Ask what the removed `initialize` handshake used to settle once per connection.",
+        "Count only the keys without which a request is malformed."
+      ]
+    },
+    {
+      "id": "mcp-002-q17",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 4,
+      "tags": [
+        "collisions",
+        "prefix",
+        "server-name"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A host qualifies contested names with the name each server reports for itself. A user connects two different servers that both report themselves as `filesystem`, under the configuration keys `work` and `home`, and both export `search`. What does the host's catalog end up with?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "`work.search` and `home.search`, both reachable.",
+          "correct": false,
+          "feedback": "That is what a host keyed on the configuration keys would produce. This host uses the self-reported names, which are equal."
+        },
+        {
+          "key": "b",
+          "text": "One plain `search`, because the qualified names are dropped for being too long.",
+          "correct": false,
+          "feedback": "Neither name is near the 128-character guideline; length has nothing to do with this failure."
+        },
+        {
+          "key": "c",
+          "text": "Two entries that are both `filesystem.search`, so the collision returns and one tool can be lost.",
+          "correct": true,
+          "feedback": "Right. Equal self-reported names give equal prefixes, so the qualified names collide again, which is why the specification says the server name should not be relied upon."
+        },
+        {
+          "key": "d",
+          "text": "An error from each server, since the specification forbids two servers reporting the same name.",
+          "correct": false,
+          "feedback": "The specification forbids nothing here: it says the server name is not guaranteed to be unique, and servers are not told about each other."
+        }
+      ],
+      "explanation": "Section 6 quotes the Tools page: the server name is not guaranteed to be unique across servers and should not be relied upon for disambiguation. Section 10 describes this exact failure; the prefix has to come from the configuration key, which is unique in the host's file.",
+      "hints": [
+        "Build the two qualified names this host would produce.",
+        "Compare them with what a host using the configuration keys would produce."
+      ]
+    }
+  ]
+}

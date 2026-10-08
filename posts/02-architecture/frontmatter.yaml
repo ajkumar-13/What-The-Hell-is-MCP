@@ -1,8 +1,23 @@
 id: mcp-002
 slug: 02-architecture
-title: "02 · The architecture: hosts, clients, and servers"
+title: "02 - The architecture: hosts, clients, and servers"
+summary: "Which of the three MCP roles owns which job: the host owns the model, the conversation and consent, each client owns one connection, and the server only sees one request, so tool names are routed and collisions resolved in the host."
 date: 2026-07-22
-tags: [model-context-protocol, mcp, foundations, architecture, primitives]
-hero: diagrams/01-host-clients-servers.svg
-reading_time: 16
+updated: 2026-10-08
+status: complete
 part: "Part I - Foundations"
+level: beginner
+reading_time: 20
+tags: [mcp, architecture, roles, capability-catalog, tool-names, primitives, security-boundary]
+hero: diagrams/01-host-clients-servers.svg
+prerequisites: [mcp-001]
+code: none
+outcomes:
+  - id: o1
+    text: "Assign any responsibility in an MCP setup to the host, the client, or the server, without guessing."
+  - id: o2
+    text: "Trace a tool name the model chose back to the exact connection that will carry the call."
+  - id: o3
+    text: "Predict what a host does when two connected servers export the same tool name."
+  - id: o4
+    text: "Explain why consent belongs in the host while validation belongs in the server."
