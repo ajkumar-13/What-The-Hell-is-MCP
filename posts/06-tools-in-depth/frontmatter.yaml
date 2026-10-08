@@ -1,8 +1,23 @@
 id: mcp-006
 slug: 06-tools-in-depth
-title: "06 · Tools in depth: schemas, structured output, and annotations"
+title: "06 - Tools in depth: schemas, structured output, and annotations"
+summary: "Reads the complete MCP Tool object field by field, designs input schemas a model fills in correctly, publishes output schemas on purpose, and routes every tool failure to a JSON-RPC error or to an isError result."
 date: 2026-07-23
-tags: [model-context-protocol, mcp, servers, tools, json-schema, structured-output]
-hero: diagrams/01-anatomy-of-a-tool-call.svg
-reading_time: 27
+updated: 2026-10-09
+status: complete
 part: "Part II - Building servers"
+level: intermediate
+reading_time: 35
+tags: [mcp, tools, json-schema, structured-output, annotations, python-sdk]
+hero: diagrams/01-anatomy-of-a-tool-call.svg
+prerequisites: [mcp-005]
+code: included
+outcomes:
+  - id: o1
+    text: "Read and write every field of a Tool object and name the two fields the specification requires."
+  - id: o2
+    text: "Design an input schema with per-property descriptions, bounds and enumerations that a model fills in correctly on its first attempt."
+  - id: o3
+    text: "Publish an outputSchema deliberately from a return annotation, and prove with an in-memory test that every tool publishes one."
+  - id: o4
+    text: "Route any tool failure to a JSON-RPC error object or to a result with isError true, and write the message a model needs to retry."

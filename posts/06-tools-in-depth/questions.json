@@ -1,0 +1,781 @@
+{
+  "standard": "2.1.0",
+  "post": "mcp-006",
+  "next_ordinal": 19,
+  "questions": [
+    {
+      "id": "mcp-006-q01",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 1,
+      "tags": [
+        "tool-object",
+        "required-fields"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Which two fields must every `Tool` object in a `tools/list` result carry, according to the specification's schema?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "`name` and `description`",
+          "correct": false,
+          "feedback": "The description is the field a model leans on most, but the schema marks it optional; a tool without one is still a valid `Tool`."
+        },
+        {
+          "key": "b",
+          "text": "`name` and `inputSchema`",
+          "correct": true,
+          "feedback": "These are the only two members without a `?` in the `Tool` interface: a tool needs an identifier to be called by and a schema for its arguments object."
+        },
+        {
+          "key": "c",
+          "text": "`inputSchema` and `outputSchema`",
+          "correct": false,
+          "feedback": "`outputSchema` is optional. A tool may return only content blocks and publish no output schema at all, as `CallToolResult` returns do."
+        },
+        {
+          "key": "d",
+          "text": "`name` and `title`",
+          "correct": false,
+          "feedback": "`title` is an optional display label for a user interface; when it is absent a host falls back to `annotations.title` and then to `name`."
+        }
+      ],
+      "explanation": "Section 2's table marks exactly two fields as required: `name`, the identifier a `tools/call` names, and `inputSchema`, a JSON Schema with `type: \"object\"` at the root. Everything else, including `description` and `outputSchema`, is optional.",
+      "hints": [
+        "Look for the members of the `Tool` interface that carry no question mark."
+      ]
+    },
+    {
+      "id": "mcp-006-q02",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "5",
+      "est_minutes": 2,
+      "tags": [
+        "output-schema",
+        "silent-failure"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A tool is registered with `@mcp.tool()`, no flags, and annotated `-> Snapshot`, where `Snapshot` sets `self.cpu_percent` and `self.memory_percent` inside `__init__` and has no annotations in its class body. What does `mcp==2.3.0` do?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Registration fails with `InvalidSignature` at import, so the server process never starts serving.",
+          "correct": false,
+          "feedback": "That is what happens only when `structured_output=True` is passed. Without the flag the SDK accepts the class and says nothing."
+        },
+        {
+          "key": "b",
+          "text": "It publishes a schema built from the type hints written on the `__init__` parameters instead.",
+          "correct": false,
+          "feedback": "Those are annotations on a function, not on the class. `get_type_hints()` on the class finds none, so no model is built."
+        },
+        {
+          "key": "c",
+          "text": "It registers with `outputSchema: null`, and a call returns the object's `repr` as successful text.",
+          "correct": true,
+          "feedback": "The SDK's branch for an ordinary class leaves the model as `None`, so nothing is published, and the result is the serialized `repr`, a memory address marked as a success."
+        },
+        {
+          "key": "d",
+          "text": "It logs a warning and publishes the result wrapped as `{\"result\": ...}`, as for a primitive.",
+          "correct": false,
+          "feedback": "Wrapping is for primitives and generics such as `str` or `list[str]`. For this class the SDK publishes nothing, and `snippets/silent_schema.py` counts zero SDK log records at INFO or above."
+        }
+      ],
+      "explanation": "Section 5 shows the SDK calling `get_type_hints()` on the return class; a class with no class-body annotations has none, the model stays `None`, and the tool registers without an output schema. The call then returns `\"<__main__.Snapshot object at 0x...>\"` as text, with no exception, warning, or log line.",
+      "hints": [
+        "Ask where `get_type_hints()` looks for annotations when it is given a class.",
+        "Then ask which of the outcomes involves a flag the prompt says was not passed."
+      ]
+    },
+    {
+      "id": "mcp-006-q03",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "7",
+      "est_minutes": 3,
+      "tags": [
+        "errors",
+        "tool-error",
+        "crash"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Under `mcp==2.3.0`, a tool named `lookup` calls a helper that raises `KeyError('region')`, and nothing in the tool catches it. What does the model receive?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "A JSON-RPC `error` object with code `-32603` (`Internal error`) and no result.",
+          "correct": false,
+          "feedback": "The high-level server turns every exception except `MCPError` into a result. Only `MCPError` travels as a JSON-RPC `error` object."
+        },
+        {
+          "key": "b",
+          "text": "A result with `isError: true` whose text is `Error executing tool lookup: 'region'`.",
+          "correct": false,
+          "feedback": "That form, with the exception's text appended, is what a `ToolError` produces. An exception the tool did not anticipate is a crash, and its text stays on the server."
+        },
+        {
+          "key": "c",
+          "text": "A result with `isError: true` whose only text is `Error executing tool lookup`.",
+          "correct": true,
+          "feedback": "Since 2.1.0 an exception other than `ToolError`, `ResourceError` or `MCPError` is a crash: the model gets the generic sentence, and the server logs the traceback at ERROR."
+        },
+        {
+          "key": "d",
+          "text": "A result with `isError: false` and an empty `content` array.",
+          "correct": false,
+          "feedback": "A failure is never reported as a success. The SDK marks the result with `isError: true` so that a client can tell the model the call failed."
+        }
+      ],
+      "explanation": "Section 7's `average` tool divides by zero and the model receives `Error executing tool average` and nothing more, while the server logs `Tool 'average' raised an unexpected exception` with the traceback. Raising `ToolError` with a written sentence is how a tool gets its reason to the model.",
+      "hints": [
+        "Ask whether `KeyError` is one of the exception types the SDK treats as a deliberate refusal.",
+        "Compare the text a `ToolError` produces with the text section 7 shows for the division by zero."
+      ]
+    },
+    {
+      "id": "mcp-006-q04",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "8",
+      "est_minutes": 2,
+      "tags": [
+        "annotations",
+        "defaults"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A tool's entry in `tools/list` carries no `annotations` at all. Read with the defaults the specification gives each hint, how does that tool describe itself to a host?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Read-only, non-destructive, and confined to a closed world.",
+          "correct": false,
+          "feedback": "`readOnlyHint` defaults to `false` and `openWorldHint` to `true`. The defaults assume the worst, not the best."
+        },
+        {
+          "key": "b",
+          "text": "Not read-only, possibly destructive, and interacting with an open world.",
+          "correct": true,
+          "feedback": "`readOnlyHint` defaults to `false`, `destructiveHint` and `openWorldHint` to `true`, so an undeclared tool is a destructive open-world tool."
+        },
+        {
+          "key": "c",
+          "text": "Not read-only, but non-destructive and idempotent.",
+          "correct": false,
+          "feedback": "`destructiveHint` defaults to `true`, not `false`, and `idempotentHint` defaults to `false`."
+        },
+        {
+          "key": "d",
+          "text": "Unclassified: a host must refuse to call any tool that arrives without annotations.",
+          "correct": false,
+          "feedback": "Annotations are optional and nothing requires a host to refuse. The defaults exist precisely so that a missing hint still has a meaning."
+        }
+      ],
+      "explanation": "Section 8's table gives the defaults: `readOnlyHint` false, `destructiveHint` true, `idempotentHint` false, `openWorldHint` true. Two of them default to the cautious answer, so a tool that declares nothing reads as destructive and open-world, and only its author can claim otherwise. Even then the claim is a hint the host must treat as untrusted unless the server is trusted.",
+      "hints": [
+        "Ask what a host should assume about a tool whose author has made no claim at all.",
+        "The specification's defaults are chosen so that silence never sounds safe."
+      ]
+    },
+    {
+      "id": "mcp-006-q05",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "3",
+      "est_minutes": 3,
+      "tags": [
+        "input-schema",
+        "no-parameters"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`get_system_info` takes no parameters. Which statement about its `inputSchema` is correct for revision 2026-07-28 and `mcp==2.3.0`?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "A tool with no parameters may omit `inputSchema`, and the SDK leaves it out.",
+          "correct": false,
+          "feedback": "`inputSchema` is required on every tool, parameters or not, and the SDK always publishes one."
+        },
+        {
+          "key": "b",
+          "text": "The SDK publishes `{\"type\": \"object\", \"additionalProperties\": false}`, the form the Tools page recommends.",
+          "correct": false,
+          "feedback": "That is the form the Tools page recommends, but it is not what the SDK emits; none of the decorator's parameters produces it."
+        },
+        {
+          "key": "c",
+          "text": "`inputSchema` may be `null` for such a tool, since there is no argument to validate at all.",
+          "correct": false,
+          "feedback": "The schema must be a valid JSON Schema object with `type: \"object\"` at the root; `null` is not allowed."
+        },
+        {
+          "key": "d",
+          "text": "The SDK publishes an object schema with empty `properties`: legal, but not the recommended form.",
+          "correct": true,
+          "feedback": "`snippets/input_schema.py` prints `{\"type\": \"object\", \"properties\": {}, \"title\": \"get_system_infoArguments\"}`: permissive, legal, and short of the `additionalProperties: false` form the Tools page recommends."
+        }
+      ],
+      "explanation": "Section 3 quotes the Tools page's two valid forms for a parameterless tool, with `additionalProperties: false` recommended and the plain object schema permitted, and prints what the SDK publishes for `get_system_info`, which is the permissive kind.",
+      "hints": [
+        "`inputSchema` is one of the two required fields, so first rule out the options that drop it.",
+        "Then compare the recommended form with what the snippet prints."
+      ]
+    },
+    {
+      "id": "mcp-006-q06",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "4",
+      "est_minutes": 2,
+      "tags": [
+        "output-schema",
+        "wrapping"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A tool is registered with `@mcp.tool()` on a function annotated `-> list[str]` that returns `[\"a\", \"b\"]`. In one sentence: what shape does the published `outputSchema` describe, and what `structuredContent` does a call carry?",
+      "answer": {
+        "model": "An object with one required property, `result`, holding the array of strings, so the call carries `{\"result\": [\"a\", \"b\"]}` rather than a top-level array.",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:no|null|none)\\s+(?:output\\s*)?schema)(?![\\s\\S]*output\\s*schema\\s*(?:is\\s*|=\\s*|:\\s*)?(?:null|none)\\b)(?![\\s\\S]*\\b(?:no|not|never|without)\\s+(?:a\\s+|any\\s+|the\\s+)?(?:wrap\\w*|result\\b))(?![\\s\\S]*(?<!not\\s)(?<!not\\sa\\s)(?<!n't\\sa\\s)(?<!never\\sa\\s)(?<!than\\sa\\s)(?<!of\\sa\\s)(?<!no\\s)(?<!than\\s)\\b(?:top-level|top\\slevel|bare|plain|raw)\\s+(?:json\\s+)?(?:array|list))(?=[\\s\\S]*\\bresult\\b)(?=[\\s\\S]*(?:\\{\\s*\\\"?result\\\"?\\s*:|\\bresult\\b[^.]{0,40}\\b(?:key|field|property|wrapp\\w*|object)|\\b(?:wrap\\w*|under|inside|in|into)\\b[^.]{0,30}\\bresult\\b|\\bobject\\b[^.]{0,60}\\bresult\\b))(?=[\\s\\S]*(?:\\{\\s*\\\"?result\\\"?\\s*:\\s*\\[|structured\\s*_?content\\b[^.;]{0,80}\\bresult\\b|\\bresult\\b[^.;]{0,80}\\[\\s*\\\"?a\\\"?\\s*,\\s*\\\"?b\\\"?\\s*\\]|\\bcarr\\w*\\b[^.;]{0,60}\\bresult\\b))[\\s\\S]{10,}$"
+        ]
+      },
+      "explanation": "Section 4's table, measured by `snippets/output_schema.py`, wraps `list[...]` returns: the schema is an object with a required `result` property, and the call carries `{\"result\": [\"a\", \"b\"]}`. A top-level array is legal in the protocol but needs a hand-built `CallToolResult`.",
+      "hints": [
+        "Lists, unions and primitives share one treatment in the SDK's table."
+      ]
+    },
+    {
+      "id": "mcp-006-q07",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "7",
+      "est_minutes": 2,
+      "tags": [
+        "errors",
+        "tool-error"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A tool must refuse a `region` argument that names a region the server does not serve, and the model should read the reason and retry. Under `mcp==2.3.0`, which exception should the tool raise, and what does the model receive if the tool raises a plain `ValueError` instead?",
+      "answer": {
+        "model": "Raise `ToolError` (from `mcp.server.mcpserver.exceptions`). A plain `ValueError` is treated as a crash, so the model gets only `Error executing tool <name>` in an `isError` result, without the reason.",
+        "accept": [
+          "^(?![\\s\\S]*`?toolerror`?\\s+(?:is|are|counts\\s+as|becomes|would\\s+be|is\\s+treated\\s+as|gets\\s+treated\\s+as)\\s+(?:a\\s+|an\\s+)?(?:crash|unexpected|generic))(?![\\s\\S]*\\b(?:should|must|to)\\s+raise\\s+(?:a\\s+|an\\s+)?(?:plain\\s+)?`?valueerror)(?!\\W*`?valueerror\\b)(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|never|n't|instead of|rather than)\\s+(?:a\\s+|an\\s+|the\\s+|use\\s+|raise\\s+|raising\\s+|using\\s+)?`?toolerror)(?![\\s\\S]*\\braise\\s+(?:an?\\s+)?`?mcperror)(?=[\\s\\S]*\\btoolerror\\b)(?=[\\s\\S]*(?:\\bcrash|\\bgeneric\\b|\\bonly\\b[^.]{0,40}error executing tool|without (?:the|its|any) (?:message|text|reason|detail)|\\b(?:message|text|reason|detail)s?\\b[^.]{0,30}\\b(?:hidden|lost|dropped|swallowed|stays?|kept|withheld|not (?:sent|shown|passed|included))|never (?:sees|reads|gets) the (?:message|text|reason)|unexpected exception))[\\s\\S]{25,}$"
+        ]
+      },
+      "explanation": "Section 7 shows both: `ToolError` reaches the model as `Error executing tool sample_window: <the sentence>`, while an exception the tool did not anticipate is a crash, and the model reads only `Error executing tool average` while the traceback stays in the server's log.",
+      "hints": [
+        "One exception class is the SDK's signal for an anticipated failure whose message the model should read.",
+        "Compare what section 7 printed for `sample_window` with what it printed for `average`."
+      ]
+    },
+    {
+      "id": "mcp-006-q08",
+      "type": "short",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "3",
+      "est_minutes": 3,
+      "tags": [
+        "input-schema",
+        "validation"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The redesigned `find_process` publishes `limit` with `minimum` 1 and `maximum` 50. A model calls it with `{\"name\": \"python\", \"limit\": 500}`. In one or two sentences: what comes back, and does the function body run?",
+      "answer": {
+        "model": "A result with `isError: true` whose text is a validation error saying `limit` should be less than or equal to 50; the arguments are rejected before the call, so the body never runs.",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*(?<!not\\s)(?<!not\\sa\\s)(?<!no\\s)(?<!than\\sa\\s)\\b(?:protocol(?:-level)?\\serror|json-rpc\\serror|error\\sobject))(?![\\s\\S]*(?<!not\\s)(?<!no\\s)-32602)(?![\\s\\S]*(?<!not\\s)(?<!no\\s)(?<!n't\\s)(?<!never\\s)\\bclamp)(?![\\s\\S]*(?<!before\\sthe\\s)(?<!before\\s)(?<!until\\sthe\\s)\\b(?:body|function|it)\\s+(?:does\\s+|still\\s+)?runs?\\b(?!\\s+(?:at all|first)))(?=[\\s\\S]*(?:is_?error|error result|execution error|validation error|tool error|an?\\s+error))(?=[\\s\\S]*(?:\\b50\\b|less than or equal|maximum|\\bbound|out of range|too (?:large|big|high)))(?=[\\s\\S]*(?:\\b(?:never|not|n't)\\b[^.;]{0,25}\\b(?:run|runs|reached|reach|reaches|execut\\w*|called|invoked)|\\bbefore\\b[^.;]{0,30}\\b(?:body|function|call|runs?)|\\bno\\b[^.;]{0,10}\\b(?:body|function)))[\\s\\S]{20,}$"
+        ]
+      },
+      "explanation": "Section 3's script calls the redesigned tool with `limit` 500 and prints `isError: true` with `Input should be less than or equal to 50`: the SDK validates arguments against the published schema's model before the function runs. The project's original `find_process`, which has no bound in its schema, clamps inside the body instead.",
+      "hints": [
+        "Ask what the SDK does with the arguments before it calls the function.",
+        "Arguments that fail validation are an execution error in this SDK, not a JSON-RPC error."
+      ]
+    },
+    {
+      "id": "mcp-006-q09",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "3",
+      "est_minutes": 3,
+      "tags": [
+        "input-schema",
+        "json-schema"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A tool is registered with `@mcp.tool()` on `def book(city: str, nights: Annotated[int, Field(ge=1, le=30)], guests: int = 2, plan: Literal[\"room\", \"half\", \"full\"] = \"room\") -> str`. Across all properties of the published `inputSchema`, how many `minimum`, `maximum` and `enum` keywords appear in total?",
+      "answer": {
+        "value": 3,
+        "tolerance": 0,
+        "unit": ""
+      },
+      "precision_note": "Closed form: ge and le each become one keyword on nights (minimum 1, maximum 30) and the Literal becomes one enum on plan; city and guests carry none. Confirmed against mcp==2.3.0, which publishes nights with maximum 30 and minimum 1 and plan with enum [\"room\", \"half\", \"full\"].",
+      "explanation": "`Field(ge=1, le=30)` becomes `minimum` 1 and `maximum` 30 on `nights`, and the `Literal` becomes an `enum` on `plan`, as the redesigned `find_process` in section 3 showed for `limit` and `sort_by`. `guests` has only a default and `city` only a type, so the total is 3.",
+      "hints": [
+        "Each Pydantic bound maps to one JSON Schema keyword.",
+        "Count `ge` and `le` separately, and remember that a default is not a bound."
+      ]
+    },
+    {
+      "id": "mcp-006-q10",
+      "type": "numeric",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "4",
+      "est_minutes": 4,
+      "tags": [
+        "output-schema",
+        "return-annotations"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Eight tools are registered with `@mcp.tool()` and no flags under `mcp==2.3.0`, annotated `-> str`, `-> list[int]`, `-> TextContent`, `-> Image`, `-> CallToolResult`, `-> Plain` (a class that sets `self.x` only in `__init__`), `-> Point` (a dataclass with `x: int` and `y: int`), and one with no return annotation. How many of the eight publish a non-null `outputSchema`?",
+      "answer": {
+        "value": 3,
+        "tolerance": 0,
+        "unit": ""
+      },
+      "precision_note": "Section 4's table (snippets/output_schema.py): str and list[int] are wrapped, the dataclass has its own schema, the other five publish none. Confirmed by registering exactly these eight under mcp==2.3.0.",
+      "explanation": "`-> str` and `-> list[int]` are wrapped, and the dataclass `Point` becomes its own schema: three. A content block and the `Image` helper publish nothing since release 2.1.0, a bare `CallToolResult` leaves the result to the tool, `Plain` has no class-body annotations, and no annotation means no schema.",
+      "hints": [
+        "Sort the eight into wrapped, own schema, and none, using the table in section 4.",
+        "Content blocks changed in release 2.1.0, and a class needs annotations in its body."
+      ]
+    },
+    {
+      "id": "mcp-006-q11",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o4",
+        "o3"
+      ],
+      "section": "7",
+      "est_minutes": 10,
+      "tags": [
+        "errors",
+        "json-rpc",
+        "structured-content"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Write `respond(request_id, outcome)`, which returns, as a dict, the JSON-RPC response a revision 2026-07-28 server sends to one request (leave out `_meta`). `outcome` is one of: `(\"unknown_method\", method)`, answered with code `-32601`, message `\"Method not found\"` and `data` set to the method; `(\"arguments_not_object\",)`, answered with code `-32602`; `(\"tool_failed\", text)`, for a tool that ran and failed with that text; and `(\"ok\", data)`, for a tool that returned `data` as structured content, with the serialized JSON in one text block as the Tools page asks. Every result carries `resultType` `\"complete\"` and an explicit `isError`. Use only the standard library.",
+      "kind": "implement",
+      "language": "python",
+      "starter": "import json\n\n\ndef respond(request_id, outcome):\n    \"\"\"Return the JSON-RPC response (without _meta) a server sends to one request.\"\"\"\n    raise NotImplementedError\n",
+      "solution": "import json\n\n\ndef respond(request_id, outcome):\n    \"\"\"Return the JSON-RPC response (without _meta) a server sends to one request.\"\"\"\n    kind = outcome[0]\n    if kind == \"unknown_method\":\n        return {\"jsonrpc\": \"2.0\", \"id\": request_id,\n                \"error\": {\"code\": -32601, \"message\": \"Method not found\", \"data\": outcome[1]}}\n    if kind == \"arguments_not_object\":\n        return {\"jsonrpc\": \"2.0\", \"id\": request_id,\n                \"error\": {\"code\": -32602, \"message\": \"Invalid params\"}}\n    if kind == \"tool_failed\":\n        result = {\"content\": [{\"type\": \"text\", \"text\": outcome[1]}],\n                  \"isError\": True, \"resultType\": \"complete\"}\n        return {\"jsonrpc\": \"2.0\", \"id\": request_id, \"result\": result}\n    data = outcome[1]\n    result = {\"content\": [{\"type\": \"text\", \"text\": json.dumps(data)}],\n              \"structuredContent\": data, \"isError\": False, \"resultType\": \"complete\"}\n    return {\"jsonrpc\": \"2.0\", \"id\": request_id, \"result\": result}\n",
+      "tests": "\nimport json\n\nr = respond(5, (\"unknown_method\", \"tools/nonexistent\"))\nassert r[\"jsonrpc\"] == \"2.0\" and r[\"id\"] == 5\nassert \"result\" not in r, \"a protocol error carries no result\"\nassert r[\"error\"][\"code\"] == -32601, r\nassert r[\"error\"].get(\"data\") == \"tools/nonexistent\"\nassert r[\"error\"][\"message\"] == \"Method not found\", r\n\nr = respond(7, (\"arguments_not_object\",))\nassert r[\"jsonrpc\"] == \"2.0\" and r[\"id\"] == 7 and \"result\" not in r\nassert r[\"error\"][\"code\"] == -32602, r\n\nr = respond(4, (\"tool_failed\", \"seconds must be between 1 and 30, got 500. Retry with a value in range.\"))\nassert \"error\" not in r, \"a tool that ran and failed is not a protocol error\"\nassert r[\"jsonrpc\"] == \"2.0\" and r[\"id\"] == 4\nres = r[\"result\"]\nassert res[\"isError\"] is True\nassert res[\"content\"] == [{\"type\": \"text\", \"text\": \"seconds must be between 1 and 30, got 500. Retry with a value in range.\"}]\nassert res[\"resultType\"] == \"complete\"\n\nr = respond(3, (\"ok\", {\"rows\": 12000}))\nassert \"error\" not in r and r[\"jsonrpc\"] == \"2.0\" and r[\"id\"] == 3\nres = r[\"result\"]\nassert res[\"isError\"] is False\nassert res[\"structuredContent\"] == {\"rows\": 12000}\nassert len(res[\"content\"]) == 1 and res[\"content\"][0][\"type\"] == \"text\"\nassert json.loads(res[\"content\"][0][\"text\"]) == {\"rows\": 12000}, \"the text block carries the serialized structured content\"\nassert res[\"resultType\"] == \"complete\"\nprint(\"all respond tests passed\")\n",
+      "explanation": "An unknown method and an `arguments` value that breaks the shape of `CallToolRequest` are protocol errors, so they get an `error` member and no `result`, as the first server answered in section 7. A tool that ran and failed gets a successful result with `isError: true` and its message in a text block, so a client can hand it to the model. A success carries `structuredContent` and, for clients that do not read it, the same JSON serialized in a text block, which is what the SDK did for `find_process` in section 4.",
+      "hints": [
+        "Decide first which outcomes get an `error` member and which get a `result`.",
+        "Only a result carries `isError`; for success, put `json.dumps(data)` in the text block beside `structuredContent`."
+      ]
+    },
+    {
+      "id": "mcp-006-q12",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "5",
+      "est_minutes": 6,
+      "tags": [
+        "output-schema",
+        "testing"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Write `missing_output_schemas(listing)`, which takes a parsed `tools/list` result (a dict with a `tools` list in the wire spelling) and returns the sorted names of the tools that publish no output schema: those whose `outputSchema` is absent or JSON `null`. An empty object `{}` is a valid JSON Schema that accepts any value, so a tool publishing it counts as having a schema. Use only the standard library.",
+      "kind": "implement",
+      "language": "python",
+      "starter": "def missing_output_schemas(listing):\n    \"\"\"Names of the tools in a tools/list result that publish no outputSchema, sorted.\"\"\"\n    raise NotImplementedError\n",
+      "solution": "def missing_output_schemas(listing):\n    \"\"\"Names of the tools in a tools/list result that publish no outputSchema, sorted.\"\"\"\n    return sorted(tool[\"name\"] for tool in listing[\"tools\"] if tool.get(\"outputSchema\") is None)\n",
+      "tests": "\nimport json\n\nwire = \"\"\"{\"resultType\": \"complete\", \"ttlMs\": 0, \"cacheScope\": \"private\", \"tools\": [\n  {\"name\": \"get_system_info\", \"inputSchema\": {\"type\": \"object\", \"properties\": {}},\n   \"outputSchema\": {\"type\": \"object\", \"properties\": {\"cpu_percent\": {\"type\": \"number\"}}}},\n  {\"name\": \"silent\", \"inputSchema\": {\"type\": \"object\"}, \"outputSchema\": null},\n  {\"name\": \"raw_array\", \"inputSchema\": {\"type\": \"object\"}},\n  {\"name\": \"anything\", \"inputSchema\": {\"type\": \"object\"}, \"outputSchema\": {}},\n  {\"name\": \"loud\", \"inputSchema\": {\"type\": \"object\"}, \"outputSchema\": {\"type\": \"object\"}}\n]}\"\"\"\nlisting = json.loads(wire)\ngot = missing_output_schemas(listing)\nassert got == [\"raw_array\", \"silent\"], got\nassert missing_output_schemas({\"tools\": []}) == []\nassert missing_output_schemas({\"tools\": [{\"name\": \"z\", \"inputSchema\": {\"type\": \"object\"}},\n                                         {\"name\": \"a\", \"inputSchema\": {\"type\": \"object\"}}]}) == [\"a\", \"z\"]\nprint(\"all missing_output_schemas tests passed\")\n",
+      "explanation": "This is the project's `test_every_tool_publishes_an_output_schema` rewritten over the wire form: a missing key and an explicit `null` both mean nothing was published, while `{}` is a real, permissive schema. Looking the key up with a default handles the absent case, and comparing with `None` rather than testing truthiness keeps `{}` on the published side.",
+      "hints": [
+        "`dict.get` with no default returns `None` for an absent key, the same value JSON `null` parses to.",
+        "An empty dict is falsy in Python, so a truthiness test would treat `{}` as missing."
+      ]
+    },
+    {
+      "id": "mcp-006-q13",
+      "type": "match",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o4",
+        "o3"
+      ],
+      "section": "12",
+      "est_minutes": 4,
+      "tags": [
+        "errors",
+        "symptoms"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Match each symptom a server author sees under `mcp==2.3.0` with its cause.",
+      "left": [
+        {
+          "key": "a",
+          "text": "The model receives `Error executing tool average` and nothing else."
+        },
+        {
+          "key": "b",
+          "text": "The client raises `RuntimeError: Invalid structured content returned by tool celsius: 'units' is a required property`."
+        },
+        {
+          "key": "c",
+          "text": "A tool lists with `outputSchema: null` and returns `\"<__main__.Snapshot object at 0x...>\"` as text."
+        },
+        {
+          "key": "d",
+          "text": "The server's standard error shows `Tool name contains invalid characters: '/'` at startup."
+        },
+        {
+          "key": "e",
+          "text": "A misspelled tool name comes back as `isError: true` with `Unknown tool: find_procss`."
+        }
+      ],
+      "right": [
+        {
+          "key": "a",
+          "text": "The return class has no annotations in its class body."
+        },
+        {
+          "key": "b",
+          "text": "An exception other than `ToolError` escaped the tool body."
+        },
+        {
+          "key": "c",
+          "text": "The SDK's tool manager raises `ToolError` for a name it does not have."
+        },
+        {
+          "key": "d",
+          "text": "The structured content does not fit the schema the client holds for that tool."
+        },
+        {
+          "key": "e",
+          "text": "A tool name uses a character outside the set the specification advises."
+        },
+        {
+          "key": "f",
+          "text": "The tool body raised `MCPError` with code `-32602`."
+        }
+      ],
+      "answer": {
+        "a": "b",
+        "b": "d",
+        "c": "a",
+        "d": "e",
+        "e": "c"
+      },
+      "explanation": "A bare exception is a crash whose text stays on the server. The client's `RuntimeError` is its own check of `structuredContent` against the published schema. A null schema with a `repr` is the class without class-body annotations. The slash warning comes from `mcp.shared.tool_name_validation` at registration. The unknown name is the SDK's divergence from the Tools page's `-32602`. An `MCPError` would reach the client as a JSON-RPC `error` object, which none of the symptoms is.",
+      "hints": [
+        "Separate what the model reads, what the client raises, and what the server logs.",
+        "An `MCPError` produces an `error` member; check which of the symptoms, if any, is a protocol error."
+      ]
+    },
+    {
+      "id": "mcp-006-q14",
+      "type": "order",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o4",
+        "o3"
+      ],
+      "section": "4",
+      "est_minutes": 3,
+      "tags": [
+        "tools-call",
+        "validation"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Put the steps of one successful `tools/call` through an `mcp==2.3.0` server and the SDK's client in the order they happen, for a tool annotated with a dataclass return type.",
+      "items": [
+        {
+          "key": "a",
+          "text": "The server checks the arguments against the tool's input model."
+        },
+        {
+          "key": "b",
+          "text": "The client checks `structuredContent` against the `outputSchema` it cached from `tools/list`."
+        },
+        {
+          "key": "c",
+          "text": "The server looks the tool up by the `name` in the request."
+        },
+        {
+          "key": "d",
+          "text": "The function body runs."
+        },
+        {
+          "key": "e",
+          "text": "The server turns the return value into a text block and `structuredContent`, checked against the output model."
+        }
+      ],
+      "answer": [
+        "c",
+        "a",
+        "d",
+        "e",
+        "b"
+      ],
+      "partial_credit": true,
+      "explanation": "A name the server does not have fails before anything else (`Unknown tool: ...`). Arguments are validated before the body runs, which is why a `limit` of 500 never reached the redesigned `find_process`. The return value is converted and checked on the server, which is where a hand-built result that misses a required field becomes `Error executing tool reading`, and the client's own check of the published schema comes last, on its side of the wire.",
+      "hints": [
+        "An unknown name and invalid arguments are both reported without the body running; which must be known first?",
+        "The client can only check what has already crossed the wire."
+      ]
+    },
+    {
+      "id": "mcp-006-q15",
+      "type": "long",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "7",
+      "est_minutes": 10,
+      "tags": [
+        "errors",
+        "critique"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A colleague's booking tool raises `MCPError(INVALID_PARAMS, \"bad date\")` when the requested check-in date is in the past, arguing that a past date is an invalid parameter and that `-32602` (`Invalid params`) is therefore the honest code. Critique the choice against the Tools page and the SDK's behavior, and rewrite the failure so the model can recover.",
+      "kind": "critique",
+      "solution": "The choice puts a tool execution error on the protocol side. The Tools page draws the line by what failed: an unknown tool, a request that breaks the shape of `CallToolRequest`, and server errors are protocol errors, while API failures, input validation errors such as a date in the wrong range, and business-logic refusals are execution errors returned as a successful result with `isError: true`. A past date is a well-formed request that is wrong for the tool, so it belongs on the execution side, which is also where SEP-1303 moved input validation errors so that a model can fix them.\n\nThe practical cost is the important part. `MCPError` is the one exception the SDK's tool layer re-raises untouched, so the client receives a JSON-RPC `error` object. The Tools page says clients **should** hand execution errors to the model and only **may** hand it protocol errors, which are less likely to lead to recovery; a host may never show the model the text at all. And `bad date` names neither the constraint nor the value nor the fix.\n\nThe rewrite raises `ToolError` with a sentence the model can act on, for example `ToolError(f\"check_in must be today or later, got {check_in}. Today is {today}. Retry with a future date.\")`. The SDK turns that into `isError: true` with `Error executing tool book: check_in must be today or later, ...`, logs it at INFO, and a model can retry with a corrected argument. If the bound can be expressed in the schema (a format, a minimum) it should also go there, so the first attempt is more likely to be right.",
+      "rubric": [
+        {
+          "criterion": "Places a past date on the execution-error side using the Tools page's split between request-shape failures and failures of the work.",
+          "points": 3
+        },
+        {
+          "criterion": "Explains that MCPError becomes a JSON-RPC error object that clients need not show the model, so recovery is unlikely.",
+          "points": 2
+        },
+        {
+          "criterion": "Rewrites the failure as ToolError with the constraint, the offending value and the correction, and states it arrives as isError true.",
+          "points": 3
+        },
+        {
+          "criterion": "Notes that the message bad date gives the model nothing to change, or suggests moving an expressible bound into the schema.",
+          "points": 2
+        }
+      ],
+      "answer_length": "two or three paragraphs",
+      "explanation": "Section 7 sets out the split and the SDK's three paths: `ToolError` for an anticipated failure, a crash for any other exception, and `MCPError` for a real protocol error, which a well-written tool body rarely decides.",
+      "hints": [
+        "Ask whether the request itself was malformed or whether the work could not be done with a well-formed request.",
+        "Then ask which of the two channels the Tools page says clients should pass to the model."
+      ]
+    },
+    {
+      "id": "mcp-006-q16",
+      "type": "long",
+      "track": "connect",
+      "difficulty": 4,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "9",
+      "est_minutes": 10,
+      "tags": [
+        "naming",
+        "hosts"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A host connects two servers, configured under the keys `files` and `web`. Both expose a tool named `search`; `web` also exposes `fetch`, which no other server has; and both servers report the name `search-server` in their `serverInfo`. Design the tool names the host shows the model, and justify each choice against the Tools page's naming rules and its guidance on collisions.",
+      "kind": "connect",
+      "connects": [
+        "mcp-011"
+      ],
+      "solution": "Only the contested name is qualified, and on both sides: `files.search` and `web.search`, while `fetch` keeps its bare name. The Tools page scopes uniqueness to one server and says a client that aggregates tools **should** have a disambiguation strategy such as a server prefix; qualifying only what collides keeps every uncontested name in the form a model may already know.\n\nThe prefix comes from the host's own configuration keys, `files` and `web`, because the page says a server's self-reported name is not guaranteed unique and **should not** be relied upon for disambiguation. Here both servers report `search-server`, so a prefix built from `serverInfo` would produce two identical names and solve nothing.\n\nThe separator is a dot because the qualified name has to stay inside the character set the page advises: ASCII letters, digits, underscore, hyphen and dot, 1 to 128 characters. A slash is outside it, and the Python SDK logs a validation warning for `files/search`. Where a model provider forbids the dot, the host falls back to an underscore, `files_search`, never to a slash. Post 11 builds exactly this catalog.",
+      "rubric": [
+        {
+          "criterion": "Qualifies only the colliding search names, on both servers, and leaves fetch bare, with a reason.",
+          "points": 3
+        },
+        {
+          "criterion": "Takes the prefix from the host's configuration keys and rejects serverInfo names because they are not guaranteed unique and here collide.",
+          "points": 3
+        },
+        {
+          "criterion": "Uses a dot separator, or an underscore where a provider forbids the dot, and rules out the slash with the advised character set.",
+          "points": 2
+        },
+        {
+          "criterion": "States that uniqueness is scoped to one server, so the host, not the servers, owns the collision.",
+          "points": 2
+        }
+      ],
+      "answer_length": "two or three paragraphs",
+      "explanation": "Section 9 states the naming rules and the collision guidance, and post 11 turns them into a host's catalog; the two together decide the prefix source, the separator and which names to qualify.",
+      "hints": [
+        "Start from who can guarantee a unique prefix: the servers, or the host's own configuration.",
+        "Then check each candidate separator against the advised character set."
+      ]
+    },
+    {
+      "id": "mcp-006-q17",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "12",
+      "est_minutes": 3,
+      "tags": [
+        "output-schema",
+        "validation"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A tool is annotated `-> Annotated[CallToolResult, Reading]`, where `Reading` is a dataclass with required fields `value` and `units`, and its body returns a hand-built result whose `structured_content` is `{\"value\": 21.5}`. What does an SDK client receive under `mcp==2.3.0`?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "A result with `isError: true` saying only `Error executing tool reading`; the server logs an ERROR.",
+          "correct": true,
+          "feedback": "The server checks a hand-built result against the annotated model before sending it, and the failure is treated as a crash, so the generic sentence is all that crosses the wire."
+        },
+        {
+          "key": "b",
+          "text": "A conforming-looking result, after which the client raises `RuntimeError` naming the missing `units` field.",
+          "correct": false,
+          "feedback": "The client's check never sees this result: the server's own check fails first and replaces it with an `isError` result, which the client does not validate."
+        },
+        {
+          "key": "c",
+          "text": "The result exactly as built, because a `CallToolResult` return bypasses every schema check.",
+          "correct": false,
+          "feedback": "Only a bare `-> CallToolResult` skips the output model. `Annotated[CallToolResult, Reading]` publishes the schema of `Reading` and holds the result to it."
+        },
+        {
+          "key": "d",
+          "text": "A JSON-RPC `error` object with code `-32603` (`Internal error`).",
+          "correct": false,
+          "feedback": "The SDK reports a failed output check as a tool result with `isError: true`, not as a protocol error."
+        }
+      ],
+      "explanation": "Section 12 shows both checks. `snippets/output_schema.py` prints `isError: true, text: 'Error executing tool reading'` and `server log: ERROR Tool 'reading' raised an unexpected exception` for exactly this tool; the client's `RuntimeError` appears only when the published schema itself stops fitting data the server considers valid.",
+      "hints": [
+        "Ask which side holds the `Reading` model at the moment the result is built.",
+        "The client skips its check for a result already marked `isError`."
+      ]
+    },
+    {
+      "id": "mcp-006-q18",
+      "type": "long",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "3",
+      "est_minutes": 10,
+      "tags": [
+        "input-schema",
+        "design"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A tool `get_logs(service: str, level: str, n: int = 100) -> str` has the docstring \"Get logs. level is one of debug, info, warning, error; n is at most 500.\" Models often call it with `level` set to `\"WARN\"` or `n` set to 10,000. Redesign the signature and the docstring with the SDK so that the published `inputSchema` and description carry what the model needs, describe the properties it then publishes, and say what a model that still sends `n` 10,000 gets back.",
+      "kind": "design",
+      "solution": "Move each constraint out of the docstring and into the parameter it constrains, with `Annotated` and Pydantic's `Field`:\n\n```python\n@mcp.tool()\ndef get_logs(\n    service: Annotated[str, Field(description=\"Service name as it appears in the deployment, for example 'checkout'.\")],\n    level: Annotated[Literal[\"debug\", \"info\", \"warning\", \"error\"], Field(description=\"Lowest severity to include.\")] = \"warning\",\n    n: Annotated[int, Field(ge=1, le=500, description=\"Most recent lines to return.\")] = 100,\n) -> str:\n    \"\"\"Return the most recent log lines of one service, newest last. Use it to see why a service is failing; it does not search across services.\"\"\"\n```\n\nThe published schema then gives `level` an `enum` of the four strings, so `\"WARN\"` is no longer something the model can invent without breaking a visible rule; gives `n` a `minimum` of 1, a `maximum` of 500 and its default; and gives every property a `description`, which the SDK never builds from an `Args:` block. The tool description says what the tool is for and what it does not do.\n\nA model that still sends `n` 10,000 gets a result with `isError: true` whose text is the validation error, `Input should be less than or equal to 500`, and the function body never runs. That message names the bound, so the next attempt can succeed. Choosing a default for `level` is a design decision; leaving it required is also defensible if the caller must always choose.",
+      "rubric": [
+        {
+          "criterion": "Uses a Literal (or equivalent enum) for level and Field bounds ge=1, le=500 for n.",
+          "points": 3
+        },
+        {
+          "criterion": "Gives each property a description in Field, not only in the docstring.",
+          "points": 2
+        },
+        {
+          "criterion": "Describes the published properties: enum, minimum, maximum, default, description.",
+          "points": 2
+        },
+        {
+          "criterion": "States that n of 10,000 returns an isError validation result naming the bound, before the body runs.",
+          "points": 2
+        },
+        {
+          "criterion": "Rewrites the tool description to say what the tool does and when to use it, or what it does not do.",
+          "points": 1
+        }
+      ],
+      "answer_length": "a code sketch and a paragraph",
+      "explanation": "Section 3 makes the same three moves on `find_process` (descriptions, bounds, an enumeration), prints the schema they publish, and shows the validation result an out-of-range value receives.",
+      "hints": [
+        "Every sentence of the docstring that constrains a value has a JSON Schema keyword that could carry it instead.",
+        "Look at what the redesigned `find_process` answered for a `limit` of 500."
+      ]
+    }
+  ]
+}
