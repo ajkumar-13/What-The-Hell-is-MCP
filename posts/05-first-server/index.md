@@ -3,11 +3,11 @@
 > **TL;DR.** A Model Context Protocol (MCP) server is an ordinary Python package: one server object, a few decorated functions, and their return values, with the protocol machinery inside the software development kit (SDK). This post builds a system-information server with two tools, shows the JavaScript Object Notation (JSON) each tool publishes before the code that produces it, drives the server by hand one JSON line at a time, and ends on the failures that keep a server out of a host, in the order that finds them fastest. Every schema, transcript and error message below is printed by a script in `snippets/` or by the project's own test suite.
 >
 > **Prerequisites:** [Post 03](../03-wire-protocol/index.md).
-> **Safe to skip?** Skip it if the reader can already build a `uv` project around `mcp[cli]==2.0.0b2`, predict the input schema the SDK generates for a typed function, drive a server by hand over standard input and output (stdio), and get a local server to appear in a desktop host.
+> **Safe to skip?** Skip it if the reader can already build a `uv` project around `mcp[cli]==2.3.0`, predict the input schema the SDK generates for a typed function, drive a server by hand over standard input and output (stdio), and get a local server to appear in a desktop host.
 >
 > **After reading, you will be able to:**
 >
-> - Create and pin a uv project for an MCP server that a desktop host can spawn, with the pre-release setting kept in pyproject.toml.
+> - Create a uv project for an MCP server, pinned to one SDK release, that a desktop host can spawn.
 > - Register a tool with @mcp.tool() and read the input schema the SDK generates from the function's type hints and defaults.
 > - Drive the server by hand over standard input and output, one JSON-RPC request per line, and read each response or error.
 > - Diagnose a server that does not appear in a host by checking the standalone run, the paths, the JSON, the restart and stdout, in that order.
@@ -50,41 +50,14 @@ Then create the project and add the two dependencies:
 ```bash
 uv init --package --build-backend hatch --name system-info mcp-system-info
 cd mcp-system-info
-uv add --prerelease=allow "mcp[cli]==2.0.0b2" psutil
+uv add "mcp[cli]==2.3.0" psutil
 ```
 
 `--package` matters more than it looks. It lays the code out under `src/system_info/` and declares a build backend, so `uv run` installs the package into the project's environment and `python -m system_info` can find it. A plain `uv init` makes an application project with no build backend, nothing puts `src/` on the import path, and the server never starts. The project under `code/` declares the same backend by hand in its `pyproject.toml`.
 
-The `--prerelease=allow` flag is where this project first stops if it is left off. Naming a pre-release exactly is enough for the package that names it, which is one reason the pin is `==`; a range such as `>=2,<3` would not match `2.0.0b2` at all, because a pre-release of 2.0.0 sorts before 2.0.0. It is not enough for `mcp-types==2.0.0b2`, which `mcp` depends on and the command never named, so the resolver refuses to reach for it. `snippets/uv_prerelease.py` reproduces the refusal offline, from uv's cache, by resolving the same requirement with `uv pip compile`, and prints it with uv's box-drawing glyphs spelled in ASCII:
+That pin is not decoration. This series targets protocol revision **2026-07-28**, and the 2.x line of the Python SDK is the line that speaks it; the 1.x line has a different module layout, and section 10 shows what code written for it does under 2.x. The pin is exact rather than a range because releases within the 2.x line have changed what a server publishes on the wire, and an exact pin is what makes the reader's transcripts match the ones below. `uv add` writes the pin into `pyproject.toml` and the resolved versions into `uv.lock`, so every later `uv sync` and `uv run`, including the one a host spawns, installs exactly the same versions.
 
-```
-    x No solution found when resolving dependencies:
-    -> Because there is no version of mcp-types==2.0.0b2 and mcp==2.0.0b2
-        depends on mcp-types==2.0.0b2, we can conclude that mcp==2.0.0b2 cannot
-        be used.
-        And because you require mcp[cli]==2.0.0b2, we can conclude that your
-        requirements are unsatisfiable.
-        hint: `mcp-types` was requested with a pre-release marker (e.g.,
-        mcp-types==2.0.0b2), but pre-releases weren't enabled (try:
-        `--prerelease=allow`)
-```
-
-The flag on the command line is not the end of it. `uv add` records the mode in `uv.lock`, but the next plain `uv lock`, and the lock check that every `uv run` and `uv sync` performs first, re-resolves under the default mode and drops it again. The same script shows uv saying so:
-
-```
-  Resolving despite existing lockfile due to change in pre-release mode: `allow` vs. `if-necessary-or-explicit`
-```
-
-That re-resolution happens to succeed while the old lock is there to prefer from, and a lock created from scratch without the flag fails on the same `mcp-types` pre-release, with the same hint. The durable fix is to put the setting where every uv command reads it. The project's `pyproject.toml` carries these two lines, and the script's last step shows a fresh lock succeeding with them and keeping the mode:
-
-```toml
-[tool.uv]
-prerelease = "allow"
-```
-
-That pin is not decoration. This series targets protocol revision **2026-07-28**, and the 2.0 line of the Python SDK is the line that speaks it. An unpinned `mcp` resolves to the latest stable release, which was on the 1.x line when this series was written, and the 1.x line has a different module layout: section 10 shows what code written for it does under 2.x.
-
-> **A note on the release this series pins.** `2.0.0b2` is a pre-release. When stable 2.0 ships, widen the pin and drop the setting. Every listing and transcript in this post was produced against `mcp==2.0.0b2` and `mcp-types==2.0.0b2`; `snippets/tool_surface.py` prints the versions and the Python it ran on (3.12.12 here).
+> **A note on the release this series pins.** Every listing and transcript in this post was produced against `mcp==2.3.0` and `mcp-types==2.3.0`; `snippets/tool_surface.py` prints the versions and the Python it ran on (3.12.12 here).
 
 The layout of the finished project:
 
@@ -127,9 +100,10 @@ import sys
 from mcp.server.mcpserver import MCPServer
 
 # Under the stdio transport, stdout IS the protocol channel. Anything printed
-# there is parsed as a JSON-RPC frame, and a stray print() will break the
-# connection in a way that is genuinely hard to diagnose. Logging must go to
-# stderr, which the host collects and shows you.
+# there before the server starts is parsed as a JSON-RPC frame, and a stray
+# print() at import time breaks the connection in a way that is hard to
+# diagnose (once mcp.run() is serving, the SDK diverts later prints to stderr).
+# Logging goes to stderr, which a host may capture into a log.
 logging.basicConfig(
     stream=sys.stderr,
     level=logging.INFO,
@@ -143,7 +117,7 @@ mcp = MCPServer("system-info")
 
 Three things are happening, and one of them is the most important line in the file.
 
-`MCPServer("system-info")` creates the server. The string is the name the server reports about itself, in the `serverInfo` it returns. It is not a unique identifier: [post 02](../02-architecture/index.md) covered why a host must not use a server's self-reported name as a key, and a host names the connection after the key its own configuration gives it (section 6).
+`MCPServer("system-info")` creates the server. The string is the name the server reports about itself, in the `io.modelcontextprotocol/serverInfo` entry it puts in the `_meta` of every result (section 7 shows one). It is not a unique identifier: [post 02](../02-architecture/index.md) covered why a host must not use a server's self-reported name as a key, and a host names the connection after the key its own configuration gives it (section 6).
 
 The `logging.basicConfig(stream=sys.stderr, ...)` call is the load-bearing one. Under the standard input and output transport (stdio), which is what a desktop host uses and what [post 04](../04-transports/index.md) described in detail, the process's **standard output is the protocol channel**. The specification's Transports page says the server **MUST NOT** write anything to stdout that is not a valid MCP message, and the bytes on it are parsed as JSON-RPC frames. Standard error is the server's own: the same page lets a server write log strings there, and lets a host capture, forward or ignore them; Claude Desktop writes them to a per-server log file (section 8). Configuring logging to stderr in the first module the package imports is how nothing ever writes to the wrong stream by accident.
 
@@ -350,7 +324,7 @@ Four rules cover almost everything a first server needs.
 
 **The type hint becomes the JSON Schema type.** `str` is `"string"`, `int` is `"integer"`, `float` is `"number"`, `bool` is `"boolean"`. A parameter with no annotation at all is published as a string, which is rarely what was meant: `snippets/sdk_errors.py` registers `def lookup(key, limit: int = 5)` and the SDK publishes `"key": {"title": "key", "type": "string"}`.
 
-**A default makes a parameter optional.** `limit: int = 25` produced both `"default": 25` and an absence from `required`. `name: str` has no default, so it is in `required`. A call that omits it gets no process list; this SDK build answers with a result marked `isError: true` whose text names the missing field, as `snippets/tool_surface.py` prints:
+**A default makes a parameter optional.** `limit: int = 25` produced both `"default": 25` and an absence from `required`. `name: str` has no default, so it is in `required`. A call that omits it gets no process list; the SDK answers with a result marked `isError: true` whose text names the missing field, as `snippets/tool_surface.py` prints:
 
 ```
 isError: true
@@ -504,20 +478,20 @@ Written to the server's standard input:
 Read back from the server's standard output:
 
 ```json
-{"jsonrpc":"2.0","id":1,"result":{"content":[{"text":"{\n  \"cpu_percent\": 46.5,\n  \"memory_percent\": 92.7,\n  \"memory_used_gb\": 7,\n  \"memory_total_gb\": 7,\n  \"disk_percent\": 92.9,\n  \"disk_used_gb\": 363,\n  \"disk_total_gb\": 391\n}","type":"text"}],"isError":false,"resultType":"complete","structuredContent":{"cpu_percent":46.5,"memory_percent":92.7,"memory_used_gb":7,"memory_total_gb":7,"disk_percent":92.9,"disk_used_gb":363,"disk_total_gb":391}}}
+{"jsonrpc":"2.0","id":1,"result":{"content":[{"text":"{\n  \"cpu_percent\": 22.7,\n  \"memory_percent\": 80.2,\n  \"memory_used_gb\": 6,\n  \"memory_total_gb\": 7,\n  \"disk_percent\": 91.5,\n  \"disk_used_gb\": 358,\n  \"disk_total_gb\": 391\n}","type":"text"}],"isError":false,"resultType":"complete","structuredContent":{"cpu_percent":22.7,"memory_percent":80.2,"memory_used_gb":6,"memory_total_gb":7,"disk_percent":91.5,"disk_used_gb":358,"disk_total_gb":391},"_meta":{"io.modelcontextprotocol/serverInfo":{"name":"system-info","version":""}}}}
 ```
 
 The numbers are one reading of the author's machine and differ on every run; the shape does not.
 
-Sit with how little happened there. One line in, one line out, newline delimited. No handshake, no session, no `initialize`. The request carries the two `_meta` keys the specification requires on every request, `io.modelcontextprotocol/protocolVersion` and `io.modelcontextprotocol/clientCapabilities`, plus `io.modelcontextprotocol/clientInfo`, which it says a client **SHOULD** send; [post 03](../03-wire-protocol/index.md) covered all three. The result carries `resultType: "complete"` and both a text block and `structuredContent`, the latter because `get_system_info` declares a return type. When the script closes standard input the server exits with code 0, and standard output carried nothing but the responses. Standard error carried one warning that the `pydantic-settings` package prints at import in the series' root environment, which is harmless and, more to the point, on the right stream.
+Sit with how little happened there. One line in, one line out, newline delimited. No handshake, no session, no `initialize`. The request carries the two `_meta` keys the specification requires on every request, `io.modelcontextprotocol/protocolVersion` and `io.modelcontextprotocol/clientCapabilities`, plus `io.modelcontextprotocol/clientInfo`, which it says a client **SHOULD** send; [post 03](../03-wire-protocol/index.md) covered all three. The result carries `resultType: "complete"`, both a text block and `structuredContent`, the latter because `get_system_info` declares a return type, and a `_meta` of its own whose `io.modelcontextprotocol/serverInfo` entry names the server, the entry the Base protocol page says a server **SHOULD** put in every result. Its `version` is empty because `app.py` passes none to `MCPServer`, which takes an optional `version` argument; a server worth versioning passes its own. When the script closes standard input the server exits with code 0, and standard output carried nothing but the responses. Standard error carried one line, the SDK's own `INFO` record of the misspelled tool name further down (`Tool 'get_sysinfo' failed: 'Unknown tool: get_sysinfo'`), which is on the right stream.
 
 Leave a required key out and the server refuses, as the specification's Base protocol page says it must, with `-32602` (`Invalid params`):
 
 ```json
-{"jsonrpc":"2.0","id":3,"error":{"code":-32602,"message":"params._meta must carry the reserved protocol-version, client-info and client-capabilities envelope keys"}}
+{"jsonrpc":"2.0","id":3,"error":{"code":-32602,"message":"params._meta must be an object carrying the required 'io.modelcontextprotocol/protocolVersion' and 'io.modelcontextprotocol/clientCapabilities' envelope keys"}}
 ```
 
-> **A note on this SDK build.** The message names client-info, and the build means it: the same script sends a `tools/list` whose `_meta` has both required keys and no `clientInfo`, and gets the same `-32602`. The specification marks `clientInfo` as **SHOULD**, not **MUST**, so `mcp==2.0.0b2` is stricter than the revision here. A hand-written request should always send all three keys.
+The message names only the two required keys. The same script sends a `tools/list` whose `_meta` carries both and no `clientInfo`, and gets the tool list back as a result.
 
 An unknown method gets a protocol error, `-32601` (`Method not found`), rather than silence:
 
@@ -525,10 +499,10 @@ An unknown method gets a protocol error, `-32601` (`Method not found`), rather t
 {"jsonrpc":"2.0","id":2,"error":{"code":-32601,"message":"Method not found","data":"tools/frobnicate"}}
 ```
 
-One honest divergence to note in passing. The specification's Tools page lists an unknown tool among the protocol errors and prints its example as `-32602`. This SDK build answers a `tools/call` for a misspelled tool name with a successful response instead:
+One honest divergence to note in passing. The specification's Tools page lists an unknown tool among the protocol errors and prints its example as `-32602`. The SDK, at release 2.3.0, answers a `tools/call` for a misspelled tool name with a successful response instead:
 
 ```json
-{"jsonrpc":"2.0","id":5,"result":{"content":[{"text":"Unknown tool: get_sysinfo","type":"text"}],"isError":true,"resultType":"complete"}}
+{"jsonrpc":"2.0","id":5,"result":{"content":[{"text":"Unknown tool: get_sysinfo","type":"text"}],"isError":true,"resultType":"complete","_meta":{"io.modelcontextprotocol/serverInfo":{"name":"system-info","version":""}}}}
 ```
 
 Arguments that fail validation come back the same way, as section 5 showed, and for those the Tools page agrees: it lists input validation errors among the tool execution errors that belong in a result with `isError: true`, because a model can read such a result and try again, although the schema's own comment on `-32602` still lists invalid tool arguments. [Post 06](../06-tools-in-depth/index.md) takes the two channels apart properly.
@@ -546,8 +520,8 @@ uv run python posts/03-wire-protocol/snippets/raw_discover.py http://127.0.0.1:8
 `snippets/http_discover.py` does both in one process, on a free port, and the client prints:
 
 ```
-server        system-info 2.0.0b2
-serverInfo    a top-level result field, not in result._meta
+server        system-info, version ""
+serverInfo    in result._meta of server/discover and of tools/list
 versions      2026-07-28
 capabilities  completions, prompts, resources, tools
 cacheable     0 ms, scope private
@@ -564,9 +538,9 @@ Four tools rather than two, because that run was against the finished project fr
 
 The `versions` line is what `server/discover` reported, not the outcome of a negotiation. The server states what it supports and the client picks; there was no handshake.
 
-The version on the `server` line is `2.0.0b2`, which is the **SDK's** version, not the server's. `MCPServer` takes an optional `version` argument, and when it is left out this build reports the version of the library. A server worth versioning passes its own.
+The version on the `server` line is the empty string the stdio result above carried, for the same reason: nothing passed `version` to `MCPServer`.
 
-The `serverInfo` line is post 03's client noticing where that name and version arrived: this SDK build returns them as a top-level field of the `server/discover` result, where the specification's example puts them under the result's `_meta`.
+The `serverInfo` line is post 03's client noticing where that name and version arrived: in the `_meta` of each result, where the Base protocol page puts them, and not as a field of the `server/discover` result itself.
 
 Over HTTP, the missing-`_meta` request above comes back as `HTTP 400 Bad Request` with the same JSON-RPC body, and the unknown method as `HTTP 404 Not Found`, the two statuses the Base protocol page assigns to those errors; `snippets/http_discover.py` prints both.
 
@@ -579,7 +553,7 @@ uv run --extra dev pytest
 ```
 tests\test_server.py ...................                                 [100%]
 
-============================= 19 passed in 6.95s ==============================
+============================= 19 passed in 5.59s ==============================
 ```
 
 Nineteen tests covering the whole server across posts 05 to 09, going through the real protocol path. The count is the result; the seconds vary by machine. [Post 12](../12-testing-and-debugging/index.md) is about that pattern in full.
@@ -598,7 +572,7 @@ When a first server does not appear in the host, the causes are few enough to en
 uv run python -m system_info
 ```
 
-It should wait, reading standard input. If it exits immediately, there is a traceback, and that traceback is the entire problem. `ModuleNotFoundError: No module named 'mcp'` means the dependencies are not installed; the 1.x imports of section 10 mean the code was written for an older SDK.
+It should wait, reading standard input. If it exits immediately, there is a traceback, and that traceback is the entire problem. `ModuleNotFoundError: No module named 'mcp'` means the dependencies are not installed; the `mcp.server.fastmcp` error of section 10 means the code was written for an older SDK.
 
 ### Is the command an absolute path?
 
@@ -658,27 +632,41 @@ Then start the host again from scratch.
 
 The rule from [post 04](../04-transports/index.md), restated because this is where it bites: **under stdio, never write to standard output.** Not `print()`, not a stray debugger call, not a library's banner. Standard output is where JSON-RPC frames live, and anything else on it is a parse failure.
 
-`snippets/stray_print.py` builds the smallest server that breaks the rule, one tool with one flushed `print()`:
+`snippets/stray_print.py` builds the smallest server that breaks the rule in two places, a flushed `print()` inside the tool and one at import time, before `mcp.run()` starts the transport, and drives each with the SDK's own stdio client:
 
 ```python
+    if where == "import":
+        print("noisy server starting", flush=True)  # the bug: stdout is the protocol channel
+
     @mcp.tool()
     def answer() -> str:
         """Return the answer."""
-        print("about to answer", flush=True)  # the bug: stdout is the protocol channel
+        if where == "tool":
+            print("about to answer", flush=True)  # the bug: stdout is the protocol channel
         return "42"
 ```
 
-and drives it with the SDK's own stdio client. The client logged:
+The `print()` inside the tool does no harm under this SDK. The client logged nothing, and the line turned up on the server's standard error instead:
 
 ```
-ERROR:mcp.client.stdio:Failed to parse JSONRPC message from server
-pydantic_core._pydantic_core.ValidationError: 1 validation error for union[JSONRPCRequest,JSONRPCNotification,JSONRPCResponse,JSONRPCError]
-  Invalid JSON: expected value at line 1 column 1 [type=json_invalid, input_value='about to answer\r', input_type=str]
+what the client logged:
+    (nothing)
+what the server wrote to stderr:
+    about to answer
+```
+
+Once `mcp.run()` has started the stdio transport, the SDK serves the protocol from a private duplicate of standard output and points the process's own standard output at standard error, so a handler cannot reach the wire. Nothing protects a `print()` that runs before that, and the import-time one lands on the wire:
+
+```
+what the client logged:
+    ERROR:mcp.client.stdio:Failed to parse JSONRPC message from server
+    pydantic_core._pydantic_core.ValidationError: 1 validation error for union[JSONRPCRequest,JSONRPCNotification,JSONRPCResponse,JSONRPCError]
+      Invalid JSON: expected ident at line 1 column 2 [type=json_invalid, input_value='noisy server starting\r', input_type=str]
 ```
 
 The `\r` is Windows: `print()` in text mode ends the line with a carriage return and a line feed, and the client split on the line feed.
 
-One honest note. That client logged the failure and kept going, and the tool call still returned `'42'` with `isError` false. How gracefully a client recovers from a garbage frame is not specified, so no server should rely on it. Different hosts fail differently, and the ones that fail hard do so with an unhelpful message.
+One honest note. That client logged the failure and kept going, and the tool call still returned `'42'` with `isError` false. How gracefully a client recovers from a garbage frame is not specified, so no server should rely on it, and the diversion is this SDK's courtesy rather than the protocol's rule: the Transports page's **MUST NOT** binds the server whichever library it is built on.
 
 The defense is the `logging.basicConfig(stream=sys.stderr, ...)` call already in `app.py`, from section 3. Every diagnostic goes through `log.info(...)` and lands on standard error, where the host keeps it.
 
@@ -686,7 +674,7 @@ The defense is the `logging.basicConfig(stream=sys.stderr, ...)` call already in
 
 A host that reports it could not connect to a server, or gave up waiting for it, after all five checks pass is describing the opposite of everything above: the configuration was read, the process was launched, and it did not answer in time. The server is fine and its startup is too slow.
 
-The usual cause is dependency resolution. The entry `mcp install` writes, printed in section 10, runs `uv run --frozen --with mcp[cli]==2.0.0b2 mcp run <file>`. The SDK's own source explains that `uv run --with` resolves that requirement in a fresh environment rather than in the project's, so the first launch can mean downloading packages while the host waits, and on a slow connection the host gives up first. The fix is the manual configuration from section 6, which runs inside the project's already-synced environment. Run `uv sync` once in the project so that nothing needs fetching at launch.
+The usual cause is dependency resolution. The entry `mcp install` writes, printed in section 10, runs `uv run --frozen --with mcp[cli]==2.3.0 mcp run <file>`. The SDK's own source explains that `uv run --with` resolves that requirement in a fresh environment rather than in the project's, so the first launch can mean downloading packages while the host waits, and on a slow connection the host gives up first. The fix is the manual configuration from section 6, which runs inside the project's already-synced environment. Run `uv sync` once in the project so that nothing needs fetching at launch.
 
 ### Reading the host's log
 
@@ -714,20 +702,19 @@ uv run python -m system_info --http         # Streamable HTTP on 127.0.0.1:8000
 uv run --extra dev pytest                   # 19 passed
 ```
 
-Eight scripts under `snippets/` produce every schema, transcript and error message quoted above. Each runs from the series root with no arguments, in a few seconds, through the root environment that pins `mcp[cli]==2.0.0b2`, `psutil` and `httpx<1`. Four of them import or start the project under `code/05-first-server/` themselves; every one stops whatever it started before it exits, and none needs a host or any network beyond 127.0.0.1.
+Seven scripts under `snippets/` produce every schema, transcript and error message quoted above. Each runs from the series root with no arguments, in a few seconds, through the root environment that pins `mcp[cli]==2.3.0`, `psutil` and `httpx<1`. Four of them import or start the project under `code/05-first-server/` themselves; every one stops whatever it started before it exits, and none needs a host or any network beyond 127.0.0.1.
 
 ```bash
-uv run python posts/05-first-server/snippets/uv_prerelease.py        # section 2: the flag, the lock, pyproject.toml (offline)
 uv run python posts/05-first-server/snippets/tool_surface.py         # sections 4 and 5: tools/list, inputSchema, a missing argument
 uv run python posts/05-first-server/snippets/sdk_errors.py           # sections 5 and 10: an unannotated parameter, the SDK's errors
 uv run python posts/05-first-server/snippets/stdio_by_hand.py        # section 7: five requests over stdio, by hand
 uv run python posts/05-first-server/snippets/http_discover.py        # section 7: raw_discover.py, HTTP 400 and 404
 uv run python posts/05-first-server/snippets/bom_check.py            # section 8: a byte order mark and a strict parse
-uv run python posts/05-first-server/snippets/stray_print.py          # section 8: one print() in a tool
+uv run python posts/05-first-server/snippets/stray_print.py          # section 8: one print() in a tool, one at import
 uv run python posts/05-first-server/snippets/mcp_install_sandbox.py  # section 10: mcp install in a throwaway home
 ```
 
-`stray_print.py` is both halves of its experiment: with no argument it is the client, and it starts itself again with `--serve` as the broken stdio server, a flag that is not meant to be run by hand. `mcp_install_sandbox.py` points `USERPROFILE`, `HOME` and `XDG_CONFIG_HOME` at a temporary directory, so the real Claude Desktop configuration is never touched. `uv_prerelease.py` resolves offline from uv's cache, which the root `uv sync` has already filled.
+`stray_print.py` is both halves of its experiment: with no argument it is the client, and it starts itself again with `--serve tool` and then `--serve import` as the broken stdio server, flags that are not meant to be run by hand. `mcp_install_sandbox.py` points `USERPROFILE`, `HOME` and `XDG_CONFIG_HOME` at a temporary directory, so the real Claude Desktop configuration is never touched.
 
 ## 10. What can go wrong?
 
@@ -742,16 +729,14 @@ Four mistakes stop a first server before any message is exchanged. `snippets/sdk
 
 The server exits instead of starting, and a host reports only that the process died. The same guard is on `@mcp.resource` and `@mcp.prompt`, each naming its own fix (`Use @resource('uri') instead of @resource`, `Use @prompt() instead of @prompt`).
 
-**Code written for the 1.x SDK.** Both of the modules the 1.x tutorials import are gone in 2.x:
+**Code written for the 1.x SDK.** The module the 1.x tutorials import their server class from is gone in 2.x, and the error says what replaced it:
 
 ```
 import mcp.server.fastmcp
-    ModuleNotFoundError: No module named 'mcp.server.fastmcp'
-import mcp.types
-    ModuleNotFoundError: No module named 'mcp.types'
+    ModuleNotFoundError: No module named 'mcp.server.fastmcp'. This is mcp 2.x, where FastMCP was renamed to MCPServer (from mcp.server.mcpserver import MCPServer) and other APIs changed; see the migration guide at https://py.sdk.modelcontextprotocol.io/v2/migration/#fastmcp-renamed-to-mcpserver or pin 'mcp<2' to keep running v1 code.
 ```
 
-The 2.x names are `mcp.server.mcpserver` for `MCPServer` and the separate `mcp_types` package for the protocol types. Code that imports either old module was written against the previous protocol revision as well as the previous library, so its message shapes are out of date too, not just its imports.
+The other 1.x import, `mcp.types`, still works: in 2.x it is a compatibility namespace that mirrors the separate `mcp_types` package, and the same script prints `mcp.types.Tool is mcp_types.Tool: True`. So only the `fastmcp` import fails at once. Code written for 1.x was written against the previous protocol revision as well as the previous library, so its message shapes are out of date too, not just its imports.
 
 **Handing transport settings to the constructor.** `host` and `port` are arguments of `run()`:
 
@@ -780,17 +765,16 @@ That is not a bug in either the command or the layout; they simply want differen
 1. **Putting `"uv"` rather than the absolute path to `uv` in the configuration.** A desktop host is a graphical application with no shell profile and therefore no `PATH` additions, and this fails silently: the server just never appears.
 2. **Single backslashes in a Windows path inside JSON.** `\t` is an escape sequence and `\U` is invalid JSON, so double every backslash, or use forward slashes, which Windows accepts.
 3. **Closing the host window instead of quitting the host.** The surviving process does not re-read its configuration; end it and start the host again.
-4. **Debugging with `print()`.** Under stdio, standard output is the protocol channel; configure `logging` to `stderr` once in the first module the package imports.
+4. **Debugging with `print()`.** Under stdio, standard output is the protocol channel, and the SDK diverts only what runs after `mcp.run()` starts; configure `logging` to `stderr` once in the first module the package imports.
 5. **Assuming a tool's schema is enforcement.** `limit: int = 25` guarantees an integer, nothing more; the bounds live in the docstring for the model and in the first line of the function body for everyone else.
-6. **Passing `--prerelease=allow` only on the command line.** The next lock check drops it and a fresh lock fails; put `prerelease = "allow"` under `[tool.uv]` in `pyproject.toml`.
 
 ## Further reading
 
 - Specification, *"Tools"*, revision 2026-07-28. The `Tool` object, `inputSchema`, annotations as untrusted hints, and the split between a protocol error and a tool execution error. <https://modelcontextprotocol.io/specification/draft/server/tools>
 - Specification, *"Transports"*, revision 2026-07-28. The stdio transport, including the rule that the server must not write anything to standard output that is not a valid MCP message. <https://modelcontextprotocol.io/specification/draft/basic/transports/stdio>
 - Specification, *"Base protocol"*, revision 2026-07-28. The required `_meta` keys, the rule that a request missing one is rejected with `-32602`, and the error codes with their HTTP statuses. <https://modelcontextprotocol.io/specification/draft/basic>
-- MCP Python SDK, release 2.0.0b2. `MCPServer`, `@mcp.tool()`, `run()`, and the `mcp install` command. <https://github.com/modelcontextprotocol/python-sdk>
-- Astral, *uv documentation*. `uv init --package`, `uv add`, `uv lock`, `uv sync`, `uv run --directory`, and the `prerelease` setting. <https://docs.astral.sh/uv/>
+- MCP Python SDK, release 2.3.0. `MCPServer`, `@mcp.tool()`, `run()`, and the `mcp install` command. <https://github.com/modelcontextprotocol/python-sdk>
+- Astral, *uv documentation*. `uv init --package`, `uv add`, `uv lock`, `uv sync` and `uv run --directory`. <https://docs.astral.sh/uv/>
 - Claude Desktop, *"Getting started with local MCP servers on Claude Desktop"*. Where the configuration file and the per-server logs live. <https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop>
 - [code/05-first-server/](../../code/05-first-server/). The complete project, with the tests run in section 7.
 

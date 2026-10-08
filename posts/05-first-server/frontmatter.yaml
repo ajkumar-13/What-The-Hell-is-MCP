@@ -3,18 +3,18 @@ slug: 05-first-server
 title: "05 - Your first MCP server"
 summary: "Builds a two-tool system-information MCP server with the Python SDK, shows the JSON each tool publishes, drives the server by hand over stdio, and diagnoses why a server fails to appear in a host."
 date: 2026-07-23
-updated: 2026-10-08
+updated: 2026-10-09
 status: complete
 part: "Part II - Building servers"
 level: beginner
-reading_time: 37
+reading_time: 36
 tags: [mcp, servers, python-sdk, tools, json-schema, stdio, uv]
 hero: diagrams/01-your-file-and-the-host.svg
 prerequisites: [mcp-003]
 code: required
 outcomes:
   - id: o1
-    text: "Create and pin a uv project for an MCP server that a desktop host can spawn, with the pre-release setting kept in pyproject.toml."
+    text: "Create a uv project for an MCP server, pinned to one SDK release, that a desktop host can spawn."
   - id: o2
     text: "Register a tool with @mcp.tool() and read the input schema the SDK generates from the function's type hints and defaults."
   - id: o3

@@ -67,7 +67,7 @@
         "signature"
       ],
       "status": "reviewed",
-      "updated": "2026-10-08",
+      "updated": "2026-10-09",
       "prompt": "A tool is registered as `@mcp.tool()` on `def search(query: str, max_results: int = 10, exact: bool = False) -> str`. Which `required` list does the SDK publish in its `inputSchema`?",
       "select": "single",
       "options": [
@@ -96,7 +96,7 @@
           "feedback": "This inverts the rule. A default makes a parameter optional; it is the parameter without a default that must be supplied."
         }
       ],
-      "explanation": "The SDK turns each parameter into a property and lists in `required` exactly the parameters that have no default. Here that is `query` alone; `max_results` and `exact` appear with `\"default\": 10` and `\"default\": false`. Run against `mcp==2.0.0b2`, the SDK publishes `[\"query\"]`.",
+      "explanation": "The SDK turns each parameter into a property and lists in `required` exactly the parameters that have no default. Here that is `query` alone; `max_results` and `exact` appear with `\"default\": 10` and `\"default\": false`. Run against `mcp==2.3.0`, the SDK publishes `[\"query\"]`.",
       "hints": [
         "Look for the parameters that have no `=` after them.",
         "A default produces a `default` keyword in the schema and keeps the name out of `required`."
@@ -145,14 +145,14 @@
         "required"
       ],
       "status": "reviewed",
-      "updated": "2026-10-08",
+      "updated": "2026-10-09",
       "prompt": "A tool is registered with `@mcp.tool()` on `def book(city: str, nights: int, guests: int = 2, breakfast: bool = False, note=None) -> str`. How many names does the SDK put in the `required` list of the published `inputSchema`?",
       "answer": {
         "value": 2,
         "tolerance": 0,
         "unit": ""
       },
-      "precision_note": "Closed form: required = parameters without a default, here city and nights. Confirmed against mcp==2.0.0b2, which publishes required [\"city\", \"nights\"] and gives the unannotated note a string type with default null.",
+      "precision_note": "Closed form: required = parameters without a default, here city and nights. Confirmed against mcp==2.3.0, which publishes required [\"city\", \"nights\"] and gives the unannotated note a string type with default null.",
       "explanation": "Only parameters without a default are required, so `city` and `nights` are listed and the count is 2. `guests` and `breakfast` carry defaults. `note` has no type hint, which makes the SDK publish it as a string, but it also has a default, so it stays optional.",
       "hints": [
         "Required-ness comes from defaults, not from type hints.",
@@ -171,32 +171,32 @@
       "est_minutes": 3,
       "tags": [
         "meta",
-        "sdk-divergence"
+        "server-info"
       ],
       "status": "reviewed",
-      "updated": "2026-10-08",
-      "prompt": "A hand-written request carries `_meta` keys under the `io.modelcontextprotocol/` prefix. Give two counts: how many of those keys the revision 2026-07-28 specification requires on every client request, and how many `mcp==2.0.0b2` actually refuses to do without when it answers.",
+      "updated": "2026-10-09",
+      "prompt": "In the hand-driven stdio exchange, the first request's `params._meta` carried three keys under the `io.modelcontextprotocol/` prefix, and the result that came back carried a `_meta` of its own. Give two counts: how many of the request's three keys the revision 2026-07-28 specification requires on every client request, and how many keys under that prefix the result's `_meta` carried.",
       "answer": {
         "parts": [
           {
-            "label": "required by the specification",
+            "label": "required on every request",
             "value": 2,
             "tolerance": 0,
             "unit": "keys"
           },
           {
-            "label": "refused without, by mcp==2.0.0b2",
-            "value": 3,
+            "label": "in the result's _meta",
+            "value": 1,
             "tolerance": 0,
             "unit": "keys"
           }
         ]
       },
-      "precision_note": "Specification: protocolVersion and clientCapabilities are required, clientInfo is SHOULD (Base protocol page). SDK: snippets/stdio_by_hand.py sends a tools/list with only the two required keys and gets -32602 naming client-info.",
-      "explanation": "The specification requires `io.modelcontextprotocol/protocolVersion` and `io.modelcontextprotocol/clientCapabilities` and says a client SHOULD send `io.modelcontextprotocol/clientInfo`, so the first count is 2. This SDK build rejects a request that omits `clientInfo` with the same `-32602` it gives a request with no `_meta`, so in practice it needs all 3. A hand-written request sends all three.",
+      "precision_note": "Specification: protocolVersion and clientCapabilities are required, clientInfo is SHOULD (Base protocol page). Result: the first response snippets/stdio_by_hand.py prints ends with a _meta holding io.modelcontextprotocol/serverInfo and nothing else.",
+      "explanation": "The specification requires `io.modelcontextprotocol/protocolVersion` and `io.modelcontextprotocol/clientCapabilities` and says a client SHOULD send `io.modelcontextprotocol/clientInfo`, so the first count is 2; the same script's request with only those two keys is accepted. The result's `_meta` carries one key, `io.modelcontextprotocol/serverInfo`, with the server's name and an empty version, the entry the Base protocol page says a server SHOULD put in every result.",
       "hints": [
         "Separate MUST from SHOULD in the specification's list of request keys.",
-        "Then look at what the server answered to the request that had both required keys and nothing else."
+        "Then read the `_meta` object at the very end of the first response line."
       ]
     },
     {
@@ -214,7 +214,7 @@
         "errors"
       ],
       "status": "reviewed",
-      "updated": "2026-10-08",
+      "updated": "2026-10-09",
       "prompt": "`snippets/stdio_by_hand.py` writes the five requests below to the first server, one per line, and reads one response line for each. How many of the five responses are JSON-RPC error objects, that is, carry a top-level `error` member rather than a `result`?",
       "stimulus": {
         "kind": "code",
@@ -223,15 +223,15 @@
         "caption": "The five requests, in the order the script sends them."
       },
       "answer": {
-        "value": 3,
+        "value": 2,
         "tolerance": 0,
         "unit": "responses"
       },
-      "precision_note": "From the output of snippets/stdio_by_hand.py against mcp==2.0.0b2: requests 2, 3 and 4 return error objects (-32601, -32602, -32602); requests 1 and 5 return results, the fifth with isError true.",
-      "explanation": "The unknown method gets `-32601`, and both requests with incomplete `_meta` get `-32602`: three error objects. The successful call is a result, and so is the misspelled tool name, which this SDK build answers with a result whose `isError` is true rather than with the `-32602` error the specification's Tools page prints.",
+      "precision_note": "From the output of snippets/stdio_by_hand.py against mcp==2.3.0: requests 2 and 3 return error objects (-32601, -32602); requests 1, 4 and 5 return results, the fifth with isError true.",
+      "explanation": "The unknown method gets `-32601`, and the request with no `_meta` at all gets `-32602`: two error objects. The request whose `_meta` has both required keys and no `clientInfo` is accepted, because `clientInfo` is only a SHOULD, and the misspelled tool name comes back as a result whose `isError` is true rather than as the `-32602` error the specification's Tools page prints. With the successful call, that makes three results.",
       "hints": [
         "Sort the five into protocol failures and tool-level outcomes.",
-        "Remember how this SDK build answers an unknown tool name, as opposed to an unknown method."
+        "For the fourth request, ask which of the `_meta` keys the specification marks MUST; for the fifth, recall how the SDK answers an unknown tool name, as opposed to an unknown method."
       ]
     },
     {
@@ -250,14 +250,14 @@
         "json-rpc"
       ],
       "status": "reviewed",
-      "updated": "2026-10-08",
+      "updated": "2026-10-09",
       "prompt": "Write `classify(line)`, which takes one line a server wrote to standard output and returns `\"protocol-error <code>\"` for a JSON-RPC error object (for example `\"protocol-error -32601\"`), `\"tool-error\"` for a result whose `isError` is true, and `\"ok\"` for any other result. A result that omits `isError` counts as `\"ok\"`. Use only the standard library.",
       "kind": "implement",
       "language": "python",
       "starter": "import json\n\n\ndef classify(line):\n    \"\"\"Return 'protocol-error <code>', 'tool-error' or 'ok' for one response line.\"\"\"\n    raise NotImplementedError\n",
       "solution": "import json\n\n\ndef classify(line):\n    \"\"\"Return 'protocol-error <code>', 'tool-error' or 'ok' for one response line.\"\"\"\n    message = json.loads(line)\n    if \"error\" in message:\n        return f\"protocol-error {message['error']['code']}\"\n    if message[\"result\"].get(\"isError\", False):\n        return \"tool-error\"\n    return \"ok\"\n",
-      "tests": "\nok_line = '{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"text\":\"{}\",\"type\":\"text\"}],\"isError\":false,\"resultType\":\"complete\",\"structuredContent\":{}}}'\nmethod_line = '{\"jsonrpc\":\"2.0\",\"id\":2,\"error\":{\"code\":-32601,\"message\":\"Method not found\",\"data\":\"tools/frobnicate\"}}'\nmeta_line = '{\"jsonrpc\":\"2.0\",\"id\":3,\"error\":{\"code\":-32602,\"message\":\"params._meta must carry the reserved protocol-version, client-info and client-capabilities envelope keys\"}}'\ntool_line = '{\"jsonrpc\":\"2.0\",\"id\":5,\"result\":{\"content\":[{\"text\":\"Unknown tool: get_sysinfo\",\"type\":\"text\"}],\"isError\":true,\"resultType\":\"complete\"}}'\ninvalid_line = '{\"jsonrpc\":\"2.0\",\"id\":4,\"result\":{\"content\":[{\"text\":\"Error executing tool find_process: 1 validation error for find_processArguments\",\"type\":\"text\"}],\"isError\":true,\"resultType\":\"complete\"}}'\nbare_line = '{\"jsonrpc\":\"2.0\",\"id\":9,\"result\":{\"content\":[],\"resultType\":\"complete\"}}'\n\nassert classify(ok_line) == \"ok\", classify(ok_line)\nassert classify(method_line) == \"protocol-error -32601\", classify(method_line)\nassert classify(meta_line) == \"protocol-error -32602\", classify(meta_line)\nassert classify(tool_line) == \"tool-error\", classify(tool_line)\nassert classify(invalid_line) == \"tool-error\", \"decide from isError, not from the text\"\nassert classify(bare_line) == \"ok\", \"isError defaults to false when it is absent\"\nprint(\"all classify tests passed\")\n",
-      "explanation": "A JSON-RPC response carries either `error` or `result`, never both, so the first test separates protocol errors from everything else, and the code comes from `error.code`. Inside a result, `isError` decides between a tool execution error and success, and the specification says it defaults to false when absent, which is why the lookup needs a default rather than a bare index. The test lines are the ones the post's stdio run printed.",
+      "tests": "\nok_line = '{\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"content\":[{\"text\":\"{}\",\"type\":\"text\"}],\"isError\":false,\"resultType\":\"complete\",\"structuredContent\":{},\"_meta\":{\"io.modelcontextprotocol/serverInfo\":{\"name\":\"system-info\",\"version\":\"\"}}}}'\nmethod_line = '{\"jsonrpc\":\"2.0\",\"id\":2,\"error\":{\"code\":-32601,\"message\":\"Method not found\",\"data\":\"tools/frobnicate\"}}'\nmeta_line = '{\"jsonrpc\":\"2.0\",\"id\":3,\"error\":{\"code\":-32602,\"message\":\"params._meta must be an object carrying the required io.modelcontextprotocol/protocolVersion and io.modelcontextprotocol/clientCapabilities envelope keys\"}}'\ntool_line = '{\"jsonrpc\":\"2.0\",\"id\":5,\"result\":{\"content\":[{\"text\":\"Unknown tool: get_sysinfo\",\"type\":\"text\"}],\"isError\":true,\"resultType\":\"complete\",\"_meta\":{\"io.modelcontextprotocol/serverInfo\":{\"name\":\"system-info\",\"version\":\"\"}}}}'\ninvalid_line = '{\"jsonrpc\":\"2.0\",\"id\":4,\"result\":{\"content\":[{\"text\":\"Error executing tool find_process: 1 validation error for find_processArguments\",\"type\":\"text\"}],\"isError\":true,\"resultType\":\"complete\"}}'\nbare_line = '{\"jsonrpc\":\"2.0\",\"id\":9,\"result\":{\"content\":[],\"resultType\":\"complete\"}}'\n\nassert classify(ok_line) == \"ok\", classify(ok_line)\nassert classify(method_line) == \"protocol-error -32601\", classify(method_line)\nassert classify(meta_line) == \"protocol-error -32602\", classify(meta_line)\nassert classify(tool_line) == \"tool-error\", classify(tool_line)\nassert classify(invalid_line) == \"tool-error\", \"decide from isError, not from the text\"\nassert classify(bare_line) == \"ok\", \"isError defaults to false when it is absent\"\nprint(\"all classify tests passed\")\n",
+      "explanation": "A JSON-RPC response carries either `error` or `result`, never both, so the first test separates protocol errors from everything else, and the code comes from `error.code`. Inside a result, `isError` decides between a tool execution error and success, and the specification says it defaults to false when absent, which is why the lookup needs a default rather than a bare index. The test lines follow the ones the post's stdio run printed, shortened, with the quotes inside the `-32602` message left out.",
       "hints": [
         "Parse the line with `json.loads` and look at the top-level keys first.",
         "Only a result can carry `isError`, and it may be missing; give the lookup a default."
@@ -279,14 +279,14 @@
         "debugging"
       ],
       "status": "reviewed",
-      "updated": "2026-10-08",
-      "prompt": "The `build_request` below is meant to produce a request the first server accepts over stdio, but every request built with it comes back as a `-32602` error saying `params._meta` must carry the reserved envelope keys. Fix it without changing its signature, and without modifying the `params` dictionary the caller passes in.",
+      "updated": "2026-10-09",
+      "prompt": "The `build_request` below is meant to produce a request the first server accepts over stdio, but every request built with it comes back as a `-32602` error saying `params._meta` must be an object carrying the required envelope keys. Fix it without changing its signature, and without modifying the `params` dictionary the caller passes in.",
       "kind": "fix",
       "language": "python",
       "starter": "PROTOCOL_VERSION = \"2026-07-28\"\n\n\ndef build_request(request_id, method, params=None):\n    \"\"\"One JSON-RPC 2.0 request for revision 2026-07-28, ready for json.dumps.\"\"\"\n    message = {\"jsonrpc\": \"2.0\", \"id\": request_id, \"method\": method, \"params\": dict(params or {})}\n    message[\"_meta\"] = {\n        \"io.modelcontextprotocol/protocolVersion\": PROTOCOL_VERSION,\n        \"io.modelcontextprotocol/clientInfo\": {\"name\": \"hand\", \"version\": \"1.0.0\"},\n        \"io.modelcontextprotocol/clientCapabilities\": {},\n    }\n    return message\n",
       "solution": "PROTOCOL_VERSION = \"2026-07-28\"\n\n\ndef build_request(request_id, method, params=None):\n    \"\"\"One JSON-RPC 2.0 request for revision 2026-07-28, ready for json.dumps.\"\"\"\n    body = dict(params or {})\n    body[\"_meta\"] = {\n        \"io.modelcontextprotocol/protocolVersion\": PROTOCOL_VERSION,\n        \"io.modelcontextprotocol/clientInfo\": {\"name\": \"hand\", \"version\": \"1.0.0\"},\n        \"io.modelcontextprotocol/clientCapabilities\": {},\n    }\n    return {\"jsonrpc\": \"2.0\", \"id\": request_id, \"method\": method, \"params\": body}\n",
-      "tests": "\nimport json\n\ncaller_params = {\"name\": \"get_system_info\", \"arguments\": {}}\nmsg = build_request(1, \"tools/call\", caller_params)\n\nassert set(msg) == {\"jsonrpc\", \"id\", \"method\", \"params\"}, f\"top-level keys are {sorted(msg)}\"\nassert msg[\"jsonrpc\"] == \"2.0\" and msg[\"id\"] == 1 and msg[\"method\"] == \"tools/call\"\nmeta = msg[\"params\"][\"_meta\"]\nassert meta[\"io.modelcontextprotocol/protocolVersion\"] == \"2026-07-28\"\nassert meta[\"io.modelcontextprotocol/clientCapabilities\"] == {}, \"the empty capabilities object must still be sent\"\nassert \"io.modelcontextprotocol/clientInfo\" in meta\nassert msg[\"params\"][\"name\"] == \"get_system_info\" and msg[\"params\"][\"arguments\"] == {}\nassert caller_params == {\"name\": \"get_system_info\", \"arguments\": {}}, \"the caller's params dict was modified\"\n\nlisting = build_request(2, \"tools/list\")\nassert set(listing[\"params\"]) == {\"_meta\"}\nassert \"\\n\" not in json.dumps(listing), \"one request must fit on one line\"\nprint(\"all build_request tests passed\")\n",
-      "explanation": "The reserved keys live in `params._meta`, not at the top level of the message: a JSON-RPC 2.0 request has exactly `jsonrpc`, `id`, `method` and `params`, and the server looks for the envelope inside `params`. The fix copies the caller's params, adds `_meta` to the copy, and keeps `clientCapabilities` even though it is empty, because the specification requires the key and an empty object means no optional capabilities.",
+      "tests": "\nimport json\n\ncaller_params = {\"name\": \"get_system_info\", \"arguments\": {}}\nmsg = build_request(1, \"tools/call\", caller_params)\n\nassert set(msg) == {\"jsonrpc\", \"id\", \"method\", \"params\"}, f\"top-level keys are {sorted(msg)}\"\nassert msg[\"jsonrpc\"] == \"2.0\" and msg[\"id\"] == 1 and msg[\"method\"] == \"tools/call\"\nmeta = msg[\"params\"][\"_meta\"]\nassert meta[\"io.modelcontextprotocol/protocolVersion\"] == \"2026-07-28\"\nassert meta[\"io.modelcontextprotocol/clientCapabilities\"] == {}, \"the empty capabilities object must still be sent\"\nassert msg[\"params\"][\"name\"] == \"get_system_info\" and msg[\"params\"][\"arguments\"] == {}\nassert caller_params == {\"name\": \"get_system_info\", \"arguments\": {}}, \"the caller's params dict was modified\"\n\nlisting = build_request(2, \"tools/list\")\nassert set(listing[\"params\"]) == {\"_meta\"}\nassert \"\\n\" not in json.dumps(listing), \"one request must fit on one line\"\nprint(\"all build_request tests passed\")\n",
+      "explanation": "The reserved keys live in `params._meta`, not at the top level of the message: a JSON-RPC 2.0 request has exactly `jsonrpc`, `id`, `method` and `params`, and the server looks for the envelope inside `params`. The fix copies the caller's params, adds `_meta` to the copy, and keeps `clientCapabilities` even though it is empty, because the specification requires the key and an empty object means no optional capabilities. `clientInfo` is a SHOULD, so the fix may keep it or drop it; keeping it is better practice.",
       "hints": [
         "Compare the error message's path, `params._meta`, with where the starter puts `_meta`.",
         "Build the params dictionary first, as a copy, then put it in the message."
@@ -359,7 +359,7 @@
         "symptoms"
       ],
       "status": "reviewed",
-      "updated": "2026-10-08",
+      "updated": "2026-10-09",
       "prompt": "Match each symptom to its most likely cause.",
       "left": [
         {
@@ -376,7 +376,7 @@
         },
         {
           "key": "d",
-          "text": "The client logs `Failed to parse JSONRPC message from server` during a tool call."
+          "text": "The client logs `Failed to parse JSONRPC message from server`, and the input it quotes is the server's startup banner."
         },
         {
           "key": "e",
@@ -398,7 +398,7 @@
         },
         {
           "key": "d",
-          "text": "A `print()` in the server writing to standard output."
+          "text": "A `print()` that runs at import time, before `mcp.run()` starts the stdio transport."
         },
         {
           "key": "e",
@@ -407,6 +407,10 @@
         {
           "key": "f",
           "text": "`@mcp.tool` used without parentheses."
+        },
+        {
+          "key": "g",
+          "text": "A `print()` inside a tool handler, which the SDK points at standard error."
         }
       ],
       "answer": {
@@ -416,10 +420,10 @@
         "d": "d",
         "e": "e"
       },
-      "explanation": "A bare `uv` fails because the host's environment lacks the shell profile's `PATH`. A file-wide failure after a PowerShell 5.1 save is the BOM it writes with `-Encoding UTF8`. An unchanged host after closing the window is a surviving process. A parse failure is non-protocol text on standard output. A timeout after every check passes is slow startup, for example `uv run --with` fetching packages. The missing parentheses would fail check one: the server would not start standalone.",
+      "explanation": "A bare `uv` fails because the host's environment lacks the shell profile's `PATH`. A file-wide failure after a PowerShell 5.1 save is the BOM it writes with `-Encoding UTF8`. An unchanged host after closing the window is a surviving process. A parse failure that quotes a startup banner is non-protocol text written to standard output before the transport started. A timeout after every check passes is slow startup, for example `uv run --with` fetching packages. Two causes match nothing: the missing parentheses would fail check one, since the server would not start standalone, and a `print()` inside a tool handler never reaches the wire under this SDK, which serves the protocol from a private duplicate of standard output once `mcp.run()` starts.",
       "hints": [
         "Ask which symptoms affect every server and which affect only this one.",
-        "The decorator mistake is caught before the host is involved at all."
+        "The decorator mistake is caught before the host is involved at all, and timing matters for a stray `print()`: before or after the transport starts."
       ]
     },
     {
@@ -437,8 +441,8 @@
         "sdk-divergence"
       ],
       "status": "reviewed",
-      "updated": "2026-10-08",
-      "prompt": "Over stdio, a client sends `tools/call` for a tool named `get_sysinfo`, which the server does not have, with complete `_meta`. Which describes what `mcp==2.0.0b2` writes back?",
+      "updated": "2026-10-09",
+      "prompt": "Over stdio, a client sends `tools/call` for a tool named `get_sysinfo`, which the server does not have, with complete `_meta`. Which describes what `mcp==2.3.0` writes back?",
       "select": "single",
       "options": [
         {
@@ -451,13 +455,13 @@
           "key": "b",
           "text": "A JSON-RPC error with code `-32602`, as the specification's Tools page prints for an unknown tool.",
           "correct": false,
-          "feedback": "That is what the specification describes, and it is not what this SDK build sends. The post's stdio run shows the divergence."
+          "feedback": "That is what the specification describes, and it is not what the SDK at release 2.3.0 sends. The post's stdio run shows the divergence."
         },
         {
           "key": "c",
           "text": "A successful result with `isError: true` and the text `Unknown tool: get_sysinfo`.",
           "correct": true,
-          "feedback": "This build reports the unknown tool inside a result, as it does for arguments that fail validation, so a model can read it and retry."
+          "feedback": "The SDK reports the unknown tool inside a result, as it does for arguments that fail validation, so a model can read it and retry."
         },
         {
           "key": "d",
@@ -484,41 +488,41 @@
       "est_minutes": 2,
       "tags": [
         "uv",
-        "pre-release"
+        "project-layout"
       ],
       "status": "reviewed",
-      "updated": "2026-10-08",
-      "prompt": "`uv add \"mcp[cli]==2.0.0b2\" psutil` fails with `No solution found when resolving dependencies` until `--prerelease=allow` is added. Why does the exact pin on `mcp` not suffice?",
+      "updated": "2026-10-09",
+      "prompt": "A developer creates the project with a plain `uv init mcp-system-info`, writes the package under `src/system_info/`, adds the dependencies, and runs `uv run python -m system_info`. The server never starts. What does `uv init --package` give a project that this one lacks?",
       "select": "single",
       "options": [
         {
           "key": "a",
-          "text": "uv never installs a pre-release of any package unless the flag is given, even when the requirement names that exact pre-release version with `==`.",
+          "text": "The `mcp[cli]` and `psutil` dependencies, which `--package` adds to `pyproject.toml` by itself.",
           "correct": false,
-          "feedback": "Naming a pre-release exactly is enough for that package. The error is not about `mcp` itself but about a dependency the command did not name."
+          "feedback": "`uv init` adds no dependencies with or without `--package`; the two come from `uv add`, which this developer ran."
         },
         {
           "key": "b",
-          "text": "`mcp==2.0.0b2` depends on `mcp-types==2.0.0b2`, a pre-release the command never named, and uv will not choose an unnamed pre-release by default.",
+          "text": "A build backend, so `uv run` installs the package and `python -m system_info` can import it.",
           "correct": true,
-          "feedback": "The resolver's own hint says so: `mcp-types` was requested with a pre-release marker, but pre-releases were not enabled."
+          "feedback": "Without a build backend nothing installs the package or puts `src/` on the import path, so `python -m system_info` cannot find the module."
         },
         {
           "key": "c",
-          "text": "`psutil` is only published as a pre-release for current Python versions.",
+          "text": "A `[tool.uv]` table with the settings uv needs to resolve the SDK's own dependencies.",
           "correct": false,
-          "feedback": "`psutil` resolves to a stable release (7.2.2 in the series' lock). The error names `mcp-types`, not `psutil`."
+          "feedback": "`--package` writes no `[tool.uv]` table, and an exact pin on a stable release such as `mcp[cli]==2.3.0` resolves with uv's defaults."
         },
         {
           "key": "d",
-          "text": "An exact pin with `==` is invalid for pre-releases; uv needs a range such as `>=2,<3`.",
+          "text": "A launcher script that a desktop host must call in place of `uv run python -m`.",
           "correct": false,
-          "feedback": "The opposite: `>=2,<3` would not match `2.0.0b2` at all, because a pre-release of 2.0.0 sorts before 2.0.0."
+          "feedback": "The `[project.scripts]` entry is not what a host runs: the host configuration in this post calls `uv --directory ... run python -m system_info`, and nothing in the post uses the script."
         }
       ],
-      "explanation": "uv allows a pre-release for a package whose requirement names one. `mcp` is named exactly, but its dependency `mcp-types==2.0.0b2` is not named by the command, so the default mode refuses it and the hint suggests `--prerelease=allow`. `snippets/uv_prerelease.py` reproduces the refusal offline.",
+      "explanation": "`--package` lays the code out under `src/system_info/` and declares a build backend, so `uv run` installs the package into the project's environment and `python -m system_info` can find it. A plain `uv init` makes an application project with no build backend, nothing puts `src/` on the import path, and the module is not found.",
       "hints": [
-        "Read which package the error message actually says has no version."
+        "Ask how Python finds a module that lives under `src/` when nobody has installed it."
       ]
     },
     {
@@ -530,45 +534,45 @@
         "o1"
       ],
       "section": "2",
-      "est_minutes": 3,
+      "est_minutes": 2,
       "tags": [
         "uv",
-        "lockfile"
+        "pinning"
       ],
       "status": "reviewed",
-      "updated": "2026-10-08",
-      "prompt": "A project was created with `uv add --prerelease=allow \"mcp[cli]==2.0.0b2\"`, and its `pyproject.toml` has no `[tool.uv]` table. The developer then runs a plain `uv lock`, with no flag. What does uv 0.11 do?",
+      "updated": "2026-10-09",
+      "prompt": "A reader copies the project without its `uv.lock` and locks it afresh. Which dependency in `pyproject.toml` makes the new environment reproduce this post's transcripts on any machine and on any later day?",
       "select": "single",
       "options": [
         {
           "key": "a",
-          "text": "Fails with the same `No solution found` resolver error that `uv add` printed when it was run without the flag.",
+          "text": "`mcp`, because uv always picks the newest release, and the newest release is the one the post used.",
           "correct": false,
-          "feedback": "Not while the old lock exists: the re-resolution prefers the locked versions and succeeds. The failure comes later, when a lock is created from scratch."
+          "feedback": "Unpinned, `mcp` resolves to whatever is newest on the day of the lock, which need not be the release the transcripts came from."
         },
         {
           "key": "b",
-          "text": "Reuses `uv.lock` unchanged and keeps allowing pre-releases, because the lock already records `prerelease-mode = \"allow\"`.",
+          "text": "`mcp>=2`, because every release of the 2.x line speaks revision 2026-07-28 and publishes the same wire output.",
           "correct": false,
-          "feedback": "The recorded mode differs from the mode the command runs with, so uv does not trust the lock as it stands."
+          "feedback": "A lower bound admits every later 2.x release, and releases within the line have changed what a server publishes on the wire."
         },
         {
           "key": "c",
-          "text": "Re-resolves under the default mode, succeeds, and rewrites `uv.lock` without the `prerelease-mode` line.",
+          "text": "`mcp[cli]==2.3.0`, pinned to the exact release the post's listings were printed with.",
           "correct": true,
-          "feedback": "uv prints that it is resolving despite the existing lockfile because the pre-release mode changed, and the new lock no longer records `allow`."
+          "feedback": "An exact pin is the only one of the four that names a single release, so a fresh lock picks the same SDK the transcripts came from."
         },
         {
           "key": "d",
-          "text": "Ignores `uv.lock` and installs the latest stable `mcp` from the 1.x line.",
+          "text": "`mcp[cli]<2`, the line whose tutorials most first-server examples are still written for.",
           "correct": false,
-          "feedback": "The exact pin still holds; uv never swaps `==2.0.0b2` for another version. Locking does not install anything either."
+          "feedback": "The 1.x line has a different module layout: `from mcp.server.mcpserver import MCPServer` does not exist there, and it speaks an older revision."
         }
       ],
-      "explanation": "`snippets/uv_prerelease.py` shows the sequence: after `uv add` with the flag the lock records `prerelease-mode = \"allow\"`; a plain `uv lock` prints `Resolving despite existing lockfile due to change in pre-release mode` and drops the line; a lock from scratch without the setting then fails. Writing `prerelease = \"allow\"` under `[tool.uv]` makes every command use the mode.",
+      "explanation": "The post pins `mcp[cli]==2.3.0` exactly because releases within the 2.x line have changed what a server publishes, and only an exact pin makes a fresh lock pick the release the listings were printed with. An unpinned or lower-bounded requirement floats to whatever is newest, and `<2` selects the 1.x line with its different module layout.",
       "hints": [
-        "The mode a command runs with comes from its flags and from pyproject.toml, not from the lockfile.",
-        "Ask what uv does when the lock was made under different options from the current command."
+        "Ask which of the four names exactly one release.",
+        "Without a lock file, a range is resolved to its newest member on the day of the lock."
       ]
     },
     {
@@ -583,21 +587,21 @@
       "est_minutes": 2,
       "tags": [
         "uv",
-        "pyproject"
+        "pinning"
       ],
       "status": "reviewed",
-      "updated": "2026-10-08",
-      "prompt": "Which table and setting, written into `pyproject.toml`, make every uv command in the project allow the pre-release dependencies that `mcp[cli]==2.0.0b2` needs, so the setting no longer has to be passed as a flag?",
+      "updated": "2026-10-09",
+      "prompt": "Inside a project created with `uv init --package`, write the one `uv` command that adds the SDK with its command-line extra, pinned exactly to the release this series uses, together with `psutil`.",
       "answer": {
-        "model": "The `[tool.uv]` table with `prerelease = \"allow\"`.",
+        "model": "uv add \"mcp[cli]==2.3.0\" psutil",
         "accept": [
-          "^(?![\\s\\S]*\\b(?:not|never|don't|do not|avoid|remove|delete|drop)\\s+(?:\\w+\\s+){0,3}(?:\\[?\\s*tool\\.uv|prerelease\\s*=))(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might|not sure)\\b)(?=[\\s\\S]*\\[?\\s*tool\\s*\\.\\s*uv(?![\\w-])\\s*\\]?)(?=[\\s\\S]*\\bprerelease\\s*=\\s*[\\\"']?allow[\\\"']?(?![\\w-]))[\\s\\S]*$"
+          "^(?![\\s\\S]*\\bpip\\s+install\\b)(?=[\\s\\S]*\\buv\\s+add\\b)(?=[\\s\\S]*\\bmcp\\s*\\[\\s*cli\\s*\\]\\s*==(?!=)\\s*2\\.3(?:\\.0)?(?![\\d.]*\\d)(?![\\w.]*\\*))(?=[\\s\\S]*\\bpsutil\\b)[\\s\\S]*$"
         ]
       },
-      "explanation": "uv reads `[tool.uv]` from `pyproject.toml` on every command, and `prerelease = \"allow\"` there is the same mode as `--prerelease=allow`. The project under `code/05-first-server/` carries exactly these lines; with them a lock created from scratch succeeds and keeps `prerelease-mode = \"allow\"`.",
+      "explanation": "`uv add \"mcp[cli]==2.3.0\" psutil` writes both dependencies into `pyproject.toml` and resolves them into `uv.lock`. The quotes keep a shell from reading the square brackets; `[cli]` brings the SDK's command-line tools, including `mcp install`; and `==` names one release, which a range such as `>=2.3` would not.",
       "hints": [
-        "Settings for uv itself live in a `tool.` table named after the tool.",
-        "The key has the same name as the command-line flag, without the dashes."
+        "The subcommand that records a dependency in `pyproject.toml` is not `pip install`.",
+        "An extra goes in square brackets after the package name, and an exact pin uses `==`."
       ]
     },
     {
@@ -616,10 +620,10 @@
         "configuration"
       ],
       "status": "reviewed",
-      "updated": "2026-10-08",
+      "updated": "2026-10-09",
       "prompt": "A colleague runs `uv run mcp install src/system_info/__main__.py` on the first server's package. The command exits with code 0 and prints nothing, but no working `system-info` server ever appears in Claude Desktop. Explain what the command wrote and why, where the real error surfaces, and what the colleague should do instead.",
       "kind": "explain",
-      "solution": "`mcp install` takes one file, loads it as a standalone module with the file's directory on the import path, and looks for a global named `mcp`, `server` or `app` to read the server's name from. `__main__.py` begins with `from . import mcp`, a relative import, and a file loaded on its own has no parent package, so the load raises `ImportError: attempted relative import with no known parent package`.\n\nThe command catches that import failure and falls back to the file's stem for the name. It writes an entry called `__main__` whose command is `uv run --frozen --with mcp[cli]==2.0.0b2 mcp run <absolute path to __main__.py>`, and exits successfully, so the terminal shows nothing wrong.\n\nThe real error surfaces only when the host runs that entry: `mcp run` imports the file the same way, hits the same `ImportError`, and exits with code 1. That traceback lands in the host's log for that server, which is the one place nobody is watching.\n\nThe fix is to write the configuration by hand: an entry keyed `system-info` whose `command` is the absolute path to `uv` and whose `args` are `--directory`, the absolute project path, `run`, `python`, `-m`, `system_info`. That runs the package as a package, inside the project's synced environment, and also avoids `uv run --with` resolving packages at launch.",
+      "solution": "`mcp install` takes one file, loads it as a standalone module with the file's directory on the import path, and looks for a global named `mcp`, `server` or `app` to read the server's name from. `__main__.py` begins with `from . import mcp`, a relative import, and a file loaded on its own has no parent package, so the load raises `ImportError: attempted relative import with no known parent package`.\n\nThe command catches that import failure and falls back to the file's stem for the name. It writes an entry called `__main__` whose command is `uv run --frozen --with mcp[cli]==2.3.0 mcp run <absolute path to __main__.py>`, and exits successfully, so the terminal shows nothing wrong.\n\nThe real error surfaces only when the host runs that entry: `mcp run` imports the file the same way, hits the same `ImportError`, and exits with code 1. That traceback lands in the host's log for that server, which is the one place nobody is watching.\n\nThe fix is to write the configuration by hand: an entry keyed `system-info` whose `command` is the absolute path to `uv` and whose `args` are `--directory`, the absolute project path, `run`, `python`, `-m`, `system_info`. That runs the package as a package, inside the project's synced environment, and also avoids `uv run --with` resolving packages at launch.",
       "rubric": [
         {
           "criterion": "States that mcp install loads a single file as a standalone module and that the relative import in __main__.py fails there.",

@@ -3,8 +3,8 @@
 Run from the series root:
     uv run python posts/05-first-server/snippets/sdk_errors.py
 
-Each case is attempted against the installed mcp==2.0.0b2 and the exception it
-raises is printed as `Type: message`. Nothing is served and nothing is left
+Each case is attempted against the installed mcp==2.3.0 and the exception it
+raises is printed as `Type: message`, or "no error" when there is none. Nothing is served and nothing is left
 running: the server objects below are built and thrown away.
 """
 
@@ -51,10 +51,11 @@ def prompt_without_parentheses() -> None:
 
 
 print("== code written for the 1.x SDK ==")
-for module in ("mcp.server.fastmcp", "mcp.types"):
+for module in ("mcp.server.fastmcp", "mcp.types", "mcp.server.mcpserver", "mcp_types"):
     attempt(f"import {module}", lambda m=module: importlib.import_module(m))
-attempt("import mcp.server.mcpserver", lambda: importlib.import_module("mcp.server.mcpserver"))
-attempt("import mcp_types", lambda: importlib.import_module("mcp_types"))
+mirror = importlib.import_module("mcp.types")
+wire = importlib.import_module("mcp_types")
+print(f"mcp.types.Tool is mcp_types.Tool: {mirror.Tool is wire.Tool}")
 
 print("\n== decorators used without being called ==")
 attempt("@mcp.tool", tool_without_parentheses)
