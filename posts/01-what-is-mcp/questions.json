@@ -1,0 +1,813 @@
+{
+  "standard": "2.1.0",
+  "post": "mcp-001",
+  "next_ordinal": 19,
+  "questions": [
+    {
+      "id": "mcp-001-q01",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "5",
+      "est_minutes": 1,
+      "tags": [
+        "roles",
+        "consent"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A user asks a desktop assistant to look up an order. Before anything runs, a dialog asks whether the `run_query` tool call should go ahead. Which MCP role is asking?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The host, because it owns every permission decision",
+          "correct": true,
+          "feedback": "Correct. The host owns the model, the conversation, and every permission decision, so the confirmation is the host talking."
+        },
+        {
+          "key": "b",
+          "text": "The server, because it publishes the `run_query` tool",
+          "correct": false,
+          "feedback": "The server sits on the far side of the trust boundary. Everything it sends is untrusted input to the host, so it cannot be the party that grants consent."
+        },
+        {
+          "key": "c",
+          "text": "The client, because it carries the call to the server",
+          "correct": false,
+          "feedback": "The client is the connection object inside the host. It owns the transport and matches responses to requests; it owns no decision. Where the Tools page says clients should prompt, this series assigns that duty to the host."
+        },
+        {
+          "key": "d",
+          "text": "The model, because it chose `run_query` from the list",
+          "correct": false,
+          "feedback": "The model picks the tool, but picking is not permitting. The confirmation that stops the call comes from the application around the model."
+        }
+      ],
+      "explanation": "Section 5 assigns the consent decision to the host: it owns the model, the conversation, and every permission decision, and the server is on the untrusted side of the boundary.",
+      "hints": [
+        "Ask which party sees the whole conversation and is trusted by the user."
+      ]
+    },
+    {
+      "id": "mcp-001-q02",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "5",
+      "est_minutes": 1,
+      "tags": [
+        "roles",
+        "vocabulary"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "Name the MCP role that owns the model, the conversation, and every permission decision.",
+      "answer": {
+        "model": "The host: the application the user interacts with, such as a desktop assistant or an editor.",
+        "accept": [
+          "^(?![\\s\\S]*\\b(maybe|perhaps|possibly|probably|i think|i guess|not sure|might be|could be)\\b)(?=(?:\\bnot (?:the |a )?(?:client|server|model)s?\\b|(?!\\b(?:(?:client|server)s?\\b|model\\b(?!,? (?:and )?(?:the )?conversation)))[\\s\\S])*?\\bhosts?\\b)(?![\\s\\S]*\\bnot (the |a )?host\\b)(?![\\s\\S]*\\bhost (is|does) not\\b)(?![\\s\\S]*\\bhost('s|s'| application's)? (client|server)\\b)(?![\\s\\S]*\\bhost\\s*(,|/|\\bor\\b|\\band\\b)\\s*(the )?(client|server|model)\\b)"
+        ]
+      },
+      "explanation": "Section 5 defines the host as the application the user interacts with, and gives it the model, the conversation, and every permission decision. The client is only the connection object inside it, and the server is on the far side of the trust boundary.",
+      "hints": [
+        "Of the three roles, pick the one the user actually sees on screen."
+      ]
+    },
+    {
+      "id": "mcp-001-q03",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "3",
+      "est_minutes": 2,
+      "tags": [
+        "registry",
+        "trust"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A server appears in the MCP Registry under the name `io.github.someone/postgres`. What does that listing establish?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Its publisher proved control of the name; the rest is self-declared",
+          "correct": true,
+          "feedback": "Correct. A listing records a name its publisher had to prove ownership of, plus whatever metadata the publisher supplied, such as where the package lives. That is all it proves."
+        },
+        {
+          "key": "b",
+          "text": "The code was reviewed by the registry's moderators before it was listed",
+          "correct": false,
+          "feedback": "The moderation policy says the registry does not make guarantees about moderation and that consumers should assume minimal-to-no moderation."
+        },
+        {
+          "key": "c",
+          "text": "The package is maintained, and the listed version is the current release",
+          "correct": false,
+          "feedback": "Only a name, a description, and a version are required. Nothing in a listing says the project is maintained, and the source link itself is optional."
+        },
+        {
+          "key": "d",
+          "text": "The server has been tested with the host applications that read the registry",
+          "correct": false,
+          "feedback": "The registry stores metadata and no code, and its documentation says it is meant for aggregators rather than for host applications directly."
+        }
+      ],
+      "explanation": "Section 3 reads a listing for what it promises: a proven name, a required description and version, and optional pointers such as `packages`. The moderation policy disclaims any review, so a listing is not evidence that the code is safe, maintained, or what it claims to be.",
+      "hints": [
+        "Separate what the registry stores from what it checks."
+      ]
+    },
+    {
+      "id": "mcp-001-q04",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "10",
+      "est_minutes": 3,
+      "tags": [
+        "configuration",
+        "hosts",
+        "debugging"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A working entry is copied from a Claude Desktop configuration file into VS Code's `.vscode/mcp.json` without changes. The file is valid JSON: one top-level `mcpServers` object with one entry holding `command` and `args`. What does VS Code most plausibly show?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "No servers configured, and no error about the file",
+          "correct": true,
+          "feedback": "Correct. VS Code reads its servers from a top-level `servers` key and requires a `type` on every entry. A file without that key is an empty configuration, not an error."
+        },
+        {
+          "key": "b",
+          "text": "A JSON parse error that points at the `mcpServers` line",
+          "correct": false,
+          "feedback": "The file is valid JSON, so there is nothing for a parser to reject. The problem is the key, which is a host convention rather than syntax."
+        },
+        {
+          "key": "c",
+          "text": "The server, running normally, with its tool names unprefixed",
+          "correct": false,
+          "feedback": "That would require VS Code to read `mcpServers`, and it does not. The top-level key is chosen by each host, not by MCP."
+        },
+        {
+          "key": "d",
+          "text": "A handshake failure, because VS Code expects an earlier revision",
+          "correct": false,
+          "feedback": "Nothing is ever sent: no server is launched. And revision 2026-07-28 has no handshake at all, so no handshake can fail."
+        }
+      ],
+      "explanation": "Section 3 and section 10 note that the top-level key belongs to the host: `mcpServers` for Claude Desktop, Claude Code, Cursor, and Gemini CLI, `servers` for VS Code, `context_servers` for Zed. The wrong key gives an empty server list rather than a complaint.",
+      "hints": [
+        "Ask whether the problem is the JSON syntax or the key VS Code looks for.",
+        "Section 3 lists the top-level key each host reads."
+      ]
+    },
+    {
+      "id": "mcp-001-q05",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "7",
+      "est_minutes": 2,
+      "tags": [
+        "privacy",
+        "local-server"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A server runs as a subprocess on a developer's laptop, using the developer's own credentials to read local log files. The host sends the conversation to a hosted model. Which statement is correct?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Log lines the host puts in the conversation reach the model provider",
+          "correct": true,
+          "feedback": "Correct. A local server keeps the access local, not the data. Whatever the host puts in the conversation is sent to the model like any other message."
+        },
+        {
+          "key": "b",
+          "text": "The logs stay on the laptop, because the server process never leaves it",
+          "correct": false,
+          "feedback": "Where the server runs decides where the data is read, not where it goes next. The host forwards tool output to whatever model it uses."
+        },
+        {
+          "key": "c",
+          "text": "The protocol encrypts tool results so that only the host can read them",
+          "correct": false,
+          "feedback": "MCP defines no privacy boundary. It standardizes how data is reached and says nothing about who may see it afterwards."
+        },
+        {
+          "key": "d",
+          "text": "The server decides whether its results may leave the machine",
+          "correct": false,
+          "feedback": "The server hands a result to the host and has no say after that. The host and its model configuration decide where the data goes."
+        }
+      ],
+      "explanation": "Section 7 separates access from privacy: a server is a role, not a location, and a local server does not imply a local model. Whether data leaves the machine is decided by the host and its model configuration.",
+      "hints": [
+        "Follow a tool result one step past the host."
+      ]
+    },
+    {
+      "id": "mcp-001-q06",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "7",
+      "est_minutes": 3,
+      "tags": [
+        "annotations",
+        "safety",
+        "trust"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A server installed from an unvetted listing declares `readOnlyHint: true` on a tool named `list_files`. Select every correct statement.",
+      "select": "multiple",
+      "options": [
+        {
+          "key": "a",
+          "text": "The host must treat the hint as untrusted, since the server is not a trusted one",
+          "correct": true,
+          "feedback": "Correct. The Tools page says clients MUST consider tool annotations untrusted unless they come from trusted servers."
+        },
+        {
+          "key": "b",
+          "text": "The protocol rejects any `tools/call` to this tool that would modify a file",
+          "correct": false,
+          "feedback": "The protocol carries a name, arguments, and a result. Nothing in it can see what the server's code does, so nothing can reject a write."
+        },
+        {
+          "key": "c",
+          "text": "Making the tool unable to write is a job for the server's code and its grants",
+          "correct": true,
+          "feedback": "Correct. Read-only is enforced where the write would happen: in the server's own code and in the permissions of the account it uses."
+        },
+        {
+          "key": "d",
+          "text": "The registry checked the hint against the package when the server was listed",
+          "correct": false,
+          "feedback": "The registry stores metadata, not code, and its moderation policy says to assume minimal-to-no moderation. It checks no annotation."
+        }
+      ],
+      "explanation": "Section 7 says the protocol enforces no safety: annotations are hints for the host, the specification requires clients to treat them as untrusted unless the server is trusted, and the protocol will not stop a tool named `list_files` from deleting a file. Enforcement lives in server code and in the host's permission model.",
+      "hints": [
+        "Ask which party could actually observe whether the tool writes.",
+        "Section 7 quotes the specification's rule for annotations from servers that are not trusted."
+      ]
+    },
+    {
+      "id": "mcp-001-q07",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 3,
+      "tags": [
+        "n-times-m",
+        "counting"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A company runs 5 AI applications that should each reach 8 data sources. Give the number of bespoke integrations if every pair is wired by hand, and the number of implementations if every application and every data source implements one shared protocol once.",
+      "answer": {
+        "parts": [
+          {
+            "label": "pairwise integrations",
+            "value": 40,
+            "tolerance": 0,
+            "unit": "integrations"
+          },
+          {
+            "label": "implementations through the protocol",
+            "value": 13,
+            "tolerance": 0,
+            "unit": "implementations"
+          }
+        ]
+      },
+      "precision_note": "Closed forms of section 2: N x M = 5 x 8 = 40 and N + M = 5 + 8 = 13.",
+      "explanation": "Section 2 counts $N \\times M$ for the mesh, one integration per pair, so $5 \\times 8 = 40$. Through one boundary each side implements the protocol once, $N + M = 5 + 8 = 13$.",
+      "hints": [
+        "In the mesh, count pairs. Through the boundary, count participants."
+      ]
+    },
+    {
+      "id": "mcp-001-q08",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 5,
+      "tags": [
+        "n-times-m",
+        "marginal-cost"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A team has 3 AI applications and 9 data sources, and every application must reach every data source. It now adds 2 applications and 1 data source. How many new integrations does it owe if every pair is wired by hand, and how many new implementations if all 12 existing participants already speak one shared protocol?",
+      "answer": {
+        "parts": [
+          {
+            "label": "new pairwise integrations",
+            "value": 23,
+            "tolerance": 0,
+            "unit": "integrations"
+          },
+          {
+            "label": "new implementations through the protocol",
+            "value": 3,
+            "tolerance": 0,
+            "unit": "implementations"
+          }
+        ]
+      },
+      "precision_note": "Closed forms of section 2: 5 x 10 - 3 x 9 = 50 - 27 = 23 new integrations; (5 + 10) - (3 + 9) = 3 new implementations. Pricing the new source against the 3 old applications only gives 2 x 9 + 1 x 3 = 21, which is wrong.",
+      "explanation": "After the change there are $5$ applications and $10$ sources, so the mesh holds $5 \\times 10 = 50$ integrations against $3 \\times 9 = 27$ before: $23$ new ones. The new data source must reach all five applications, including the two new ones. Through the boundary the 12 existing participants already speak the protocol, so each newcomer costs one implementation, $3$ in all (section 2).",
+      "hints": [
+        "Compute the mesh total before and after rather than pricing each addition separately.",
+        "After the change there are 5 applications and 10 data sources; subtract the old total of $3 \\times 9$."
+      ]
+    },
+    {
+      "id": "mcp-001-q09",
+      "type": "numeric",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 4,
+      "tags": [
+        "n-times-m",
+        "adoption"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "One AI application must reach 6 data sources. Give the pairwise integration count, the implementation count through a shared protocol, and the smallest number of applications at which, with the same 6 data sources, the protocol needs strictly fewer pieces of work than the mesh.",
+      "answer": {
+        "parts": [
+          {
+            "label": "pairwise integrations, one application",
+            "value": 6,
+            "tolerance": 0,
+            "unit": "integrations"
+          },
+          {
+            "label": "implementations through the protocol, one application",
+            "value": 7,
+            "tolerance": 0,
+            "unit": "implementations"
+          },
+          {
+            "label": "smallest number of applications that saves work",
+            "value": 2,
+            "tolerance": 0,
+            "unit": "applications"
+          }
+        ]
+      },
+      "precision_note": "Closed forms of section 2 with M = 6: N = 1 gives N x M = 6 and N + M = 7; N = 2 gives 12 against 8, the first N with N x M > N + M.",
+      "explanation": "With $N = 1$ the mesh costs $1 \\times 6 = 6$ while the boundary costs $1 + 6 = 7$, one more, because the single application implements the protocol too. At $N = 2$ the mesh costs $12$ and the boundary $8$. Section 2 makes the same point in words: a protocol that only one application speaks saves nothing.",
+      "hints": [
+        "Evaluate $N \\times M$ and $N + M$ with $N = 1$ and $M = 6$.",
+        "Then increase $N$ one at a time until the mesh is the larger of the two."
+      ]
+    },
+    {
+      "id": "mcp-001-q10",
+      "type": "order",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "3",
+      "est_minutes": 3,
+      "tags": [
+        "installation",
+        "registry"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "Put the steps of installing a published Python server into a desktop host in the order they happen.",
+      "items": [
+        {
+          "key": "a",
+          "text": "Search the registry for a server that covers the system to reach"
+        },
+        {
+          "key": "b",
+          "text": "Copy the `identifier` from the entry's `packages` array"
+        },
+        {
+          "key": "c",
+          "text": "Add an entry with `uvx` and that string under the host's top-level key"
+        },
+        {
+          "key": "d",
+          "text": "Quit the host fully and start it again"
+        },
+        {
+          "key": "e",
+          "text": "Ask the assistant for something the server covers"
+        },
+        {
+          "key": "f",
+          "text": "Answer the host's question about whether the tool call may go ahead"
+        }
+      ],
+      "answer": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f"
+      ],
+      "partial_credit": true,
+      "explanation": "Section 3 runs find, read the entry, configure, restart, use. The identifier must exist before it can go into the file, the host reads the file at launch so the restart follows the edit, and the permission question can only arise once the model has picked a tool for a request.",
+      "hints": [
+        "Each step needs something the previous one produced."
+      ]
+    },
+    {
+      "id": "mcp-001-q11",
+      "type": "match",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "5",
+      "est_minutes": 3,
+      "tags": [
+        "roles",
+        "trust-boundary"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "Match each party in an MCP setup to its job. One job on the right belongs to none of them.",
+      "left": [
+        {
+          "key": "a",
+          "text": "Host"
+        },
+        {
+          "key": "b",
+          "text": "Client"
+        },
+        {
+          "key": "c",
+          "text": "Server"
+        },
+        {
+          "key": "d",
+          "text": "Data source"
+        }
+      ],
+      "right": [
+        {
+          "key": "a",
+          "text": "Holds the transport for one connection and matches responses to requests by id"
+        },
+        {
+          "key": "b",
+          "text": "Sits outside the protocol, reached by the server's own driver"
+        },
+        {
+          "key": "c",
+          "text": "Owns the model, the conversation, and the permission decisions"
+        },
+        {
+          "key": "d",
+          "text": "Guarantees that a tool declared read-only cannot write"
+        },
+        {
+          "key": "e",
+          "text": "Publishes tools, resources, and prompts"
+        }
+      ],
+      "answer": {
+        "a": "c",
+        "b": "a",
+        "c": "e",
+        "d": "b"
+      },
+      "explanation": "Section 5: the host owns the model, the conversation, and consent; the client, one per server, owns the transport and the id matching; the server publishes the primitives; the data source is outside MCP. Nobody guarantees a read-only hint, which section 7 calls a hint the host must not trust.",
+      "hints": [
+        "Place the host and the data source first, at the two ends of the picture in section 5."
+      ]
+    },
+    {
+      "id": "mcp-001-q12",
+      "type": "long",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 10,
+      "tags": [
+        "n-times-m",
+        "critique"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A planning document says: \"Adopting MCP saves every organization $N \\times M - (N + M)$ integrations, and at run time our applications will hold $N + M$ connections instead of $N \\times M$.\" Critique both halves of the sentence, using a small worked example.",
+      "kind": "critique",
+      "answer_length": "half a page",
+      "solution": "1. **The count is of implementations, not connections.** $N + M$ is the number of pieces of work to write and maintain. At run time every application still reaches every data source it needs: with 4 applications and 6 sources, all 24 paths exist, carried over one shared interface instead of 24 private ones. The second half of the sentence is wrong.\n2. **The saving is conditional on adoption.** A protocol saves work only when the applications speak it. With one application and 6 sources the mesh costs $6$ and the boundary $7$, so there is no saving at all; for any application that does not speak MCP the integration stays bespoke.\n3. **The organization does not pay both sides.** Application vendors write their half once, and many servers already exist, so an organization's own marginal cost is often one server or none. The formula overstates what it writes and says nothing about what it can reuse.\n4. **What survives.** With $N = 4$ and $M = 6$ the work drops from $24$ to $10$, and the marginal cost of one more application or source falls from $M$ or $N$ to one. That is the real claim.",
+      "rubric": [
+        {
+          "criterion": "Says $N + M$ counts implementations to write, and that every needed path still exists at run time",
+          "points": 2
+        },
+        {
+          "criterion": "Says the saving depends on the applications speaking the protocol, with the $N = 1$ case or a non-MCP application",
+          "points": 2
+        },
+        {
+          "criterion": "Notes that vendors and existing servers cover much of the work, so the organization rarely writes both sides",
+          "points": 1
+        },
+        {
+          "criterion": "Gives a correct worked example, such as 24 against 10 for four applications and six sources",
+          "points": 1
+        }
+      ],
+      "explanation": "Section 2 closes with two qualifications and a condition: $N + M$ counts implementations, not run-time connections; a team rarely writes both sides; and a protocol only one application speaks saves nothing.",
+      "hints": [
+        "Ask what exactly $N + M$ counts, and what still exists while the team is working.",
+        "Try the formula with a single application."
+      ]
+    },
+    {
+      "id": "mcp-001-q13",
+      "type": "long",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "7",
+      "est_minutes": 15,
+      "tags": [
+        "design",
+        "limits",
+        "safety",
+        "privacy"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A team plans a support bot that answers order questions through an MCP server in front of its orders database. The host uses a hosted model. Separate what MCP will give the team from what it must still build or decide, and say where each missing piece belongs.",
+      "kind": "design",
+      "answer_length": "half a page",
+      "solution": "**What MCP gives.** A way for the client to discover what the server offers (`server/discover`, `tools/list`), a way to call a tool (`tools/call`), the shape of a result and of a failure, and a choice of transport (`stdio` or Streamable HTTP). Any host that speaks MCP can then use the server without custom glue.\n\n**What the team still owns.**\n1. **Tool choice.** MCP adds no intelligence. Whether the model calls the right tool depends on the tool names, descriptions, and schemas the team writes.\n2. **Privacy.** Order data a tool returns and the host puts in the conversation goes to the model provider. That is decided by the host and its model configuration, and possibly by a data agreement, not by the protocol.\n3. **Safety.** A read-only annotation is a hint. If the bot must never change an order, the server's code and the database role it connects as must make writes impossible.\n4. **Consent.** The host decides whether to ask before a tool runs; the team chooses or configures a host that asks for anything sensitive.\n5. **Trust in the server itself.** If any part comes from a registry listing, the listing proves only a name; the code is reviewed like any other dependency.",
+      "rubric": [
+        {
+          "criterion": "Lists what the protocol fixes: discovery, calling, result and failure shapes, transport",
+          "points": 1
+        },
+        {
+          "criterion": "Tool choice depends on the team's names, descriptions, and schemas, not on MCP",
+          "points": 1
+        },
+        {
+          "criterion": "Data sent to a hosted model is a host and model-configuration decision, not a protocol one",
+          "points": 2
+        },
+        {
+          "criterion": "Read-only is enforced in server code and database grants, not by annotations",
+          "points": 2
+        },
+        {
+          "criterion": "Consent lives in the host and must be configured there",
+          "points": 1
+        }
+      ],
+      "explanation": "Section 4 lists the five things the protocol fixes, and section 7 the three it does not: no intelligence, no privacy boundary, and no enforced safety. Each missing piece lands in the server's code, the database's grants, or the host's configuration.",
+      "hints": [
+        "Start from the five things section 4 says the protocol fixes; everything else is the team's.",
+        "For each of the three disclaimers of section 7, name the component that has to carry the responsibility instead."
+      ]
+    },
+    {
+      "id": "mcp-001-q14",
+      "type": "long",
+      "track": "connect",
+      "difficulty": 4,
+      "outcomes": [
+        "o3",
+        "o4"
+      ],
+      "section": "5",
+      "est_minutes": 15,
+      "tags": [
+        "trust-boundary",
+        "consent",
+        "security"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "Argue that the consent decision cannot live in the server, even a well-written one. Then say what the catalog a host builds from several servers adds to the argument, and what kind of attack becomes possible when a host forgets the argument.",
+      "kind": "connect",
+      "connects": [
+        "mcp-002",
+        "mcp-019"
+      ],
+      "answer_length": "half a page",
+      "solution": "1. **The server is on the untrusted side.** Everything a server sends, its tool descriptions included, is untrusted input to the host. A check the server performs on itself is a promise from the party being checked: a careless or malicious server can simply skip it, and the host would never know.\n2. **The server cannot see enough.** It sees one call with its arguments. It does not see the conversation, the user's intent, or the other servers in use, so it cannot judge whether this call is what the user wanted.\n3. **The host can.** It owns the model, the conversation, and every connection. Post 02 shows the host merging the tool lists of every connected server into one catalog, so it is the only party that sees all the tools the model can reach, and the only one that can notice two servers claiming the same name.\n4. **What breaks when it is forgotten.** If a host trusts what servers say, a server can steer the model through its descriptions, shadow a trusted tool's name, or declare a destructive tool read-only. Post 19 treats these attacks, which cross the trust boundary in the server-to-host direction.\n5. **Validation still belongs in the server.** The server validates its own inputs and enforces its own limits; that protects the data behind it, but it is not consent.",
+      "rubric": [
+        {
+          "criterion": "Server output, including descriptions and annotations, is untrusted, so a server-side check can be skipped unseen",
+          "points": 2
+        },
+        {
+          "criterion": "The server lacks the conversation and the other connections, so it cannot judge intent",
+          "points": 1
+        },
+        {
+          "criterion": "The host sees the whole catalog built from every server (post 02), including name collisions",
+          "points": 2
+        },
+        {
+          "criterion": "Names at least one attack class that exploits a host trusting servers, such as poisoned descriptions or tool shadowing (post 19)",
+          "points": 1
+        }
+      ],
+      "explanation": "Section 5 puts the host on the trusted side of the boundary and calls everything a server sends untrusted. Post 02 (`mcp-002`) builds the host's unified catalog, and post 19 (`mcp-019`) is the threat model for hosts that forget which way the boundary faces.",
+      "hints": [
+        "Ask what a malicious server would do with a consent check it was asked to run on itself.",
+        "Then ask which party sees every connected server at once."
+      ]
+    },
+    {
+      "id": "mcp-001-q15",
+      "type": "code",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "3",
+      "est_minutes": 10,
+      "tags": [
+        "configuration",
+        "json",
+        "debugging"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "`add_server(config_text, key, identifier)` should add a `uvx` entry to the JSON text of a host configuration file that uses the `mcpServers` key, keeping every server and setting already in the file, and raise `ValueError` if a server is already configured under `key`. After running it on a real file, the user's other servers vanish. Find the bug and fix it.",
+      "kind": "fix",
+      "language": "python",
+      "starter": "import json\n\n\ndef add_server(config_text, key, identifier):\n    \"\"\"Return config_text with a uvx server entry added under mcpServers.\n\n    Every server and every other setting already in the file is kept. If a\n    server is already configured under the same key, raise ValueError.\n    \"\"\"\n    config = json.loads(config_text)\n    servers = config.get(\"mcpServers\", {})\n    if key in servers:\n        raise ValueError(f\"a server named {key!r} is already configured\")\n    config = {\"mcpServers\": {key: {\"command\": \"uvx\", \"args\": [identifier]}}}\n    return json.dumps(config, indent=2)\n",
+      "solution": "import json\n\n\ndef add_server(config_text, key, identifier):\n    \"\"\"Return config_text with a uvx server entry added under mcpServers.\n\n    Every server and every other setting already in the file is kept. If a\n    server is already configured under the same key, raise ValueError.\n    \"\"\"\n    config = json.loads(config_text)\n    servers = config.get(\"mcpServers\", {})\n    if key in servers:\n        raise ValueError(f\"a server named {key!r} is already configured\")\n    servers[key] = {\"command\": \"uvx\", \"args\": [identifier]}\n    config[\"mcpServers\"] = servers\n    return json.dumps(config, indent=2)\n",
+      "tests": "import json\n\nexisting = json.dumps({\n    \"globalShortcut\": \"Ctrl+Space\",\n    \"mcpServers\": {\n        \"notes\": {\"command\": \"uvx\", \"args\": [\"notes-server\"], \"env\": {\"NOTES_DIR\": \"~/notes\"}}\n    }\n})\n\nout = add_server(existing, \"orders\", \"orders-pg-server\")\nconfig = json.loads(out)  # 1. the result must still parse as JSON\n\n# 2. nothing that was already in the file is lost\nassert config.get(\"globalShortcut\") == \"Ctrl+Space\", \"a top-level setting was dropped\"\nassert \"notes\" in config.get(\"mcpServers\", {}), \"the server configured yesterday was dropped\"\nassert config[\"mcpServers\"][\"notes\"] == {\"command\": \"uvx\", \"args\": [\"notes-server\"], \"env\": {\"NOTES_DIR\": \"~/notes\"}}, \"an existing server's settings were changed\"\n\n# 3. the new entry launches the copied identifier with uvx, as a list of arguments\nassert config[\"mcpServers\"][\"orders\"] == {\"command\": \"uvx\", \"args\": [\"orders-pg-server\"]}, config[\"mcpServers\"].get(\"orders\")\nassert \"servers\" not in config, \"VS Code's key does not belong in an mcpServers file\"\n\n# 4. an empty file and a file without mcpServers both work\nassert json.loads(add_server(\"{}\", \"a\", \"pkg-a\")) == {\"mcpServers\": {\"a\": {\"command\": \"uvx\", \"args\": [\"pkg-a\"]}}}\ntwo = json.loads(add_server(add_server(\"{}\", \"a\", \"pkg-a\"), \"b\", \"pkg-b\"))\nassert set(two[\"mcpServers\"]) == {\"a\", \"b\"}, \"adding a second server removed the first\"\n\n# 5. an existing key is refused, not overwritten\ntry:\n    add_server(existing, \"notes\", \"other-server\")\nexcept ValueError:\n    pass\nelse:\n    raise AssertionError(\"an existing server was silently replaced\")\nprint(\"all tests passed\")\n",
+      "expected_output": "all tests passed\n",
+      "explanation": "The starter rebuilds the whole configuration from scratch, which discards every existing server and every other top-level setting, the in-code version of replacing the file with the example instead of adding the entry alongside what the file already holds (section 3). The fix adds the new entry to the existing `mcpServers` object and writes that object back into the parsed file. The entry keeps `args` as a list holding the copied identifier.",
+      "hints": [
+        "Compare what the function returns with what it parsed from the file.",
+        "The new entry should be added to the existing servers object, not to a new dictionary."
+      ]
+    },
+    {
+      "id": "mcp-001-q16",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "7",
+      "est_minutes": 1,
+      "tags": [
+        "tool-selection",
+        "limits"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A server's tool is never chosen by the model, even for requests it clearly covers. Where does the fix almost always lie?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "In the tool's name, description, and input schema",
+          "correct": true,
+          "feedback": "Correct. They are the entire interface the model gets; a vague description shows up as a tool the model never uses."
+        },
+        {
+          "key": "b",
+          "text": "In a newer protocol revision with better tool routing",
+          "correct": false,
+          "feedback": "The protocol carries a name, arguments, and a result. No revision decides which tool to call, so none can route better."
+        },
+        {
+          "key": "c",
+          "text": "In the client, which ranks the tools before the model sees them",
+          "correct": false,
+          "feedback": "The client owns one connection and the id matching. It has no layer that ranks or selects tools."
+        },
+        {
+          "key": "d",
+          "text": "In returning `isError: true` when the wrong tool is called",
+          "correct": false,
+          "feedback": "That reports a failure after a call happened. It does nothing for a tool that is never called in the first place."
+        }
+      ],
+      "explanation": "Section 7: MCP adds no intelligence. Nothing in the protocol decides which tool to call, so a tool's description and schema are the only interface the model has, and a badly written description is a bug that shows up as a tool that is never used.",
+      "hints": [
+        "Ask what the model actually reads when it decides."
+      ]
+    },
+    {
+      "id": "mcp-001-q17",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "3",
+      "est_minutes": 2,
+      "tags": [
+        "registry",
+        "configuration"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A registry entry's `name` is the reverse-domain string `io.github.someone/postgres`. Which field of the entry holds the string that goes into the `args` of the host's `uvx` command?",
+      "answer": {
+        "model": "The `identifier` of a package in the entry's `packages` array: the package's name inside the index its `registryType` names.",
+        "accept": [
+          "^(?![\\s\\S]*\\b(maybe|perhaps|possibly|probably|i think|i guess|not sure|might be|could be)\\b)(?=(?:\\bnot (?:the |its |a )?(?:reverse-domain |registry |entry's )?`?(?:name|registrytype|runtimehint|version|description|title|remotes)\\b|\\bpackage'?s? name\\b|\\bname (?:inside|in|within|of|on)\\b|\\b(?:name|registrytype|runtimehint|version|description|title|remotes)\\b`?(?=(?:[^.;:\\n]|\\.(?=\\S))*?\\b(?:is not|isn'?t|cannot|can'?t)\\b)\\w*|(?!\\b(?:name|registrytype|runtimehint|version|description|title|remotes)\\b)[\\s\\S])*?\\bidentifiers?\\b)(?![\\s\\S]*\\bnot (the |its |a )?`?identifier)(?![\\s\\S]*\\bidentifier`? (is|field is) not\\b)(?![\\s\\S]*\\bidentifier`?\\s*(,|/|\\bor\\b|\\band\\b)\\s*`?(the )?(name|registrytype|runtimehint|version)\\b(?! (inside|in|within|of)))"
+        ]
+      },
+      "explanation": "Section 3: the reverse-domain `name` is not a command-line string. Each object in `packages` carries a `registryType`, naming the package index, and an `identifier`, the package's name inside that index, and the identifier is the string to copy.",
+      "hints": [
+        "The string has to be a name the package index understands, not the registry's own name."
+      ]
+    },
+    {
+      "id": "mcp-001-q18",
+      "type": "short",
+      "track": "edge",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "7",
+      "est_minutes": 2,
+      "tags": [
+        "annotations",
+        "safety"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A tool from an untrusted server is annotated `readOnlyHint: true`. What part of MCP verifies that the tool does not write?",
+      "answer": {
+        "model": "Nothing. Annotations are hints that clients must treat as untrusted; read-only has to be enforced in the server's code and its database grants.",
+        "accept": [
+          "^(?![\\s\\S]*\\b(maybe|perhaps|possibly|probably|i think|i guess|not sure|might be|could be)\\b)(?=[\\s\\S]*(^\\W*(nothing|none|no one|nobody)\\b|\\bnothing\\b|\\bno (part|layer|mechanism|check|checks|one|component|verification|enforcement|party)\\b|\\b(not|never|isn'?t) (verified|checked|enforced|validated)\\b|\\bunverified\\b|\\bunenforced\\b|\\bdoes ?n[o']t (verify|check|enforce|validate)\\b|\\bdo not (verify|check|enforce|validate)\\b))(?![\\s\\S]*(^|[.;:,]\\s*|\\b(but|and|because|so)\\s+)(the )?(host|client|protocol|specification|spec|sdk|mcp|registry|transport|json-rpc)s? (verifies|checks|enforces|validates|guarantees|will (verify|check|enforce|validate)|does\\b(?! ?n[o']t| nothing| no\\b)|do\\b(?! ?n[o']t| nothing| no\\b))\\b)(?![\\s\\S]*\\b(it|this|the hint|the annotation|that) is (verified|enforced|checked|validated|guaranteed)\\b)(?![\\s\\S]*\\bnothing,? (except|but|unless)\\b)"
+        ]
+      },
+      "explanation": "Section 7: a tool can declare itself read-only and nothing checks. The specification requires clients to treat annotations from untrusted servers as untrusted, and the protocol cannot see what the server's code does.",
+      "hints": [
+        "Ask whether anything on the wire could observe the server's database calls."
+      ]
+    }
+  ]
+}

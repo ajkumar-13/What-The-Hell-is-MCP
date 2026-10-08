@@ -1,8 +1,23 @@
 id: mcp-001
 slug: 01-what-is-mcp
-title: "01 · What MCP is, and the problem it solves"
+title: "01 - What MCP is, and the problem it solves"
+summary: "Why one protocol boundary turns N times M bespoke integrations into N plus M, how to install a published server and spot the host's permission prompt, and what MCP leaves unsolved."
 date: 2026-07-22
-tags: [model-context-protocol, mcp, foundations, introduction, integration]
-hero: diagrams/01-n-times-m.svg
-reading_time: 21
+updated: 2026-10-08
+status: complete
 part: "Part I - Foundations"
+level: beginner
+reading_time: 23
+tags: [mcp, model-context-protocol, foundations, introduction, integration, registry]
+hero: diagrams/01-n-times-m.svg
+prerequisites: []
+code: none
+outcomes:
+  - id: o1
+    text: "Count the integrations a set of AI applications and data sources costs, with and without a shared protocol."
+  - id: o2
+    text: "Install a published server from the registry into a host and recognize the permission prompt when it appears."
+  - id: o3
+    text: "Name the three MCP roles, host, client, and server, and say which one owns the consent decision."
+  - id: o4
+    text: "State what MCP leaves unsolved, from tool choice and data privacy to the enforcement of safety."
