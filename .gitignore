@@ -35,8 +35,17 @@ dist/
 build/
 *.egg-info/
 
-# Node (if any tooling)
+# Diagram render previews (regenerable)
+.preview/
+
+# Diagram generator dependencies (npm install restores them)
 node_modules/
+
+# Maintainers' question viewer, built on demand by series-standard/tools/build_questions_html.py
+.review/
+
+# Claude Code: local settings
+.claude/
 
 # Misc
 *.bak
@@ -44,9 +53,6 @@ node_modules/
 
 # Working notes and source material for the rewrite (not published)
 .research/
-
-# Diagram assets, the poster, and the Excalidraw generator: kept local, not published.
-assets/
 
 # poster/: only the rendered sheet is published.
 poster/*
@@ -56,7 +62,13 @@ poster/*
 # rendered SVG is published one level up, in posts/NN-slug/diagrams/.
 posts/*/diagrams/excalidraw/
 
-# Working material, not part of the published series: the master plan, the
-# measurement harness, and the authoring templates.
-verify/
-templates/
+# Authoring material (series-standard Section 3.1): kept on the author's machine, not published.
+# The website reads posts/, code/, series.yaml, the root environment (pyproject.toml, uv.lock)
+# and the root reference pages only. assets/ holds the design tokens and the Excalidraw generator.
+/plan.md
+/CONTRIBUTING.md
+/verify/
+/tools/
+/templates/
+/audits/
+/assets/

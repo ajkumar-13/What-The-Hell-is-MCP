@@ -6,7 +6,7 @@ standard: "2.2.0"
 key: mcp
 code: mcp
 title: What The Hell is MCP?
-status: complete
+status: in-progress
 author: Ajay
 library: null
 slug_patterns:
