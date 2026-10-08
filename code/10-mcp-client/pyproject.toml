@@ -6,11 +6,11 @@ readme = "README.md"
 requires-python = ">=3.10"
 
 # Pinned exactly, for the same reason the server project is: this code was
-# written against the 2.0 beta that implements protocol revision 2026-07-28.
+# written against mcp 2.3.0, which implements protocol revision 2026-07-28.
 # The 1.x line has a different module layout (mcp.types, streamablehttp_client)
 # and none of the client code here would import.
 dependencies = [
-    "mcp[cli]==2.0.0b2",
+    "mcp[cli]==2.3.0",
 ]
 
 [project.optional-dependencies]
@@ -33,12 +33,6 @@ mcp-host = "mcp_host.__main__:main"
 
 [tool.uv.sources]
 mcp-system-info = { path = "../05-first-server", editable = true }
-
-[tool.uv]
-# The mcp pin above is a pre-release, and so is its transitive mcp-types pin.
-# Without this, `uv lock` silently drops `prerelease-mode = "allow"` from
-# uv.lock, and the next `uv sync` on a clean machine fails to resolve.
-prerelease = "allow"
 
 [build-system]
 requires = ["hatchling"]

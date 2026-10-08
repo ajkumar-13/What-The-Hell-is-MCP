@@ -24,8 +24,8 @@ uv run python -m mcp_app_demo --http     # 127.0.0.1:8000/mcp
 
 `uv run pytest` reports `11 passed, 1 warning`.
 
-The `mcp` dependency is pinned exactly to `2.0.0b2`. That is the release that
-implements protocol revision 2026-07-28 and the first one to ship
+The `mcp` dependency is pinned exactly to `2.3.0`. That is a release of the 2.x line, which
+implements protocol revision 2026-07-28 and ships
 `mcp.server.apps`. The only other dependency is `tzdata`, unpinned: `zoneinfo`
 reads the system IANA database, Windows has no such database and slim Linux
 images often drop it, and without it every zone `world_clock` is handed --

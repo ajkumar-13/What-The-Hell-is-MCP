@@ -6,11 +6,10 @@ readme = "README.md"
 requires-python = ">=3.10"
 
 # Pinned exactly, for the same reason as every other project in this series:
-# 2.0.0b2 is the pre-release that implements protocol revision 2026-07-28, and
-# it is also the release that first ships `mcp.server.apps`. The 1.x line has
-# neither.
+# 2.3.0 is a release of the 2.x line, which implements protocol revision
+# 2026-07-28 and ships `mcp.server.apps`. The 1.x line has neither.
 dependencies = [
-    "mcp[cli]==2.0.0b2",
+    "mcp[cli]==2.3.0",
     # zoneinfo reads the system IANA database, and Windows does not have one,
     # so without this every zone the world_clock tool is given -- including
     # plain "UTC" -- comes back as "unknown zone". Slim Linux images have the
@@ -26,12 +25,6 @@ dev = [
 
 [project.scripts]
 mcp-app-demo = "mcp_app_demo.__main__:main"
-
-[tool.uv]
-# The mcp pin above is a pre-release, and so is its transitive mcp-types pin.
-# Without this, `uv lock` silently drops `prerelease-mode = "allow"` from
-# uv.lock, and the next `uv sync` on a clean machine fails to resolve.
-prerelease = "allow"
 
 [build-system]
 requires = ["hatchling"]

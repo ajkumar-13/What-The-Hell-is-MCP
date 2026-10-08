@@ -39,7 +39,7 @@ Python 3.10 or newer, and [uv](https://docs.astral.sh/uv/).
 uv sync --extra dev
 ```
 
-The `mcp` dependency is **pinned exactly** to `2.0.0b2`. The `WWW-Authenticate` header text
+The `mcp` dependency is **pinned exactly** to `2.3.0`. The `WWW-Authenticate` header text
 this project asserts on is a detail the SDK is free to change between releases, and floating
 the pin would make post 20 wrong without anything failing.
 

@@ -4,7 +4,7 @@ version = "1.0.0"
 description = "The environment the posts' snippets of What The Hell is MCP? run in: the pinned SDK and the two libraries the snippets import"
 requires-python = ">=3.12"
 dependencies = [
-    "mcp[cli]==2.0.0b2",
+    "mcp[cli]==2.3.0",
     "psutil>=7.0.0",
     "httpx<1",
 ]
@@ -17,7 +17,7 @@ dev = [
 ]
 
 [tool.uv]
-# mcp==2.0.0b2 and its mcp-types pin are pre-releases; without this the lock drops them.
+# Kept from the pre-release era; harmless now that the pin is a stable release.
 prerelease = "allow"
 
 [tool.pytest.ini_options]

@@ -10,7 +10,7 @@ requires-python = ">=3.10"
 # between releases. Floating the pin would quietly make the post wrong; failing
 # a test is the outcome we want instead.
 dependencies = [
-    "mcp[cli]==2.0.0b2",
+    "mcp[cli]==2.3.0",
     "pyjwt>=2.10.0",
 ]
 
@@ -23,12 +23,6 @@ dev = [
 [project.scripts]
 mcp-auth-demo = "auth_demo.__main__:main"
 mcp-toy-as = "toy_as.__main__:main"
-
-[tool.uv]
-# The mcp pin above is a pre-release, and so is its transitive mcp-types pin.
-# Without this, `uv lock` silently drops `prerelease-mode = "allow"` from
-# uv.lock, and the next `uv sync` on a clean machine fails to resolve.
-prerelease = "allow"
 
 [build-system]
 requires = ["hatchling"]

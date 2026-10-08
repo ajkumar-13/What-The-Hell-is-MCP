@@ -5,11 +5,11 @@ description = "The Kubernetes DevOps first-responder MCP server built across pos
 readme = "README.md"
 requires-python = ">=3.10"
 
-# Pinned exactly. This project was written and tested against the 2.0 beta that
-# implements protocol revision 2026-07-28. Do not float this pin: the 1.x line
+# Pinned exactly. This project was written and tested against mcp 2.3.0, a
+# release of the 2.x line that implements protocol revision 2026-07-28. Do not float this pin: the 1.x line
 # uses a completely different module layout (mcp.server.fastmcp, mcp.types).
 dependencies = [
-    "mcp[cli]==2.0.0b2",
+    "mcp[cli]==2.3.0",
     "kubernetes>=31.0.0",
 ]
 
@@ -21,12 +21,6 @@ dev = [
 
 [project.scripts]
 mcp-k8s-responder = "k8s_responder.__main__:main"
-
-[tool.uv]
-# The mcp pin above is a pre-release, and so is its transitive mcp-types pin.
-# Without this, `uv lock` silently drops `prerelease-mode = "allow"` from
-# uv.lock, and the next `uv sync` on a clean machine fails to resolve.
-prerelease = "allow"
 
 [build-system]
 requires = ["hatchling"]

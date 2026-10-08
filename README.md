@@ -45,12 +45,12 @@ After this part a reader has written a client and a permission-gated multi-serve
 
 After this part a reader has built three projects whose refusals, approvals, and byte counts are checked by committed tests, and can put a human on the critical path of a mutation in a parameter the model cannot forge.
 
-13. [13 - Project 1 · A secure database analyst](posts/13-database-analyst/index.md)
-14. [14 - Project 1 · Writes, transactions, and an audit trail](posts/14-database-writes/index.md)
-15. [15 - Project 2 · A DevOps first responder](posts/15-devops-responder/index.md)
-16. [16 - Project 2 · Safe remediation with approval](posts/16-devops-remediation/index.md)
-17. [17 - Project 3 · A deep research browser](posts/17-research-browser/index.md)
-18. [18 - Project 3 · Server-side model calls and multi-page research](posts/18-server-side-models/index.md)
+13. [13 - Project 1: A secure database analyst](posts/13-database-analyst/index.md)
+14. [14 - Project 1: Writes, transactions, and an audit trail](posts/14-database-writes/index.md)
+15. [15 - Project 2: A DevOps first responder](posts/15-devops-responder/index.md)
+16. [16 - Project 2: Safe remediation with approval](posts/16-devops-remediation/index.md)
+17. [17 - Project 3: A deep research browser](posts/17-research-browser/index.md)
+18. [18 - Project 3: Server-side model calls and multi-page research](posts/18-server-side-models/index.md)
 
 ### Part V - Production
 
@@ -65,7 +65,7 @@ After this part a reader can name every attack class by where it crosses the tru
 
 After this part a reader can configure the same server in six hosts, declare and degrade any extension, ship a tool that returns an interface, and take a change through the Specification Enhancement Proposal process.
 
-23. [23 - Project 4 · One server, every client](posts/23-multi-client/index.md)
+23. [23 - Project 4: One server, every client](posts/23-multi-client/index.md)
 24. [24 - MCP Apps, extensions, and where the protocol goes next](posts/24-mcp-apps-and-frontier/index.md)
 
 ## Where to start
@@ -87,13 +87,13 @@ Each post opens with a short summary, the prerequisites, and what the reader wil
 ## The protocol revision and the SDK
 
 - **Protocol revision:** 2026-07-28, throughout. Removed mechanisms (`initialize`, sessions, the server-to-client request channel) appear only as things a reader will meet in older code.
-- **Python SDK:** `mcp==2.0.0b2`, pinned exactly in every project and in the root environment.
+- **Python SDK:** `mcp==2.3.0`, pinned exactly in every project and in the root environment.
 
-**A note on timing.** This edition was written as the 2026-07-28 revision went final and while the Python SDK's 2.0 line was still in beta. Every code sample was executed against `mcp==2.0.0b2`, not transcribed from documentation, but that is a pre-release, and the SDK repository's own `main` documentation already disagrees with it in a few places. Each project pins the exact version it was tested against. A reader arriving some months later should expect a stable `mcp>=2,<3` to exist, and a handful of the smaller details here to have moved.
+**A note on timing.** This edition was written against protocol revision 2026-07-28 and the stable Python SDK `mcp==2.3.0`. Every code sample was executed, not transcribed from documentation, and each project pins the exact SDK release it was tested against. A reader arriving later should expect newer 2.x releases to exist and a few of the smaller details here to have moved; the posts say which behaviours are the SDK's rather than the specification's.
 
 ## What is measured
 
-- Every transcript in a post was produced against `mcp==2.0.0b2`, and every claim about the protocol cites the specification page that supports it.
+- Every transcript in a post was produced against `mcp==2.3.0`, and every claim about the protocol cites the specification page that supports it.
 - Every project ships a test suite that runs in memory, with no subprocess, socket, database, cluster, or browser. Run with `uv run --extra dev pytest` in each project directory: `code/05-first-server/` passes 19 tests, `code/10-mcp-client/` 68, `code/13-postgres-analyst/` 85 (with 12 more that run only against a live PostgreSQL), `code/15-devops-responder/` 78, `code/17-research-browser/` 75 (with one more that needs the optional model-provider extra), `code/20-auth/` 21, `code/23-knowledge-base/` 51, and `code/24-mcp-app/` 11.
 - Where a post quotes a number, it names the script or the test suite that produces it. Wall-clock durations vary by machine and are given as examples, not as results.
 

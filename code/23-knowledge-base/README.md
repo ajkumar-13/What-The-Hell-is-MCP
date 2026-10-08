@@ -26,7 +26,7 @@ Python 3.10 or newer, and [uv](https://docs.astral.sh/uv/).
 uv sync --extra dev
 ```
 
-The `mcp` dependency is **pinned exactly** to `2.0.0b2`, the pre-release that
+The `mcp` dependency is **pinned exactly** to `2.3.0`, a release of the 2.x line that
 implements protocol revision 2026-07-28. Floating that pin breaks the imports
 outright: the 1.x line uses `mcp.server.fastmcp` and `mcp.types`, neither of
 which exists any more.

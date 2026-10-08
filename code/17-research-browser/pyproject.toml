@@ -5,15 +5,15 @@ description = "The deep research browser MCP server built across posts 17 and 18
 readme = "README.md"
 requires-python = ">=3.10"
 
-# Pinned exactly. This project was written and tested against the 2.0 beta that
-# implements protocol revision 2026-07-28. Do not float this pin: the 1.x line
+# Pinned exactly. This project was written and tested against mcp 2.3.0, a
+# release of the 2.x line that implements protocol revision 2026-07-28. Do not float this pin: the 1.x line
 # uses a completely different module layout (mcp.server.fastmcp, mcp.types).
 #
 # trafilatura and markdownify are pinned to a major line because post 17 quotes
 # the size-reduction numbers the test suite measures against the committed
 # fixtures. A different extractor version moves those numbers.
 dependencies = [
-    "mcp[cli]==2.0.0b2",
+    "mcp[cli]==2.3.0",
     "playwright>=1.49",
     "trafilatura>=2.1,<3",
     "markdownify>=1.0,<2",
@@ -36,12 +36,6 @@ provider = [
 
 [project.scripts]
 mcp-research-browser = "research_browser.__main__:main"
-
-[tool.uv]
-# The mcp pin above is a pre-release, and so is its transitive mcp-types pin.
-# Without this, `uv lock` silently drops `prerelease-mode = "allow"` from
-# uv.lock, and the next `uv sync` on a clean machine fails to resolve.
-prerelease = "allow"
 
 [build-system]
 requires = ["hatchling"]

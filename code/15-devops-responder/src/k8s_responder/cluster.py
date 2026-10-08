@@ -35,14 +35,20 @@ from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 
 from .app import log
+from mcp.server.mcpserver.exceptions import ToolError
 
 # --------------------------------------------------------------------------
 # Errors
 # --------------------------------------------------------------------------
 
 
-class ClusterError(RuntimeError):
+class ClusterError(ToolError):
     """Anything the Kubernetes API refused to do, in a shape tools can read.
+
+    It subclasses the SDK's `ToolError`, the exception for a failure the tool
+    anticipated: the message reaches the model in an `isError` result and the
+    server logs it without a traceback. Any other exception is a crash, and the
+    model then sees only `Error executing tool <name>`.
 
     `status` carries the HTTP status when there was one, so callers can branch
     on 404 without importing the kubernetes exception type everywhere.

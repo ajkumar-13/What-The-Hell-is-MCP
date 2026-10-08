@@ -37,7 +37,7 @@ Python 3.10 or newer, and [uv](https://docs.astral.sh/uv/).
 uv sync --extra dev
 ```
 
-The `mcp` dependency is **pinned exactly** to `2.0.0b2`, the pre-release that implements
+The `mcp` dependency is **pinned exactly** to `2.3.0`, a release of the 2.x line that implements
 protocol revision 2026-07-28. Floating that pin breaks the imports, because the 1.x line
 uses a different module layout. `trafilatura` and `markdownify` are pinned to a major line
 for a different reason: post 17 quotes size-reduction numbers that a different extractor

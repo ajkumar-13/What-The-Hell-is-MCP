@@ -69,7 +69,7 @@ A search for `-ise`, `-ised`, `-iser`, and `-isation` catches most departures me
 ## 5. Numbers, versions, and dates
 
 - Protocol revisions are always the full date string, **2026-07-28**, never "the July spec".
-- SDK versions are pinned in prose the way `pyproject.toml` pins them: `mcp[cli]==2.0.0b2` in a dependency list, `mcp==2.0.0b2` when naming the build a result was measured on. Never a range.
+- SDK versions are pinned in prose the way `pyproject.toml` pins them: `mcp[cli]==2.3.0` in a dependency list, `mcp==2.3.0` when naming the build a result was measured on. Never a range.
 - No benchmark, latency figure, or tool output is invented. A number in a post comes from a citation in [REFERENCES.md](REFERENCES.md) or from a script in [code/](code/) or in the post's own snippets that the reader can run, and the post names the command.
 - Where a figure was measured against a throwaway server that is not committed, the sentence that quotes it says so and gives the exact package version and configuration, so a reader can rebuild it. Such a figure never sits behind a blanket "produced by running the code" claim.
 
