@@ -50,11 +50,12 @@ class TerminateConfirmation(BaseModel):
 def _confirm_terminate(pid: int) -> Elicit[TerminateConfirmation]:
     """Build the confirmation question for a specific pid.
 
-    The question is derived *only* from the tool's arguments. That is not a
-    style preference. The SDK matches a recorded answer against a digest of the
-    exact rendered question, so if this string changed between rounds, for
-    example because it embedded a timestamp or a live memory reading, the
-    recorded answer would never match and the call would loop forever.
+    The question is derived from the tool's arguments and a lookup keyed by
+    them. That is not a style preference. The SDK matches a recorded answer
+    against a digest of the exact rendered question, so if this string changed
+    between rounds, for example because it embedded a timestamp or a live
+    memory reading, the recorded answer would never match and the call would
+    never converge (the SDK client gives up after ten rounds).
     """
     try:
         name = psutil.Process(pid).name()

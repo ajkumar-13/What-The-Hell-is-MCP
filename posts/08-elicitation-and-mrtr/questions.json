@@ -1,0 +1,737 @@
+{
+  "standard": "2.1.0",
+  "post": "mcp-008",
+  "next_ordinal": 18,
+  "questions": [
+    {
+      "id": "mcp-008-q01",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "3",
+      "est_minutes": 1,
+      "tags": [
+        "mrtr",
+        "params"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A client retries a `tools/call` after an `input_required` result. Where in the retry request do `inputResponses` and `requestState` go?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Inside `params._meta`, beside `io.modelcontextprotocol/protocolVersion`.",
+          "correct": false,
+          "feedback": "Most new request-side fields of this revision live in `_meta`, which is why this is the tempting answer, but these two do not: `InputResponseRequestParams` puts them directly in `params`."
+        },
+        {
+          "key": "b",
+          "text": "Inside `params`, as siblings of `name` and `arguments`.",
+          "correct": true,
+          "feedback": "Correct. `CallToolRequestParams` extends `InputResponseRequestParams`, so both fields are ordinary members of `params`."
+        },
+        {
+          "key": "c",
+          "text": "Inside `params.arguments`, next to the tool's own arguments.",
+          "correct": false,
+          "feedback": "`arguments` holds what the model supplied and is re-sent verbatim; mixing protocol fields into it would also change the digest the server binds the state to."
+        },
+        {
+          "key": "d",
+          "text": "In HTTP headers, so a load balancer can route the retry back to the worker that asked.",
+          "correct": false,
+          "feedback": "Routing back to the same worker is exactly what MRTR makes unnecessary, and headers only mirror body fields such as the method and name; the answer and the state travel in the body."
+        }
+      ],
+      "explanation": "The retry-side base type `InputResponseRequestParams` declares `inputResponses` and `requestState` as optional members of `params`. They sit next to `name` and `arguments`, and the post stresses that they are not in `_meta`, which is the easy mistake by analogy.",
+      "hints": [
+        "Look at which type `CallToolRequestParams` extends in the retry-side schema."
+      ]
+    },
+    {
+      "id": "mcp-008-q02",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "8",
+      "est_minutes": 2,
+      "tags": [
+        "elicitation",
+        "accept"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "The host shows the `terminate_process` confirmation form. The user leaves the `confirm` checkbox unchecked and clicks Submit. What does the server receive in `inputResponses`?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "An entry with `action: \"decline\"`, because the user did not confirm.",
+          "correct": false,
+          "feedback": "Decline is an explicit refusal of the request itself, such as clicking Reject or No. Submitting the form is an accept, whatever the form contains."
+        },
+        {
+          "key": "b",
+          "text": "An entry with `action: \"accept\"` and `content` of `{\"confirm\": false}`.",
+          "correct": true,
+          "feedback": "Correct. Accept means the form was submitted; the answer inside it is still no, which is why the tool checks `approval.data.confirm` before acting."
+        },
+        {
+          "key": "c",
+          "text": "An entry with `action: \"cancel\"`, because no choice was made.",
+          "correct": false,
+          "feedback": "Cancel means the user dismissed the dialog without choosing, for instance with Escape. Clicking Submit is a choice."
+        },
+        {
+          "key": "d",
+          "text": "Nothing: an unchecked required field makes the client send no retry at all.",
+          "correct": false,
+          "feedback": "`confirm` is required to be present, not to be true; an unchecked box is the value `false`, and the client retries with it."
+        }
+      ],
+      "explanation": "Section 8 separates the action from the answer. `action: \"accept\"` says the user submitted; the boolean inside `content` carries the yes or no. The second row of `snippets/four_outcomes.py` is exactly this case and prints `Not terminated. The user answered no for process 999999.`",
+      "hints": [
+        "Separate what the user did with the dialog from what they wrote in it."
+      ]
+    },
+    {
+      "id": "mcp-008-q03",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "5",
+      "est_minutes": 3,
+      "tags": [
+        "request-state",
+        "load-balancing"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A server built with `MCPServer(\"fleet\")` and no `request_state_security` runs as three workers behind a round-robin load balancer. A call reaches worker 1 and gets `input_required`; the client's retry reaches worker 2. What does worker 2 answer?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "A complete result, because the retry carries the original arguments and the answer.",
+          "correct": false,
+          "feedback": "The arguments and the answer are in the retry, but the recorded progress is in `requestState`, and worker 2 cannot open a token sealed under worker 1's key."
+        },
+        {
+          "key": "b",
+          "text": "Another `input_required` result, asking the same question again.",
+          "correct": false,
+          "feedback": "That is how the SDK treats a reworded question, not a token it cannot verify. A failed seal is refused outright."
+        },
+        {
+          "key": "c",
+          "text": "A JSON-RPC error `-32602` with the message `Invalid or expired requestState`.",
+          "correct": true,
+          "feedback": "Correct. Each worker generated its own ephemeral key at startup, so worker 2 fails verification and gives the frozen refusal, HTTP 400."
+        },
+        {
+          "key": "d",
+          "text": "A JSON-RPC error `-32021`, because worker 2 never saw the client's capabilities.",
+          "correct": false,
+          "feedback": "Capabilities arrive in every request's `_meta`, the retry included, so no worker needs to have seen an earlier request."
+        }
+      ],
+      "explanation": "By default `MCPServer` seals `requestState` under a process-local key made at startup. Two workers have two keys, so state minted by one fails verification on the other; `snippets/two_workers.py` shows worker C, which keeps the default, answering `-32602` `Invalid or expired requestState` while worker B, which shares A's key, completes.",
+      "hints": [
+        "Ask where the default sealing key comes from.",
+        "Two processes started separately do not share anything generated at startup."
+      ]
+    },
+    {
+      "id": "mcp-008-q04",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "1",
+      "est_minutes": 2,
+      "tags": [
+        "approval",
+        "input-schema"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A tool is written as `def terminate_process(pid: int, approved: bool)` and returns early unless `approved` is true. Why does this not put a human in the loop?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Because `approved` appears in the published input schema, so the model reads it and fills it in.",
+          "correct": true,
+          "feedback": "Correct. The schema the model sees lists `approved` as a required boolean, so the thing being gated supplies its own approval."
+        },
+        {
+          "key": "b",
+          "text": "Because the SDK drops boolean parameters from the schema, so `approved` is always false.",
+          "correct": false,
+          "feedback": "The SDK publishes it: `snippets/naive_tools.py` prints `\"approved\": {\"title\": \"Approved\", \"type\": \"boolean\"}` and lists it as required."
+        },
+        {
+          "key": "c",
+          "text": "Because only a `destructiveHint` annotation can make a host ask the user, and this tool has none.",
+          "correct": false,
+          "feedback": "An annotation is a hint the client must treat as untrusted unless the server is trusted; it is not a gate either, and adding one would not fix the flag."
+        },
+        {
+          "key": "d",
+          "text": "Because a `bool` parameter needs a default of `False` before the model is allowed to omit it.",
+          "correct": false,
+          "feedback": "A default would make the flag optional, but the model could still send `true`. The problem is that the model can see and set it at all."
+        }
+      ],
+      "explanation": "Section 1 prints what the flagged version publishes: `required: [\"pid\", \"approved\"]`. Every parameter in the input schema is something the model fills in, so a flag there is decorative. The fix in section 6 removes the parameter from the schema with `Resolve`.",
+      "hints": [
+        "Ask who writes the arguments of a tool call."
+      ]
+    },
+    {
+      "id": "mcp-008-q05",
+      "type": "mcq",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "3",
+      "est_minutes": 3,
+      "tags": [
+        "mrtr",
+        "client-requirements"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "An `input_required` result carries both `inputRequests` and `requestState`. Which of these must the client do when it retries? Select every one that applies.",
+      "select": "multiple",
+      "options": [
+        {
+          "key": "a",
+          "text": "Use a JSON-RPC `id` different from the original request's.",
+          "correct": true,
+          "feedback": "Required: the two requests are independent, so the ids must differ."
+        },
+        {
+          "key": "b",
+          "text": "Echo `requestState` back exactly as received.",
+          "correct": true,
+          "feedback": "Required: the client must echo the exact value and must not inspect, parse or modify it."
+        },
+        {
+          "key": "c",
+          "text": "Decode `requestState` to show the user what has been answered so far.",
+          "correct": false,
+          "feedback": "Forbidden: the value is opaque to the client, and the SDK's is encrypted anyway."
+        },
+        {
+          "key": "d",
+          "text": "Attach the same `inputResponses` to any other request it has in flight to that server.",
+          "correct": false,
+          "feedback": "Forbidden: both fields affect only the retry of the one request they came back on."
+        },
+        {
+          "key": "e",
+          "text": "Construct the requested inputs before retrying.",
+          "correct": true,
+          "feedback": "Required: when `inputRequests` is present the client must gather those inputs first; only a result with `requestState` alone may be retried immediately."
+        }
+      ],
+      "explanation": "The MRTR page gives four client requirements. Three of them apply here: gather the inputs because `inputRequests` is present, echo `requestState` exactly, and use a new `id`. The fourth forbids reusing either field on other requests, and the opacity rule forbids decoding the state.",
+      "hints": [
+        "List the four client requirements of the MRTR page.",
+        "Two of the options are things the client is forbidden to do."
+      ]
+    },
+    {
+      "id": "mcp-008-q06",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "3",
+      "est_minutes": 1,
+      "tags": [
+        "result-type"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A server needs the user's answer before it can finish a `tools/call`. What value does `resultType` carry in the result it sends back?",
+      "answer": {
+        "model": "`input_required`",
+        "accept": [
+          "^(?![\\s\\S]*(?<!not )(?<!not \")(?<!not `)(?<!not ')(?<!n't )(?<!n't \")(?<!n't `)(?<!n't ')(?<!yet )(?<!yet \")(?<!yet `)(?<!yet ')(?<!than )(?<!than \")(?<!than `)(?<!than ')(?<!of )(?<!of \")(?<!of `)(?<!of ')(?<!to )(?<!to \")(?<!to `)(?<!to ')\\bcomplete\\b)(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|never|no|isn't|is not)\\s+(?:the\\s+)?[\\\"'`]?input[_ -]?required)(?![\\s\\S]*\\binput[_ -]?required[\\\"'`]?\\s*(?:or|/|and)\\s+[\\\"'`]?complete)(?![\\s\\S]*\\bcomplete[\\\"'`]?\\s*(?:or|/|and)\\s+[\\\"'`]?input[_ -]?required)[\\s\\S]*\\binput[_ -]?required\\b[\\s\\S]*$"
+        ]
+      },
+      "explanation": "Every result in revision 2026-07-28 carries `resultType`, and the core protocol defines `\"complete\"` and `\"input_required\"`. The interim result that asks for more information is tagged `\"input_required\"`, which tells the client this is a finished response to request 1 and that a retry is expected.",
+      "hints": [
+        "The core protocol defines two values; one of them means the request is finished with its final content."
+      ]
+    },
+    {
+      "id": "mcp-008-q07",
+      "type": "short",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "9",
+      "est_minutes": 3,
+      "tags": [
+        "url-mode",
+        "accept"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A server's `inputRequests` holds an `elicitation/create` entry with `\"mode\": \"url\"`, and the retry comes back with `{\"action\": \"accept\"}` for it. In one or two sentences: what does that accept tell the server, and what must the server still establish for itself?",
+      "answer": {
+        "model": "Only that the user consented to the out-of-band interaction (to open the URL); it does not mean the interaction is complete, so on the retry the server must check its own records or the echoed state to see whether it finished, and either complete or return input_required again.",
+        "accept": [
+          "^(?![\\s\\S]*(?:\\bnot|n't|\\bnever)\\s+(?:\\w+\\s+){0,2}?(?:consent\\w*|agree\\w*|approv\\w*|allow\\w*|give\\s+permission|gave\\s+permission)\\b)(?![\\s\\S]*(?:\\bneeds?\\s+not\\b|\\bneedn't\\b|\\bno\\s+need\\b|\\bdo(?:es)?\\s+not\\s+(?:need|have)\\s+to\\b|\\bdo(?:es)?n't\\s+(?:need|have)\\s+to\\b))(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*(?<!not )(?<!n't )(?<!never )\\bmeans?\\s+(?:that\\s+)?(?:the\\s+)?(?:user\\s+)?(?:interaction|flow|work|authorization|payment|task|process|sign[- ]?in|login)\\s+(?:is|was|has been|has)\\s+(?:complete|completed|finished|done|over)\\b)(?![\\s\\S]*\\b(?:it|accept|this)\\s+(?:means|tells|says|confirms)\\s+(?:that\\s+)?(?:the\\s+)?(?:user\\s+)?(?:completed|finished|has completed|has finished)\\b)(?=[\\s\\S]*\\b(?:consent\\w*|agree\\w*|approv\\w*|open\\w*|permission|allow\\w*|willing|ok(?:ay)?\\s+(?:with|to))\\b)(?=[\\s\\S]*(?:\\b(?:not|never|no|n't|nothing)\\b[^.;]{0,80}\\b(?:complet\\w*|finish\\w*|done|succe\\w*|over)\\b|\\bwhether\\b[^.;]{0,80}\\b(?:complet\\w*|finish\\w*|done|succe\\w*|happened)\\b|\\b(?:check|verif|confirm|determin|look|find|ask|query|consult)\\w*\\b[^.;]{0,100}\\b(?:complet\\w*|finish\\w*|done|succe\\w*)\\b))[\\s\\S]{15,}$"
+        ]
+      },
+      "explanation": "The Elicitation page says an accept in URL mode means the user has consented to the interaction and does not mean the interaction is complete. The client is never told the outcome, so the server determines from its own records whether the out-of-band work finished, and may answer `input_required` again, which server requirement 8 permits.",
+      "hints": [
+        "URL-mode accept carries no `content`; ask what the user actually did in the client.",
+        "The work itself happens in a browser the client does not see."
+      ]
+    },
+    {
+      "id": "mcp-008-q08",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "5",
+      "est_minutes": 3,
+      "tags": [
+        "request-state",
+        "keys"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "Four workers run the same `MCPServer(\"fleet\", ...)` behind a round-robin load balancer. Workers W1, W2 and W3 are built with `RequestStateSecurity(keys=[K])` for one shared 32-byte key `K`; W4 was deployed without `request_state_security`. A call reaches W2 and gets `input_required`, and the retry may reach any of the four within a minute. Give two counts: how many of the four workers would complete the retry, and how many would if all four had been deployed without `request_state_security`.",
+      "answer": {
+        "parts": [
+          {
+            "label": "workers that complete the retry, as deployed",
+            "value": 3,
+            "tolerance": 0,
+            "unit": "workers"
+          },
+          {
+            "label": "workers that complete it, all on the default key",
+            "value": 1,
+            "tolerance": 0,
+            "unit": "workers"
+          }
+        ]
+      },
+      "precision_note": "Closed form from section 5: a worker completes the retry only if it holds the sealing key. As deployed W1, W2, W3 hold K (3); on the default each has its own key, so only W2 (1). snippets/two_workers.py shows both: B, sharing the key, completes; C, on its own key, answers -32602.",
+      "explanation": "The state is sealed under W2's sealing key. As deployed that is the shared `K`, which W1 and W3 also hold, so three workers can open it and W4, with a key of its own, refuses it with `-32602`. With the default, every worker generated a separate key at startup and only W2 can verify its own state.",
+      "hints": [
+        "Ask which key sealed the state, and which workers hold that key.",
+        "A worker without request_state_security generates its own key when it starts."
+      ]
+    },
+    {
+      "id": "mcp-008-q09",
+      "type": "numeric",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "10",
+      "est_minutes": 3,
+      "tags": [
+        "resolve",
+        "convergence"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A resolver builds its question as `f\"Terminate process {pid}? (reading {next(tick)})\"`, so the text changes every time the resolver runs. An `mcp==2.3.0` `Client` with default settings calls the tool, and its elicitation callback always answers accept with `confirm` true. How many dialogs does the callback show before the call ends?",
+      "answer": {
+        "value": 10,
+        "tolerance": 0,
+        "unit": "dialogs"
+      },
+      "precision_note": "snippets/drifting_question.py prints 'dialogs shown: 10' for drifting_tool and ends with InputRequiredRoundsExceededError after more than 10 rounds; 10 is the Client's default input_required_max_rounds.",
+      "explanation": "The SDK accepts an answer only for the exact rendered question it recorded, so every retry discards the answer and asks again with a new counter value. The server never fails; the client gives up after its default of ten rounds with `InputRequiredRoundsExceededError`, after the user has seen ten dialogs.",
+      "hints": [
+        "The server compares a digest of the rendered question with the one recorded when it asked.",
+        "The call ends only when the client stops retrying; find its default limit."
+      ]
+    },
+    {
+      "id": "mcp-008-q10",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "3",
+      "est_minutes": 10,
+      "tags": [
+        "mrtr",
+        "retry"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "Write `build_retry(original, result, responses)`, which takes the JSON-RPC `tools/call` request a client sent, the `result` object of the `input_required` response it got, and the `inputResponses` map the client has built, and returns the retry request as a new dict. It must follow the MRTR page's client rules for the retry, and it must not modify `original`. Use only the standard library.",
+      "kind": "implement",
+      "language": "python",
+      "starter": "def build_retry(original, result, responses):\n    \"\"\"Return the retry of `original` after `result`, an input_required result.\n\n    `original` is the JSON-RPC request dict that was sent, `result` is the\n    \"result\" object it got back, and `responses` is the inputResponses map\n    the client built. Do not modify `original`.\n    \"\"\"\n    raise NotImplementedError\n",
+      "solution": "import copy\n\n\ndef build_retry(original, result, responses):\n    \"\"\"Return the retry of `original` after `result`, an input_required result.\n\n    `original` is the JSON-RPC request dict that was sent, `result` is the\n    \"result\" object it got back, and `responses` is the inputResponses map\n    the client built. Do not modify `original`.\n    \"\"\"\n    retry = copy.deepcopy(original)\n    retry[\"id\"] = f\"{original['id']}-retry\"\n    params = retry[\"params\"]\n    params[\"inputResponses\"] = responses\n    if \"requestState\" in result:\n        params[\"requestState\"] = result[\"requestState\"]\n    return retry\n",
+      "tests": "\nimport copy\n\nSTATE = \"v1.4dP0_k3y-qz9Q\"\nKEY = \"system_info.interactive:_confirm_terminate\"\noriginal = {\n    \"jsonrpc\": \"2.0\",\n    \"id\": 1,\n    \"method\": \"tools/call\",\n    \"params\": {\n        \"name\": \"terminate_process\",\n        \"arguments\": {\"pid\": 999999},\n        \"_meta\": {\n            \"io.modelcontextprotocol/protocolVersion\": \"2026-07-28\",\n            \"io.modelcontextprotocol/clientCapabilities\": {\"elicitation\": {\"form\": {}}},\n        },\n    },\n}\nresult = {\"resultType\": \"input_required\", \"inputRequests\": {KEY: {\"method\": \"elicitation/create\", \"params\": {}}}, \"requestState\": STATE}\nresponses = {KEY: {\"action\": \"accept\", \"content\": {\"confirm\": True}}}\nbefore = copy.deepcopy(original)\n\nretry = build_retry(original, result, responses)\nassert original == before, \"the original request must not be modified\"\nassert retry[\"jsonrpc\"] == \"2.0\" and retry[\"method\"] == \"tools/call\"\nassert retry[\"id\"] != original[\"id\"], \"the retry is a new request and needs a new id\"\np = retry[\"params\"]\nassert p[\"name\"] == \"terminate_process\" and p[\"arguments\"] == {\"pid\": 999999}, \"re-send the original name and arguments\"\nassert p[\"_meta\"] == before[\"params\"][\"_meta\"], \"_meta is sent again, unchanged\"\nassert p[\"inputResponses\"] == responses\nassert p[\"requestState\"] == STATE, \"echo requestState exactly\"\nassert \"requestState\" not in p[\"_meta\"] and \"inputResponses\" not in p[\"_meta\"], \"both fields sit in params, not _meta\"\nassert isinstance(retry[\"id\"], (int, str)) and not isinstance(retry[\"id\"], bool), \"a JSON-RPC request id is a string or an integer\"\nassert \"inputRequests\" not in p, \"the requests are not echoed back; only the answers are\"\n\nstate_only = {\"resultType\": \"input_required\", \"requestState\": \"v1.abc\"}\nr2 = build_retry(original, state_only, {})\nassert r2[\"params\"][\"requestState\"] == \"v1.abc\"\n\nno_state = {\"resultType\": \"input_required\", \"inputRequests\": {KEY: {\"method\": \"elicitation/create\", \"params\": {}}}}\nr3 = build_retry(original, no_state, responses)\nassert \"requestState\" not in r3[\"params\"], \"a client must not invent a requestState\"\nassert original == before\nprint(\"all build_retry tests passed\")\n",
+      "explanation": "The retry is the original request again with a new `id`, the same method, name, arguments and `_meta`, plus `inputResponses` and, only when the result carried one, the exact `requestState`. Both fields go in `params`, not `_meta`. A deep copy keeps the caller's request intact, since `params` and `_meta` are nested dicts.",
+      "hints": [
+        "Start from a deep copy of the original request; most of it is re-sent unchanged.",
+        "Three rules decide the rest: a different id, the state echoed only if it was sent, and both new fields directly in params."
+      ]
+    },
+    {
+      "id": "mcp-008-q11",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "8",
+      "est_minutes": 8,
+      "tags": [
+        "elicitation",
+        "outcomes"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "This function decides what a confirmation-gated tool should do with one `ElicitResult`, given as a dict. It is meant to return `\"terminate\"` only when the user submitted the form with `confirm` true, `\"answered-no\"` for any other submitted form, `\"declined\"` for a decline and `\"dismissed\"` for a cancel. Fix it.",
+      "kind": "fix",
+      "language": "python",
+      "starter": "def decide(answer):\n    \"\"\"Map one ElicitResult dict to 'terminate', 'answered-no', 'declined' or 'dismissed'.\"\"\"\n    if answer[\"action\"] == \"accept\":\n        return \"terminate\"\n    if answer[\"action\"] == \"decline\":\n        return \"declined\"\n    return \"dismissed\"\n",
+      "solution": "def decide(answer):\n    \"\"\"Map one ElicitResult dict to 'terminate', 'answered-no', 'declined' or 'dismissed'.\"\"\"\n    if answer[\"action\"] == \"accept\":\n        if answer.get(\"content\", {}).get(\"confirm\") is True:\n            return \"terminate\"\n        return \"answered-no\"\n    if answer[\"action\"] == \"decline\":\n        return \"declined\"\n    return \"dismissed\"\n",
+      "tests": "\nassert decide({\"action\": \"accept\", \"content\": {\"confirm\": True}}) == \"terminate\"\nassert decide({\"action\": \"accept\", \"content\": {\"confirm\": False}}) == \"answered-no\", \"an accept can still say no\"\nassert decide({\"action\": \"accept\", \"content\": {\"confirm\": False, \"reason\": \"wrong pid\"}}) == \"answered-no\"\nassert decide({\"action\": \"accept\", \"content\": {\"reason\": \"no box\"}}) == \"answered-no\", \"no confirm field is not a yes\"\nassert decide({\"action\": \"decline\"}) == \"declined\"\nassert decide({\"action\": \"cancel\"}) == \"dismissed\", \"a closed dialog is not a refusal\"\nassert decide({\"action\": \"decline\", \"content\": {\"confirm\": True}}) == \"declined\", \"decline wins over stray content\"\nassert decide({\"action\": \"accept\", \"content\": {\"confirm\": \"false\"}}) == \"answered-no\", \"only the boolean true is a yes\"\nassert decide({\"action\": \"accept\"}) == \"answered-no\", \"an accept with no content is not a yes\"\nprint(\"all decide tests passed\")\n",
+      "explanation": "An accept means the form came back, not that the answer is yes, so the accept branch has to look at `content` and act only on `confirm` being exactly true. A missing field is not a yes. Decline and cancel stay separate because a refusal and a closed window are different facts, as the project's tool reports.",
+      "hints": [
+        "Which of the four expected outcomes can the starter never return?",
+        "Inside the accept branch, test `content[\"confirm\"]` for the value `True`, and treat an absent field as no."
+      ]
+    },
+    {
+      "id": "mcp-008-q12",
+      "type": "order",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "4",
+      "est_minutes": 2,
+      "tags": [
+        "mrtr",
+        "sequence"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "Put the steps of one elicitation round trip over Streamable HTTP in order.",
+      "answer": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e"
+      ],
+      "items": [
+        {
+          "key": "a",
+          "text": "The client sends `tools/call` with `id` 1, the arguments, and `_meta` declaring form elicitation."
+        },
+        {
+          "key": "b",
+          "text": "The server answers request 1 with `resultType: \"input_required\"`, an `inputRequests` map and a sealed `requestState`."
+        },
+        {
+          "key": "c",
+          "text": "The host renders the form and the user submits it; no MCP message is sent."
+        },
+        {
+          "key": "d",
+          "text": "The client sends `tools/call` with `id` 2, the same arguments, `inputResponses` and the echoed `requestState`."
+        },
+        {
+          "key": "e",
+          "text": "The server verifies the state, restores the answer, runs the tool body and returns `resultType: \"complete\"`."
+        }
+      ],
+      "partial_credit": true,
+      "explanation": "Request 1 is answered and closed by the `input_required` result; the user interaction happens off the wire; the retry is a new request with a new id carrying the answer and the state; and only then does the server run the tool body to a complete result. This is the sequence `snippets/mrtr_wire.py` prints as messages 1 to 4.",
+      "hints": [
+        "The server never sends a request, so every server step is an answer to the step before it."
+      ]
+    },
+    {
+      "id": "mcp-008-q13",
+      "type": "match",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "8",
+      "est_minutes": 2,
+      "tags": [
+        "elicitation",
+        "actions"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "Match what the user did with the `terminate_process` confirmation to what the server receives for that question on the retry.",
+      "answer": {
+        "a": "p",
+        "b": "q",
+        "c": "r",
+        "d": "s"
+      },
+      "left": [
+        {
+          "key": "a",
+          "text": "Checked the checkbox and clicked Submit"
+        },
+        {
+          "key": "b",
+          "text": "Left the checkbox unchecked and clicked Submit"
+        },
+        {
+          "key": "c",
+          "text": "Clicked No"
+        },
+        {
+          "key": "d",
+          "text": "Pressed Escape to close the dialog"
+        }
+      ],
+      "right": [
+        {
+          "key": "p",
+          "text": "`action: \"accept\"` with `{\"confirm\": true}`"
+        },
+        {
+          "key": "q",
+          "text": "`action: \"accept\"` with `{\"confirm\": false}`"
+        },
+        {
+          "key": "r",
+          "text": "`action: \"decline\"`"
+        },
+        {
+          "key": "s",
+          "text": "`action: \"cancel\"`"
+        },
+        {
+          "key": "t",
+          "text": "A JSON-RPC error instead of a result"
+        }
+      ],
+      "explanation": "Submitting is always an accept, and the checkbox decides the boolean in `content`. An explicit No is a decline; dismissing the dialog without choosing is a cancel. None of the four is an error: all of them ride back in `inputResponses` like any other answer.",
+      "hints": [
+        "Decide first whether the form was submitted, then what it contained."
+      ]
+    },
+    {
+      "id": "mcp-008-q14",
+      "type": "long",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o4",
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 15,
+      "tags": [
+        "request-state",
+        "deployment"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A team runs the project's `terminate_process` server as four workers behind a round-robin load balancer, deploys by restarting one worker at a time, and wants to rotate its `requestState` key every quarter. Design the `requestState` configuration: what each worker is given, how a rotation proceeds without breaking outstanding round trips, what the server's name has to do with it, and which symptom on the wire tells the team that a worker is misconfigured. Say also what the configuration does not protect against.",
+      "kind": "design",
+      "solution": "Every worker is built with the same policy, `MCPServer(\"system-info\", request_state_security=RequestStateSecurity(keys=[K]))`, with `K` at least 32 bytes of secret randomness from a secret store, so a retry sealed by any worker can be opened by any other and a restarted worker comes back with the same key rather than a fresh ephemeral one. The server keeps its name (or sets `audience`), because the name is sealed into the state as an audience claim and the SDK refuses a key policy on an unnamed server; the claim stops another service that shares the keys from accepting this server's state.\n\nRotation uses the key list as a ring: the first key seals and every listed key unseals. Each worker first gets `[old, new]`, then `[new, old]` once every worker can unseal `new`, and the old key is dropped only after one state lifetime (ten minutes by default) has passed, so no outstanding round trip holds state sealed under a key that is gone. A worker that is missing the shared key shows up as retries that fail with `-32602` and the message `Invalid or expired requestState`, HTTP 400, on some fraction of round trips, with the real reason (`unknown key`) only in that worker's log.\n\nThe seal binds the method, tool name, a digest of the arguments, the expiry and, when authenticated, the principal, so tampered state, state replayed on different arguments, and late state are refused. It does not make state single-use: a retry can be replayed within its lifetime, so anything that must happen at most once needs its own server-side record. It also does not replace the elicitation itself, which is what keeps the model from approving its own call.",
+      "rubric": [
+        {
+          "criterion": "Gives every worker the same key of at least 32 bytes through RequestStateSecurity(keys=[...]) and explains why the default ephemeral key fails on restarts and across workers.",
+          "points": 3
+        },
+        {
+          "criterion": "Describes a rotation that adds the new key as an unsealing key before it seals and drops the old key only after the state lifetime.",
+          "points": 3
+        },
+        {
+          "criterion": "Explains the server name as the sealed audience claim and that a key policy on an unnamed server is refused.",
+          "points": 2
+        },
+        {
+          "criterion": "Names the symptom: -32602 Invalid or expired requestState with HTTP 400, with the reason only in the server log.",
+          "points": 2
+        },
+        {
+          "criterion": "States that the seal bounds replay but is not single-use, so at-most-once effects need server-side enforcement.",
+          "points": 2
+        }
+      ],
+      "answer_length": "three paragraphs",
+      "explanation": "Section 5 shows the default key failing across workers and the shared key succeeding, prints the two constructor checks, and notes that replay protection is not single-use. The rotation order follows from the rule that the first key seals and every key unseals.",
+      "hints": [
+        "Start from what differs between two workers that each generated their own key.",
+        "For rotation, ask which keys a worker must accept while some outstanding state is still sealed under the old one."
+      ]
+    },
+    {
+      "id": "mcp-008-q15",
+      "type": "long",
+      "track": "connect",
+      "difficulty": 4,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 12,
+      "tags": [
+        "stateless",
+        "back-channel"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "Using post 03's account of the stateless model and post 04's account of Streamable HTTP, explain why the 2025-11-25 way of eliciting, a server-to-client `elicitation/create` request sent mid-call, cannot work for a server deployed as several workers behind a round-robin load balancer in revision 2026-07-28, and how MRTR's two carriers of state make the retry routable to any worker.",
+      "kind": "connect",
+      "solution": "The old mechanism needed three things: a bidirectional connection still open, the original `tools/call` still unanswered while the user read the dialog, and the half-finished handler's local variables alive in one specific process, because only that process could resume. Post 03's stateless model removes all three. There is no session and no `Mcp-Session-Id`, every request carries its own revision and capabilities in `_meta`, and a server must not infer anything from earlier requests. Post 04's Streamable HTTP makes each message a POST to one endpoint that a load balancer may hand to any worker, and the revision forbids servers from initiating JSON-RPC requests at all. A request that has to come back to the worker holding its stack frame cannot be load balanced, cannot survive a deploy, and has no channel to travel on.\n\nMRTR inverts the direction. The server answers the original request with an `input_required` result, which closes it, and holds nothing. The client retries with a new id, and two things carry everything the next worker needs: the retry re-sends the original method, name and arguments, and it echoes `requestState`, which carries whatever the arguments do not, sealed so that any worker holding the shared key can verify and open it. The answer itself rides in `inputResponses`. Because nothing lives in any one process, the round-robin balancer may send the retry anywhere.",
+      "rubric": [
+        {
+          "criterion": "Names what the back channel required: an open bidirectional connection, the original call left in flight, and state in one process's memory.",
+          "points": 3
+        },
+        {
+          "criterion": "Connects post 03: no session, per-request _meta, servers must not infer from prior requests, and servers must not initiate requests.",
+          "points": 2
+        },
+        {
+          "criterion": "Connects post 04: each request is an independent POST that a round-robin balancer may give to any worker.",
+          "points": 2
+        },
+        {
+          "criterion": "Explains MRTR's carriers: re-sent original arguments and the echoed, integrity-protected requestState, with the answer in inputResponses and a new id.",
+          "points": 3
+        }
+      ],
+      "answer_length": "two paragraphs",
+      "explanation": "Section 2 lists the three conditions the back channel depended on and why the third killed it; sections 3 to 5 show the two carriers, re-sent parameters and `requestState`, that let a retry stand alone. Posts 03 and 04 supply the sessionless model and the transport that make any-worker routing the normal case.",
+      "hints": [
+        "List what had to stay alive between the server's question and the user's answer in the old model.",
+        "Then name the only two things that survive a round trip in the new one."
+      ],
+      "connects": [
+        "mcp-003",
+        "mcp-004"
+      ]
+    },
+    {
+      "id": "mcp-008-q16",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "12",
+      "est_minutes": 3,
+      "tags": [
+        "resolve",
+        "prompts"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "An author moves the confirmation onto a prompt instead of a tool: `@mcp.prompt()` on `def confirm(pid: int, approval: Annotated[TerminateConfirmation, Resolve(_confirm_terminate)]) -> str`. Under `mcp==2.3.0`, what happens?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The decorator raises `InvalidSignature`, because `Resolve` is only valid on tools.",
+          "correct": false,
+          "feedback": "That would be the helpful outcome, but the SDK does not check: the prompt registers without complaint, which is what makes this mistake expensive."
+        },
+        {
+          "key": "b",
+          "text": "`prompts/get` returns `input_required` and elicits the confirmation exactly as the tool does.",
+          "correct": false,
+          "feedback": "`prompts/get` can carry MRTR in the protocol, but the SDK honors `Resolve` only on tools, so no resolver runs for a prompt."
+        },
+        {
+          "key": "c",
+          "text": "`approval` is published as an ordinary prompt argument, and getting the prompt without it fails with an internal error.",
+          "correct": true,
+          "feedback": "Correct. `snippets/resolve_rules.py` prints the published arguments `['pid', 'approval']` and `MCPError -32603: Internal server error` for `prompts/get`."
+        },
+        {
+          "key": "d",
+          "text": "The `Resolve` marker is ignored and `approval` is silently left out, so the prompt renders without asking.",
+          "correct": false,
+          "feedback": "The parameter is not left out: it becomes a visible argument, and the call fails because nothing fills it in."
+        }
+      ],
+      "explanation": "The SDK reads `Resolve` only when it builds a tool. On a prompt the annotated parameter is treated like any other, so it is published as an argument the user is expected to supply, and a `prompts/get` without it fails as `-32603`. The protocol allows MRTR on `prompts/get`; the SDK's `Resolve` does not provide it there.",
+      "hints": [
+        "Separate what the protocol allows on `prompts/get` from what the SDK's `Resolve` supports.",
+        "Ask what the SDK does with an annotated parameter it does not treat specially."
+      ]
+    },
+    {
+      "id": "mcp-008-q17",
+      "type": "numeric",
+      "track": "edge",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "12",
+      "est_minutes": 2,
+      "tags": [
+        "capabilities",
+        "errors"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A test opens `Client(mcp)` on the project's server without passing an `elicitation_callback`, so its requests declare no elicitation capability, and calls `terminate_process` with `{\"pid\": 999999}`. Which JSON-RPC error code comes back?",
+      "answer": {
+        "value": -32021,
+        "tolerance": 0,
+        "unit": ""
+      },
+      "precision_note": "snippets/mrtr_wire.py sends the first call with empty clientCapabilities and prints code -32021 with requiredCapabilities {\"elicitation\": {\"form\": {}}}; snippets/resolve_rules.py prints the same code for an in-memory Client with no callback.",
+      "explanation": "Server requirement 7 forbids an elicitation request the client did not declare, so the resolver refuses to ask and the call fails with `-32021` (`MISSING_REQUIRED_CLIENT_CAPABILITY`) before the tool body runs, naming the missing capability in `requiredCapabilities` and the resolver in the message.",
+      "hints": [
+        "The server is not allowed to ask a question the client did not declare it can answer.",
+        "The code is one of the three MCP-specific codes of this revision, the one about capabilities."
+      ]
+    }
+  ]
+}

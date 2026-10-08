@@ -1,8 +1,24 @@
 id: mcp-008
 slug: 08-elicitation-and-mrtr
-title: "08 · Elicitation and MRTR: asking the user mid-call"
+title: "08 - Elicitation and MRTR: asking the user mid-call"
+summary: "How a server asks the user a question mid-call by returning an interim result that asks for input and being retried, and how to build a tool whose approval the model can neither see nor forge."
 date: 2026-07-23
-tags: [model-context-protocol, mcp, servers, elicitation, mrtr, human-in-the-loop]
-hero: diagrams/01-mrtr-loop.svg
-reading_time: 27
+updated: 2026-10-08
+status: complete
 part: "Part II - Building servers"
+level: intermediate
+reading_time: 37
+tags: [mcp, elicitation, mrtr, human-in-the-loop, request-state, python-sdk]
+hero: diagrams/01-mrtr-loop.svg
+prerequisites: [mcp-006]
+code: included
+outcomes:
+  - id: o1
+    text: "Trace a Multi Round-Trip Request exchange message by message and say where the state lives at each step."
+  - id: o2
+    text: "Build a tool whose approval parameter the model can neither see nor forge."
+  - id: o3
+    text: "Handle accept, decline, and cancel as three separate outcomes rather than one."
+  - id: o4
+    text: "Protect requestState correctly on a server that runs more than one worker."
+recommended: [mcp-003]

@@ -7,7 +7,7 @@ it is still alive.
 Progress reporting is the part of this that works everywhere today. The tasks
 extension, which turns long work into a pollable object with its own lifecycle,
 is negotiated per request and is not exposed through the high-level server API
-in this SDK build; post 09 covers what that means in practice.
+in mcp 2.3.0; post 09 covers what that means in practice.
 """
 
 from __future__ import annotations
