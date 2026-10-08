@@ -13,9 +13,10 @@ import sys
 from mcp.server.mcpserver import MCPServer
 
 # Under the stdio transport, stdout IS the protocol channel. Anything printed
-# there is parsed as a JSON-RPC frame, and a stray print() will break the
-# connection in a way that is genuinely hard to diagnose. Logging must go to
-# stderr, which the host collects and shows you.
+# there before the server starts is parsed as a JSON-RPC frame, and a stray
+# print() at import time breaks the connection in a way that is hard to
+# diagnose (once mcp.run() is serving, the SDK diverts later prints to stderr).
+# Logging goes to stderr, which a host may capture into a log.
 logging.basicConfig(
     stream=sys.stderr,
     level=logging.INFO,

@@ -16,9 +16,5 @@ dev = [
     "pyyaml>=6.0",
 ]
 
-[tool.uv]
-# Kept from the pre-release era; harmless now that the pin is a stable release.
-prerelease = "allow"
-
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

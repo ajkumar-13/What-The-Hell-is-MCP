@@ -52,7 +52,6 @@ The series targets revision **2026-07-28**. While that revision was a release ca
 ### Announcements
 
 - Model Context Protocol, *"The 2026-07-28 MCP Specification Release Candidate"* (2026). https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/
-- Model Context Protocol, *"Beta SDKs for the 2026-07-28 MCP Spec Release Candidate Are Here"* (2026). https://blog.modelcontextprotocol.io/posts/sdk-betas-2026-07-28/
 - Model Context Protocol, *"MCP joins the Agentic AI Foundation"* (2025). https://blog.modelcontextprotocol.io/posts/2025-12-09-mcp-joins-agentic-ai-foundation/
 - Linux Foundation, *"Formation of the Agentic AI Foundation"* (2025). https://www.linuxfoundation.org/press/linux-foundation-announces-the-formation-of-the-agentic-ai-foundation
 - Model Context Protocol, *"MCP Apps"* (2025), the preview announcement. https://blog.modelcontextprotocol.io/posts/2025-11-21-mcp-apps/
@@ -142,7 +141,7 @@ National Vulnerability Database entries: https://nvd.nist.gov/vuln/detail/CVE-20
 
 ## 5. SDKs and tooling
 
-- Python SDK. https://github.com/modelcontextprotocol/python-sdk and https://pypi.org/project/mcp/
+- MCP Python SDK, release 2.3.0 (2026-10-02), the build behind every transcript in this series. https://github.com/modelcontextprotocol/python-sdk and https://pypi.org/project/mcp/2.3.0/
 - TypeScript SDK. https://github.com/modelcontextprotocol/typescript-sdk
 - SDK tiers and conformance commitments. https://modelcontextprotocol.io/community/sdk-tiers
 - Conformance suite. https://github.com/modelcontextprotocol/conformance
