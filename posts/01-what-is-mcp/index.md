@@ -262,7 +262,7 @@ A reader who would rather have something running first treats section 3 above as
 
 For a server already written against an older revision, the posts that change its code are 03, 07, 08, and 09: the handshake and the session went in post 03, `resources/subscribe` became `subscriptions/listen` in post 07, the server-to-client back channel became a return value in post 08, and tasks moved out of the core protocol in post 09.
 
-Two things are pinned throughout, and both are named here so they can be checked against whatever is installed. The protocol revision is 2026-07-28. The Python software development kit (SDK) is `mcp==2.0.0b2`, a beta at the time of writing; every project pins the exact version it was tested against, and where the SDK had not yet caught up with the specification, the post says so rather than guessing.
+Two things are pinned throughout, and both are named here so they can be checked against whatever is installed. The protocol revision is 2026-07-28. The Python software development kit (SDK) is `mcp==2.3.0`; every project pins the exact version it was tested against, and where the SDK and the specification disagree, the post says so rather than guessing.
 
 ## 10. What can go wrong?
 
