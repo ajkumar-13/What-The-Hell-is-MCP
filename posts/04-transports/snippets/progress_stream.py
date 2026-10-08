@@ -31,12 +31,14 @@ async def slow_count(n: int, ctx: Context) -> int:
 
 def demo() -> None:
     import json
+    import logging
     import socket
     import subprocess
     import time
 
     import httpx
 
+    logging.getLogger("httpx").setLevel(logging.WARNING)  # keep the client's request log off stderr
     with socket.socket() as probe:
         probe.bind(("127.0.0.1", 0))
         port = probe.getsockname()[1]

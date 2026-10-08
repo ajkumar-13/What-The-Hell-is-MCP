@@ -35,17 +35,17 @@
       "est_minutes": 3,
       "tags": ["stdout-rule", "buffering"],
       "status": "reviewed",
-      "updated": "2026-10-08",
-      "prompt": "A tool in a stdio server calls `print(\"tool called\")`. The developer's test calls the tool through the SDK's stdio client and sees no parse error. Later the same tool breaks a user's session. What best explains the passing test?",
+      "updated": "2026-10-09",
+      "prompt": "A tool in a stdio server built on `mcp==2.3.0` calls `print(\"tool called\")`, and standard output is left as Python leaves it for a pipe. Through the SDK's stdio client every call returns the right result and the client logs nothing during the session, but one parse failure appears when the server shuts down. What explains the timing?",
       "select": "single",
       "options": [
-        {"key": "a", "text": "Standard output was a pipe, so Python buffered it in blocks and the short line never reached the pipe in the test.", "correct": true, "feedback": "This is what `stdout_trap.py` shows: block-buffered, the stray line never reached the client; line-buffered, the identical tool produced a parse failure at once."},
-        {"key": "b", "text": "The SDK client recognizes plain text on the pipe and silently discards it, so the line is harmless under any client.", "correct": false, "feedback": "The SDK client logged a parse failure as soon as the line arrived, and another client may treat an unparseable frame as a broken connection. Recovery is a client's choice."},
-        {"key": "c", "text": "When standard output is not a terminal, `print()` sends its text to standard error instead of standard output.", "correct": false, "feedback": "`print()` writes to `sys.stdout` whatever that is connected to; only the buffering changes when standard output is a pipe."},
-        {"key": "d", "text": "The specification allows a short non-JSON line on standard output as long as it contains no embedded newline.", "correct": false, "feedback": "The rule has no exceptions: the server must not write anything to standard output that is not a valid MCP message."}
+        {"key": "a", "text": "Python buffered the text and flushed it at exit, after the SDK had pointed standard output back at the pipe.", "correct": true, "feedback": "This is the block-buffered run of `stdout_trap.py`: while the transport serves, descriptor 1 points at standard error, but the text never left Python's buffer then; the exit flush came after the transport restored descriptor 1 to the pipe."},
+        {"key": "b", "text": "The SDK client queues every parse failure during a session and reports the whole batch when the connection closes.", "correct": false, "feedback": "The client logs a parse failure when it reads the line: the banner run of `stdout_trap.py` shows one logged at connect. Here the line simply arrived last."},
+        {"key": "c", "text": "When standard output is not a terminal, `print()` writes to standard error, and only the final flush at exit goes to standard output.", "correct": false, "feedback": "`print()` always writes to `sys.stdout`; where the bytes land depends on what descriptor 1 points at when the buffer is flushed, and only the buffering changes for a pipe."},
+        {"key": "d", "text": "The specification lets a server write plain text to standard output once its last response has been sent.", "correct": false, "feedback": "The rule has no exceptions and no time window: the server must not write anything to standard output that is not a valid MCP message."}
       ],
-      "explanation": "Section 3 shows that Python buffers standard output in blocks when it is a pipe. A short `print()` can sit in that buffer through every test run, and in the post's run it never reached the pipe at all; a flush, a larger write or a dependency that flushes makes the identical code fail in front of a user.",
-      "hints": ["Consider what Python does differently when standard output is a pipe rather than a terminal.", "Compare the block-buffered and line-buffered runs of the stdout demonstration."]
+      "explanation": "Section 3 shows that while `mcp.run()` serves, the SDK points descriptor 1 at standard error and writes frames through a private duplicate of the pipe. A block-buffered `print()` writes nothing to descriptor 1 at the time; Python flushes the text at exit, after the transport has pointed descriptor 1 back at the pipe, so the client reads it after the last response.",
+      "hints": ["Ask when the text actually left Python's buffer.", "Compare where descriptor 1 points while the transport serves and after it stops."]
     },
     {
       "id": "mcp-004-q03",
@@ -55,20 +55,20 @@
       "outcomes": ["o3"],
       "section": "3",
       "est_minutes": 4,
-      "tags": ["stdout-rule", "subprocess"],
+      "tags": ["stdout-rule", "buffering", "subprocess"],
       "status": "reviewed",
-      "updated": "2026-10-08",
-      "prompt": "A stdio server has run `logging.basicConfig(stream=sys.stderr)`. Which of these, executed inside the server process, write to the server's standard output and so break the stdout rule? Select all that apply.",
+      "updated": "2026-10-09",
+      "prompt": "A stdio server calls `mcp.run()` on `mcp==2.3.0`, leaves standard output block-buffered, and configures logging to `sys.stderr`. Which of these put text on the pipe the client reads frames from? Select all that apply.",
       "select": "multiple",
       "options": [
-        {"key": "a", "text": "`subprocess.run([\"git\", \"status\"])` with no `stdout=` argument", "correct": true, "feedback": "The child inherits the server's standard output and writes straight into the frame stream, and it flushes when it exits, so the parent's buffering does not hide it."},
-        {"key": "b", "text": "`log.warning(\"disk almost full\")` on a logger configured as above", "correct": false, "feedback": "The logging configuration sends every record to standard error, which the specification permits for any logging purpose."},
-        {"key": "c", "text": "A `breakpoint()` left in a tool, reached during a call", "correct": true, "feedback": "The debugger prompt goes to standard output, so a forgotten `breakpoint()` writes text into the frame stream when it is reached."},
-        {"key": "d", "text": "A dependency that calls `print()` to announce its version when it is imported", "correct": true, "feedback": "Anything that writes to file descriptor 1 does the damage, including code the server author did not write."},
-        {"key": "e", "text": "`subprocess.run([\"git\", \"status\"], stdout=subprocess.DEVNULL)` inside a tool", "correct": false, "feedback": "Redirecting the child's standard output to `DEVNULL` is the fix; nothing from the child reaches the frame stream."}
+        {"key": "a", "text": "`print(\"somelib 1.0 ready\", flush=True)` run when a module is imported, before `mcp.run()`", "correct": true, "feedback": "Before the transport starts, descriptor 1 is still the pipe, so the flushed banner is the first line the client reads, as the banner run of `stdout_trap.py` shows."},
+        {"key": "b", "text": "`log.warning(\"disk almost full\")` inside a tool, on a logger configured as above", "correct": false, "feedback": "The logging configuration sends every record to standard error, which the specification permits for any logging purpose."},
+        {"key": "c", "text": "`print(\"tool called\")` inside a tool", "correct": true, "feedback": "Block-buffered, the text waits in Python's buffer until exit and is flushed after the SDK has pointed descriptor 1 back at the pipe, so the client reads it after the last response."},
+        {"key": "d", "text": "`subprocess.run([sys.executable, \"--version\"])` inside a tool, with no `stdout=` argument", "correct": false, "feedback": "While the transport serves, descriptor 1 points at standard error and the child inherits that, so its output reached the server's log in every run. In a server without this diversion it would land in the frame stream, which is why `stdout=` belongs on it anyway."},
+        {"key": "e", "text": "`print(\"tool called\", flush=True)` inside a tool", "correct": false, "feedback": "The flush happens while descriptor 1 points at standard error, so the text reaches the server's log, as the line-buffered run shows."}
       ],
-      "explanation": "Section 3 lists the culprits: a dependency's banner, a progress bar, a `breakpoint()`, and a subprocess that inherits standard output. Configured logging and a subprocess with `stdout=subprocess.DEVNULL` or `stdout=subprocess.PIPE` keep the frame stream clean.",
-      "hints": ["Ask, for each line, which file descriptor the text ends up on.", "A child process inherits its parent's standard streams unless told otherwise."]
+      "explanation": "Section 3's runs show the timing rule of this SDK: a write made while the transport serves lands on standard error, and text written before `mcp.run()` or held in Python's buffer until exit lands on the pipe. The banner and the buffered `print()` reach the client; the logger, the flushed `print()` and the inheriting child do not, though the child would in a server without the diversion.",
+      "hints": ["For each line, ask when its bytes actually reach file descriptor 1.", "Recall where descriptor 1 points before, during and after the transport serves."]
     },
     {
       "id": "mcp-004-q04",
@@ -219,13 +219,13 @@
       "est_minutes": 2,
       "tags": ["era-probe", "versioning"],
       "status": "reviewed",
-      "updated": "2026-10-08",
+      "updated": "2026-10-09",
       "prompt": "A server answers `server/discover` with a `DiscoverResult`, and it also answers a legacy `initialize` request naming revision 2025-06-18 under that revision. Which of the specification's era terms describes this server?",
       "answer": {
         "model": "Dual-era.",
         "accept": ["^(?!.*\\b(maybe|perhaps|probably|possibly)\\b)(?!.*\\b(not|never|isn't)\\s+(a\\s+|an\\s+)?dual)(?!.*\\b(modern|legacy)\\s*(,|/|\\bor\\b)\\s*(a\\s+)?dual)(?!.*\\bdual[\\s-]*era\\s*(/|\\bor\\b)\\s*(modern|legacy)).*\\bdual[\\s-]*era\\b"]
       },
-      "explanation": "Section 7 defines modern implementations (per-request metadata, 2026-07-28 and later), legacy ones (a session set up by `initialize`, 2025-11-25 and earlier), and dual-era ones that support both. The `mcp==2.0.0b2` server of the post behaves exactly this way, which is why era is cached per server rather than inferred from one reply.",
+      "explanation": "Section 7 defines modern implementations (per-request metadata, 2026-07-28 and later), legacy ones (a session set up by `initialize`, 2025-11-25 and earlier), and dual-era ones that support both. The `mcp==2.3.0` server of the post behaves exactly this way, which is why era is cached per server rather than inferred from one reply.",
       "hints": ["The server passes the modern probe and also accepts the legacy handshake."]
     },
     {
@@ -263,10 +263,10 @@
       "est_minutes": 12,
       "tags": ["era-probe", "header-mismatch", "sdk-divergence"],
       "status": "reviewed",
-      "updated": "2026-10-08",
-      "prompt": "A hand-written client sends a `tools/list` POST whose body `_meta` names revision 2026-07-28, while its `MCP-Protocol-Version` header still says 2025-06-18 from an older configuration. The `mcp==2.0.0b2` server answers `400` with JSON-RPC `-32600` and the message \"Bad Request: Missing session ID\". Explain what happened inside the server, what a server following the specification would have answered instead, why the client should not conclude from this reply that the server is legacy, and how the client should be fixed.",
+      "updated": "2026-10-09",
+      "prompt": "A hand-written client sends a `tools/list` POST whose body `_meta` names revision 2026-07-28, while its `MCP-Protocol-Version` header still says 2025-06-18 from an older configuration. The `mcp==2.3.0` server answers `400` with JSON-RPC `-32600` and the message \"Bad Request: Missing session ID\". Explain what happened inside the server, what a server following the specification would have answered instead, why the client should not conclude from this reply that the server is legacy, and how the client should be fixed.",
       "kind": "explain",
-      "solution": "**What happened.** This beta decides which era's code handles a request from the `MCP-Protocol-Version` header alone. The header named 2025-06-18, a legacy revision, so the request went to the legacy path, which expects a session established by `initialize` and refused a request without one.\n\n**What the specification prescribes.** The header must equal `io.modelcontextprotocol/protocolVersion` in the body's `_meta`; when they disagree the server must reject the request with `400 Bad Request` and `HeaderMismatch`, code `-32020`. The beta's answer is a divergence from that rule, which the post records as worth re-checking on a release build.\n\n**Why it says nothing about era.** The request contradicted itself, so it was not a valid probe. Era is a property of the server, determined by a consistent modern request: on stdio by `server/discover` first, on HTTP by a modern request whose body is read on `400`. Sent consistently, this server answers `server/discover` with a `DiscoverResult`, and it also accepts a legacy `initialize`, so it is dual-era, not legacy. A client that cached \"legacy\" here would downgrade a modern server.\n\n**The fix.** Derive every header from the finished body, as `headers_for` does, so the header and `_meta` cannot drift.",
+      "solution": "**What happened.** This SDK decides which era's code handles a request from the `MCP-Protocol-Version` header alone. The header named 2025-06-18, a legacy revision, so the request went to the legacy path, which expects a session established by `initialize` and refused a request without one.\n\n**What the specification prescribes.** The header must equal `io.modelcontextprotocol/protocolVersion` in the body's `_meta`; when they disagree the server must reject the request with `400 Bad Request` and `HeaderMismatch`, code `-32020`. The SDK's answer is a divergence from that rule, and a comment in its source describes header-only routing as the arrangement for now.\n\n**Why it says nothing about era.** The request contradicted itself, so it was not a valid probe. Era is a property of the server, determined by a consistent modern request: on stdio by `server/discover` first, on HTTP by a modern request whose body is read on `400`. Sent consistently, this server answers `server/discover` with a `DiscoverResult`, and it also accepts a legacy `initialize`, so it is dual-era, not legacy. A client that cached \"legacy\" here would downgrade a modern server.\n\n**The fix.** Derive every header from the finished body, as `headers_for` does, so the header and `_meta` cannot drift.",
       "rubric": [
         {"criterion": "Identifies header-only era routing as the reason the request reached the legacy, session-expecting path.", "points": 3},
         {"criterion": "States the specification's answer: 400 with HeaderMismatch, -32020, because the header must match the body's _meta.", "points": 3},
@@ -274,7 +274,7 @@
         {"criterion": "Proposes deriving the headers from the body as the fix.", "points": 2}
       ],
       "answer_length": "one or two paragraphs",
-      "explanation": "Section 11 shows this exact reply and attributes it to the beta's header-only routing; section 5 states that a disagreement between `MCP-Protocol-Version` and `_meta` must be rejected with `-32020`; section 7 defines era as a property of the server, found by a consistent probe.",
+      "explanation": "Section 11 shows this exact reply and attributes it to the SDK's header-only routing; section 5 states that a disagreement between `MCP-Protocol-Version` and `_meta` must be rejected with `-32020`; section 7 defines era as a property of the server, found by a consistent probe.",
       "hints": ["Ask which of the two revision values this server looked at first.", "Compare the reply with the status-code table's row for a header that disagrees with the body.", "Would a correctly formed `server/discover` to the same server reveal a different era?"]
     },
     {
@@ -308,18 +308,18 @@
       "est_minutes": 3,
       "tags": ["stdout-rule", "cheap-check"],
       "status": "reviewed",
-      "updated": "2026-10-08",
-      "prompt": "Put the steps of the cheap stdout check in order so that the check also catches a stray `print()` that output buffering would otherwise hide.",
+      "updated": "2026-10-09",
+      "prompt": "Put the steps of the cheap stdout check in order so that the check also catches stray text that output buffering holds until the server exits.",
       "items": [
-        {"key": "a", "text": "Start the server under `python -u`, so its standard output is unbuffered."},
+        {"key": "a", "text": "Start the server with the exact command the host's configuration names, adding no interpreter flags."},
         {"key": "b", "text": "Write one JSON-RPC request line to the server's standard input."},
         {"key": "c", "text": "Read standard output until the response to that request arrives."},
         {"key": "d", "text": "Close the server's standard input, so that it exits."},
-        {"key": "e", "text": "Read the rest of standard output and try to parse every line as JSON."}
+        {"key": "e", "text": "Read the rest of standard output until end of file and try to parse every line as JSON."}
       ],
       "answer": ["a", "b", "c", "d", "e"],
-      "explanation": "Section 3 runs this check twice. The interpreter flag must be set when the process starts, the request must be written before its response can be read, and standard input must stay open until the response arrives, because a server that sees end of file exits without finishing work in flight. Only then is every line it wrote parsed, and under `-u` the stray line is among them.",
-      "hints": ["Some steps are only possible once another has happened.", "Ask what a server does with a request still in progress when its standard input closes."]
+      "explanation": "Section 3 runs this check twice. The server must start the way the host starts it: under `python -u` the buffered `print()` of `stdout_trap.py` is written while the SDK diverts standard output, and the check passes a broken server. The request must be written before its response can be read, and standard input must stay open until the response arrives, because a server that sees end of file exits without finishing work in flight. The buffered stray line arrives only as the server exits, so the last step reads to end of file.",
+      "hints": ["Some steps are only possible once another has happened.", "Ask when the buffered stray line actually reaches the pipe."]
     },
     {
       "id": "mcp-004-q16",
@@ -365,8 +365,8 @@
       "est_minutes": 4,
       "tags": ["security", "dns-rebinding", "bind-address"],
       "status": "reviewed",
-      "updated": "2026-10-08",
-      "prompt": "To reach a laptop's server from a virtual machine, a developer changes `host=\"127.0.0.1\"` to `host=\"0.0.0.0\"` in the `run()` call and passes no `transport_security`. With `mcp==2.0.0b2`, what changes besides the server becoming reachable from other machines?",
+      "updated": "2026-10-09",
+      "prompt": "To reach a laptop's server from a virtual machine, a developer changes `host=\"127.0.0.1\"` to `host=\"0.0.0.0\"` in the `run()` call and passes no `transport_security`. With `mcp==2.3.0`, what changes besides the server becoming reachable from other machines?",
       "select": "single",
       "options": [
         {"key": "a", "text": "Nothing else changes, since the SDK goes on validating `Origin` on every request regardless of the address it is bound to.", "correct": false, "feedback": "The SDK arms its rebinding protection only for `127.0.0.1`, `localhost` and `::1`; bound to any other address with no `transport_security`, it checks neither `Host` nor `Origin`."},

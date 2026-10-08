@@ -157,7 +157,8 @@ def demo() -> None:
             result = reply.json()["result"]
             print("--- server/discover")
             print(f"HTTP {reply.status_code}  {reply.headers['content-type']}")
-            print(f"server        {result['serverInfo']['name']} {result['serverInfo']['version']}")
+            info = result["_meta"]["io.modelcontextprotocol/serverInfo"]
+            print(f"serverInfo    in result _meta: name={info['name']!r} version={info['version']!r}")
             print(f"revisions     {', '.join(result['supportedVersions'])}")
             print(f"capabilities  {', '.join(result['capabilities'])}")
             print()

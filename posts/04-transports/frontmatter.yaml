@@ -3,11 +3,11 @@ slug: 04-transports
 title: "04 - Transports: stdio and Streamable HTTP"
 summary: "How identical MCP messages travel over stdio pipes and over Streamable HTTP, the stdout rule that breaks stdio servers, every header an HTTP request needs, and how to choose a transport and probe a server's era."
 date: 2026-07-22
-updated: 2026-10-08
+updated: 2026-10-09
 status: complete
 part: "Part I - Foundations"
 level: beginner
-reading_time: 41
+reading_time: 43
 tags: [mcp, transports, stdio, streamable-http, http-headers, load-balancing]
 hero: diagrams/01-two-transports.svg
 prerequisites: [mcp-003]
@@ -18,6 +18,6 @@ outcomes:
   - id: o2
     text: "Compose a conformant Streamable HTTP request by hand, with every required header derived from its body."
   - id: o3
-    text: "Diagnose stdout corruption in a stdio server, including the case that output buffering hides."
+    text: "Diagnose stdout corruption in a stdio server, including the stray text that output buffering delays until the server exits."
   - id: o4
     text: "Probe an unfamiliar server for its era instead of guessing which revision it speaks."

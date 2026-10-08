@@ -1,6 +1,6 @@
 # 04 - Transports: stdio and Streamable HTTP
 
-> **TL;DR.** The transport is the only layer of the Model Context Protocol (MCP) that knows about processes and sockets, and the specification defines two: stdio, where the host spawns the server as a child process and exchanges one JavaScript Object Notation (JSON) message per line over its pipes, and Streamable HTTP (Hypertext Transfer Protocol), where the server listens on one endpoint and answers each ordinary POST with one JSON object or an event stream scoped to that request. The messages are identical on both, so the choice follows the shape of the deployment, not any capability. On stdio a single stray write to standard output corrupts the frame stream, and output buffering can hide the bug until a user meets it; on HTTP every POST mirrors its revision and method, and for three methods a name, into headers that a load balancer routes on and the server must check against the body. Four scripts in `snippets/` reproduce every exchange quoted here that is not the specification's own example, including how a server of revision 2026-07-28 answers a client that still expects sessions.
+> **TL;DR.** The transport is the only layer of the Model Context Protocol (MCP) that knows about processes and sockets, and the specification defines two: stdio, where the host spawns the server as a child process and exchanges one JavaScript Object Notation (JSON) message per line over its pipes, and Streamable HTTP (Hypertext Transfer Protocol), where the server listens on one endpoint and answers each ordinary POST with one JSON object or an event stream scoped to that request. The messages are identical on both, so the choice follows the shape of the deployment, not any capability. On stdio a single stray write to standard output corrupts the frame stream, and although the SDK used here diverts writes made while it serves, a startup banner or text that Python buffered until exit still lands on the pipe; on HTTP every POST mirrors its revision and method, and for three methods a name, into headers that a load balancer routes on and the server must check against the body. Four scripts in `snippets/` reproduce every exchange quoted here that is not the specification's own example, including how a server of revision 2026-07-28 answers a client that still expects sessions.
 >
 > **Prerequisites:** [Post 03](../03-wire-protocol/index.md).
 > **Safe to skip?** Skip it if the reader can already list every header a Streamable HTTP POST needs, say why one `print()` breaks a stdio server, and tell a modern server from a legacy one with a single probe.
@@ -9,7 +9,7 @@
 >
 > - Choose between stdio and Streamable HTTP from the shape of a deployment rather than from habit.
 > - Compose a conformant Streamable HTTP request by hand, with every required header derived from its body.
-> - Diagnose stdout corruption in a stdio server, including the case that output buffering hides.
+> - Diagnose stdout corruption in a stdio server, including the stray text that output buffering delays until the server exits.
 > - Probe an unfamiliar server for its era instead of guessing which revision it speaks.
 
 ![Two panels of equal size. On the left, a host spawns a server as a child process and three pipes run between them for standard input, standard output, and standard error, with two newline-terminated JSON objects beneath. On the right, the same host sends an ordinary POST with protocol and method headers to one HTTP endpoint, and the server answers with either one JSON object or an event stream.](diagrams/01-two-transports.svg)
@@ -106,7 +106,8 @@ if __name__ == "__main__":
 <<< {"jsonrpc":"2.0","id":2,"result":{"cacheScope":"private","resultType":"complete","too...
 >>> {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "whoami", "arg...
 <<< {"jsonrpc":"2.0","id":3,"result":{"content":[{"text":"Windows 10","type":"text"}],
-    "isError":false,"resultType":"complete","structuredContent":{"result":"Windows 10"}}}
+    "isError":false,"resultType":"complete","structuredContent":{"result":"Windows 10"},
+    "_meta":{"io.modelcontextprotocol/serverInfo":{"name":"hello","version":""}}}}
 exit code 0 after stdin was closed
 stderr carried: ['INFO whoami called']
 ```
@@ -124,13 +125,13 @@ The second half of the demonstration hands the same file to the software develop
 ```text
 === with the SDK's stdio client
 protocol_version 2026-07-28
-server_info      name='hello' version='2.0.0b2'
+server_info      name='hello' version=''
 tools            ['whoami']
 whoami           Windows 10
 server stderr    INFO whoami called
 ```
 
-The SDK client sent `server/discover` first, found revision 2026-07-28, and never needed a handshake. The `version='2.0.0b2'` is the SDK build, `mcp==2.0.0b2`, which the server reports because this file sets no version of its own.
+The SDK client sent `server/discover` first, found revision 2026-07-28, and never needed a handshake. The server's identity travels in each result's `_meta` under `io.modelcontextprotocol/serverInfo`, as the third frame above shows, and its `version` is empty because this file passes no `version=` to `MCPServer`.
 
 ## 3. The stdout rule
 
@@ -161,37 +162,54 @@ def python_version() -> str:
     return platform.python_version()
 ```
 
-Run with no arguments, the script spawns itself under the SDK's stdio client twice and calls both tools each time. The first run leaves standard output as Python leaves it for a pipe:
+**What the SDK does about it.** The SDK's stdio transport keeps handlers off the wire. While `mcp.run()` serves, file descriptor 1, the process's standard output, points at standard error, and the frames travel through a private duplicate of the pipe that nothing else in the process writes to; when the transport stops, descriptor 1 points at the pipe again. Run with no arguments, the script spawns itself under the SDK's stdio client three times, calls both tools each time, and reports what the client logged and which stray lines reached the server's standard error. The first run leaves standard output as Python leaves it for a pipe:
 
 ```text
 === SDK client, server stdout block-buffered (the default for a pipe)
+at connect      client logged nothing
 whoami          result 'Windows 10'
                 client logged nothing
 python_version  result '3.12.12'
-                client logged: Failed to parse JSONRPC message from server
+                client logged nothing
+after shutdown  client logged: Failed to parse JSONRPC message from server
                   1 validation error for union[JSONRPCRequest,JSONRPCNotification,JSONRPCResponse,JSONRPCError]
-                  Invalid JSON: expected value at line 1 column 1 [type=json_invalid, input_value='Python 3.12.12\r', input_type=str]
+                  Invalid JSON: expected value at line 1 column 1 [type=json_invalid, input_value='whoami called\r', input_type=str]
+server stderr   ['Python 3.12.12']
 ```
 
-Nothing there mentions `print`, `stdout`, or the tool. The client read a line that was not JSON, which is true and unhelpful. The trailing `\r` is a Windows detail: Python's text layer on that system turns each `\n` written to standard output into a carriage return and a line feed, and the client strips only the line feed. A host with a graphical interface may hide even this much: the server appears to connect, then fails on the first call or disconnects, and the detail sits in a log file.
+Both calls succeed, and the child interpreter's `Python 3.12.12` went to the server's log, because the child inherited descriptor 1 while it pointed at standard error. The `print()` escaped the diversion. When standard output is a pipe rather than a terminal, Python buffers it in blocks, so `whoami called` waited in that buffer through the whole session, and Python flushed it at exit, after the transport had pointed descriptor 1 back at the pipe. The client read it as one more line after the last response.
 
-**Three details make this harder to catch than it should be.**
+Nothing there mentions `print`, `stdout`, or the tool. The client read a line that was not JSON, which is true and unhelpful. The trailing `\r` is a Windows detail: Python's text layer on that system turns each `\n` written to standard output into a carriage return and a line feed, and the client strips only the line feed. A host with a graphical interface may hide even this much, and the detail sits in a log file.
 
-*It is intermittent, because of buffering.* When standard output is a pipe rather than a terminal, Python buffers it in blocks. The `print()` in `whoami` corrupted nothing in the run above: its text was still waiting in the buffer when the call returned, and the cheap check below shows that it never reached the pipe at all. In this SDK it never will: the stdio transport writes its frames through a second text layer over the same byte buffer, and when the server stops, closing that layer closes the buffer, so text still waiting in Python's own layer is discarded rather than flushed at exit. The second run of the demonstration line-buffers the server's standard output, which is what `print(..., flush=True)` does for one call, and the identical tool fails at once:
+The second run line-buffers the server's standard output, which is what `print(..., flush=True)` does for one call. Every write now happens while descriptor 1 points at standard error, and nothing reaches the pipe:
 
 ```text
 === SDK client, server stdout line-buffered
+at connect      client logged nothing
 whoami          result 'Windows 10'
-                client logged: Failed to parse JSONRPC message from server
-                  1 validation error for union[JSONRPCRequest,JSONRPCNotification,JSONRPCResponse,JSONRPCError]
-                  Invalid JSON: expected value at line 1 column 1 [type=json_invalid, input_value='whoami called\r', input_type=str]
+                client logged nothing
+python_version  result '3.12.12'
+                client logged nothing
+after shutdown  client logged nothing
+server stderr   ['whoami called', 'Python 3.12.12']
 ```
 
-A bug that appears only when the output happens to be flushed, by a flag, by a larger write that fills the buffer, or by a dependency that flushes standard output on its own schedule, survives testing and shows up in front of a user.
+The third run prints and flushes one line before `mcp.run()` starts, as a dependency that announces itself when it is imported would. At that moment descriptor 1 is still the pipe, so the first line the client reads is the banner:
 
-*Recovery is a client's choice, not a guarantee.* The SDK client above logged the parse failure, skipped the line, and still delivered both correct tool results. That is generous behavior and a server must not rely on it. The requirement is on the server, and a client is within its rights to treat an unparseable frame as a broken connection.
+```text
+=== SDK client, server stdout block-buffered, a banner flushed before mcp.run()
+at connect      client logged: Failed to parse JSONRPC message from server
+                  1 validation error for union[JSONRPCRequest,JSONRPCNotification,JSONRPCResponse,JSONRPCError]
+                  Invalid JSON: expected value at line 1 column 1 [type=json_invalid, input_value='somelib 1.0 ready\r', input_type=str]
+```
 
-*It is not always a `print()` in the server's own code.* Anything that writes to file descriptor 1 does the same damage: a dependency printing a startup banner or a deprecation notice, a progress bar, a `breakpoint()` left in, since the debugger prompt goes to standard output. Another is a `subprocess.run(...)` with no `stdout=` argument, as in `python_version`: a child process inherits the parent's standard output and writes straight into the frame stream, and since the child flushes when it exits, buffering in the parent does not hide it. That is why `python_version` failed in both runs.
+**Three details make this harder to catch than it should be.**
+
+*Where a stray write lands depends on when it happens.* A write made while the transport serves goes to standard error; text written before `mcp.run()`, or held in Python's buffer until exit, reaches the pipe. The identical `print()` is harmless when line-buffered and corrupts the stream at shutdown when block-buffered, so a bug can pass under one configuration and fail under another. The protection also belongs to this SDK alone. Its source calls the diversion best-effort: where descriptors cannot be duplicated, it serves the pipe in place, as the SDK's 1.x line did, and then every stray write lands in the frame stream. A server written with another SDK, or by hand, has whatever protection its author built, and the rule binds it all the same.
+
+*Recovery is a client's choice, not a guarantee.* The SDK client above logged each parse failure, skipped the line, and still delivered every tool result. That is generous behavior and a server must not rely on it. The requirement is on the server, and a client is within its rights to treat an unparseable frame as a broken connection.
+
+*It is not always a `print()` in the server's own code.* Anything that writes to file descriptor 1 at the wrong moment does the same damage: a dependency printing a startup banner or a deprecation notice, a progress bar, a `breakpoint()` left in, since the debugger prompt goes to standard output. Another is a `subprocess.run(...)` with no `stdout=` argument, as in `python_version`: a child process inherits the parent's descriptor 1 and writes wherever it points. Under this SDK that was standard error, as all three runs show; in a server that serves the pipe in place it is the frame stream itself, and the child's output arrives whatever the parent's buffering.
 
 **The fix is two lines, and they belong at the top of the file.** They are the logging lines of section 2:
 
@@ -200,20 +218,20 @@ logging.basicConfig(stream=sys.stderr, level=logging.INFO, format="%(levelname)s
 log = logging.getLogger("hello")
 ```
 
-Python's `logging` already defaults to standard error, but naming the stream states the intent where the next reader will see it. From then on, `log.info(...)` instead of `print(...)`, and `subprocess.run(..., stdout=subprocess.DEVNULL)`, or `stdout=subprocess.PIPE` when the output is wanted, for anything the server shells out to.
+Python's `logging` already defaults to standard error, but naming the stream states the intent where the next reader will see it. From then on, `log.info(...)` instead of `print(...)`, nothing written to standard output before `mcp.run()`, and `subprocess.run(..., stdout=subprocess.DEVNULL)`, or `stdout=subprocess.PIPE` when the output is wanted, for anything the server shells out to. None of that relies on the SDK's diversion, so it holds on every SDK and in every configuration.
 
 Standard error is not a consolation prize. The specification explicitly permits any UTF-8 on it, for any logging purpose, and a desktop host can collect it into a per-server log file, as post 05 shows for one host. Two facts about it are worth carrying: a client may capture, forward, or ignore that stream, so it is not a delivery mechanism, and a client should not read output there as a sign of failure, so logging at `info` is fine.
 
 On Streamable HTTP, standard output carries nothing and a stray `print()` is merely untidy. The habit is still worth keeping, because the same file should run both ways (section 9), and nobody remembers six months later which functions were safe on which transport.
 
-**A cheap check before shipping:** run the server, feed it one request, close its standard input, and confirm that every line it wrote to standard output parses as JSON. The last two lines of the demonstration run that check on the broken server, once as it is and once under `python -u`, which turns Python's buffering of standard output off:
+**A cheap check before shipping:** run the server with the exact command the host's configuration names, feed it one request, close its standard input, and parse every line it wrote to standard output until end of file. The last two lines of the demonstration run that check on the broken server, once as a host would start it and once under `python -u`, which turns Python's buffering of standard output off:
 
 ```text
-cheap check, python stdout_trap.py --serve       1 stdout line(s), not JSON: []
-cheap check, python -u stdout_trap.py --serve    2 stdout line(s), not JSON: ['whoami called']
+cheap check, python stdout_trap.py --serve       2 stdout line(s), not JSON: ['whoami called']
+cheap check, python -u stdout_trap.py --serve    1 stdout line(s), not JSON: []
 ```
 
-Without `-u` the check passes a broken server, for the reason above: the stray text never left the buffer. Run the check unbuffered, and it catches the bug that a buffered run hides.
+Run as a host would start it, the check catches the stray line, and only because it keeps reading after the response: the line arrives once standard input has closed. Under `-u` the same check passes the broken server, because every unbuffered write happened while descriptor 1 pointed at standard error. A check run under a debugging variant of the command tests a different server.
 
 ## 4. Streamable HTTP: one endpoint, ordinary POSTs
 
@@ -271,7 +289,8 @@ data: {"jsonrpc":"2.0","method":"notifications/progress","params":{"progressToke
 
 event: message
 data: {"jsonrpc":"2.0","id":1,"result":{"content":[{"text":"3","type":"text"}],
-       "isError":false,"resultType":"complete","structuredContent":{"result":3}}}
+       "isError":false,"resultType":"complete","structuredContent":{"result":3},
+       "_meta":{"io.modelcontextprotocol/serverInfo":{"name":"progress","version":""}}}}
 
 4 events; SSE id: fields 0; the last carries id 1 and ends the stream
 ```
@@ -567,7 +586,7 @@ The compatibility outcomes, condensed from the versioning page:
 
 That last pair is why the specification asks a modern-only server to name the protocol revisions it supports in whatever error it returns to an `initialize` request, on any transport. A legacy client cannot recover, and that message may be the only diagnostic a user ever sees.
 
-**An observation from the beta SDK, offered as a hedge rather than a rule.** The `mcp==2.0.0b2` server used throughout this post is dual-era. Sent a legacy `initialize` naming 2025-06-18, with no `MCP-Protocol-Version` header, it answered under that revision, on an event stream, and minted a session as a legacy server would:
+**The SDK used here is dual-era.** The `mcp==2.3.0` server used throughout this post serves both eras. Sent a legacy `initialize` naming 2025-06-18, with no `MCP-Protocol-Version` header, it answered under that revision, on an event stream, and minted a session as a legacy server would:
 
 ```text
 --- a legacy initialize naming 2025-06-18
@@ -576,7 +595,7 @@ protocolVersion answered  2025-06-18
 mcp-session-id minted     True
 ```
 
-A probe against it therefore reports "modern" from `server/discover` and "legacy" from `initialize`, which is exactly why era is defined as a property of the server and cached rather than inferred per request. This is implementation behavior in a beta, not a protocol fact, and worth re-checking against a release build.
+A probe against it therefore reports "modern" from `server/discover` and "legacy" from `initialize`, which is exactly why era is defined as a property of the server and cached rather than inferred per request. That is a property of this implementation, not a protocol fact: a modern-only server answers the same `initialize` with an error that names the revisions it supports.
 
 ## 8. Security that lives at this layer
 
@@ -623,7 +642,7 @@ The reason this choice stays cheap is that it is one line. `stdio_hello.py` and 
 
 ## 10. Make it run: four scripts
 
-Every transcript in this post is printed by one of four scripts in `snippets/`. Each runs from the series root with no arguments, needs only the root `pyproject.toml` environment (the pinned `mcp[cli]==2.0.0b2` and `httpx`), starts whatever server it needs on standard input and output or on a free loopback port, stops it, and exits:
+Every transcript in this post is printed by one of four scripts in `snippets/`. Each runs from the series root with no arguments, needs only the root `pyproject.toml` environment (the pinned `mcp[cli]==2.3.0` and `httpx`), starts whatever server it needs on standard input and output or on a free loopback port, stops it, and exits:
 
 ```text
 uv run python posts\04-transports\snippets\stdio_hello.py
@@ -632,7 +651,7 @@ uv run python posts\04-transports\snippets\http_hello.py
 uv run python posts\04-transports\snippets\progress_stream.py
 ```
 
-Each takes a few seconds, most of it starting Python processes. The serving path of each file sits behind `--serve`, which the no-argument run never takes. These two commands run the post's server for real:
+Each takes between about 3 and 10 seconds, most of it starting Python processes; `stdout_trap.py`, which starts five servers, is the slowest. The serving path of each file sits behind `--serve`, which the no-argument run never takes. These two commands run the post's server for real:
 
 ```text
 uv run python posts\04-transports\snippets\stdio_hello.py --serve
@@ -648,7 +667,7 @@ uv run python posts\03-wire-protocol\snippets\raw_discover.py http://127.0.0.1:8
 | Section | Script | What it prints |
 |---|---|---|
 | 2 | `stdio_hello.py` | three frames by hand, exit code 0, then the SDK client's view |
-| 3 | `stdout_trap.py` | the parse failures with buffered and line-buffered output, then the cheap check twice |
+| 3 | `stdout_trap.py` | where the stray writes land with buffered output, line-buffered output, and a startup banner, then the cheap check twice |
 | 4 | `progress_stream.py` | the headers and raw event stream of one `tools/call` with progress |
 | 4 to 8, 11 | `http_hello.py` | derived headers, the Base64 table, discovery, and every status this server returns |
 
@@ -680,16 +699,17 @@ HTTP 406  (no content-type)
 (empty body)
 ```
 
-**Code ported from stdio sends `notifications/cancelled` over HTTP.** There is no such notification on this transport; closing the response stream is the cancellation. This SDK takes the specification's cannot-accept branch for every notification body, a `400` with a JSON-RPC error whose `id` is `null`:
+**Code ported from stdio sends `notifications/cancelled` over HTTP.** There is no such notification on this transport; closing the response stream is the cancellation. This SDK takes the specification's accepting branch for a notification body, `202 Accepted` with no body, and its source states that the notification is then dropped. The client sees success, and nothing is cancelled:
 
 ```text
 --- a notification body
-HTTP 400  application/json
-{"jsonrpc":"2.0","error":{"code":-32600,
- "message":"Body must be a single JSON-RPC request object"},"id":null}
+HTTP 202  (no content-type)
+(empty body)
 ```
 
-**The header names a legacy revision while the body names 2026-07-28.** The specification prescribes `-32020` for a disagreement between `MCP-Protocol-Version` and the body. This beta routes requests to its legacy or modern code by the header alone, so the request reached the legacy path, which looked for a session and answered with a different error:
+A `202` proves only that the POST arrived. To stop work over HTTP, the client closes the response stream of the request it wants stopped.
+
+**The header names a legacy revision while the body names 2026-07-28.** The specification prescribes `-32020` for a disagreement between `MCP-Protocol-Version` and the body. This SDK, at 2.3.0, still routes requests to its legacy or modern code by the header alone, so the request reached the legacy path, which looked for a session and answered with a different error:
 
 ```text
 --- header names 2025-06-18, body _meta names 2026-07-28
@@ -698,7 +718,7 @@ HTTP 400  application/json
  "message":"Bad Request: Missing session ID"}}
 ```
 
-A "Missing session ID" from a server that has no sessions means the header and the body disagree about the revision. This divergence from the specification belongs to the beta and is worth re-checking against a release build.
+A "Missing session ID" from a server that has no sessions means the header and the body disagree about the revision. The divergence from the specification is the SDK's, and a comment in its source describes header-only routing as the arrangement "for now".
 
 **A reverse proxy forwards a real hostname to a server bound to loopback.** The rebinding protection of section 8 checks `Host` as well as `Origin`, so every request forwarded with the public hostname is refused until `transport_security=TransportSecuritySettings(...)` names that host:
 
@@ -712,8 +732,8 @@ Invalid Host header
 
 ## Common pitfalls
 
-1. **Calling `print()` anywhere in a stdio server.** It writes into the frame stream, the client's parse error names neither the file nor the function, and because standard output is block-buffered on a pipe it can pass every test run; configure `logging` to `sys.stderr` and run the cheap check under `python -u`.
-2. **Letting a child process inherit standard output.** `subprocess.run(["git", "log"])` with no `stdout=` argument writes `git`'s output straight onto the protocol channel, buffered or not; pass `stdout=subprocess.PIPE` or `stdout=subprocess.DEVNULL` for every subprocess a stdio server launches.
+1. **Calling `print()` anywhere in a stdio server.** Even under an SDK that diverts writes made during the session, a banner flushed before `mcp.run()` or text buffered until exit reaches the pipe, and the parse error names neither the file nor the function; configure `logging` to `sys.stderr` and run the cheap check with the host's exact command, reading to end of file.
+2. **Letting a child process inherit standard output.** `subprocess.run(["git", "log"])` with no `stdout=` argument writes wherever descriptor 1 points, which is the frame stream in any server without this SDK's diversion; pass `stdout=subprocess.PIPE` or `stdout=subprocess.DEVNULL` for every subprocess a stdio server launches.
 3. **Retrying a broken stream with the same request id.** There is no resumability and no `Last-Event-ID`, and the specification requires the re-issued request to carry a new id.
 4. **Expecting a `GET` stream or a session.** A modern server answers the `GET` with `405` and ignores the session header; code that opened a `GET /mcp` stream wants `subscriptions/listen` instead.
 5. **Binding a local server to `0.0.0.0` because an example did.** It exposes the server to the network, and in this SDK it also switches off the `Host` and `Origin` checks that loopback turns on.
@@ -729,6 +749,7 @@ Invalid Host header
 - SEP-2575, *Stateless MCP*, and SEP-2567, *Sessionless MCP*. Why the session and the handshake were removed, and the load-balancing argument of section 6.
 - Model Context Protocol, *"The 2026-07-28 MCP Specification Release Candidate"* (2026). The round-robin sentence quoted in section 6.
 - RFC 9110 section 5.1, *HTTP Semantics*. The field-name token syntax an `x-mcp-header` value must satisfy. <https://datatracker.ietf.org/doc/html/rfc9110#section-5.1>
+- MCP Python SDK, release 2.3.0. The server and clients of every snippet, the stdio transport's diversion of standard output in section 3, and the HTTP behavior quoted in sections 4 to 11. <https://github.com/modelcontextprotocol/python-sdk>
 
 Full citations are in [REFERENCES.md](../../REFERENCES.md).
 
