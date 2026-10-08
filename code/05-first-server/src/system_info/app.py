@@ -15,7 +15,8 @@ from mcp.server.mcpserver import MCPServer
 # Under the stdio transport, stdout IS the protocol channel. Anything printed
 # there before the server starts is parsed as a JSON-RPC frame, and a stray
 # print() at import time breaks the connection in a way that is hard to
-# diagnose (once mcp.run() is serving, the SDK diverts later prints to stderr).
+# diagnose (once mcp.run() is serving, the SDK diverts flushed prints to stderr,
+# but a buffered one still reaches the pipe when the process exits).
 # Logging goes to stderr, which a host may capture into a log.
 logging.basicConfig(
     stream=sys.stderr,

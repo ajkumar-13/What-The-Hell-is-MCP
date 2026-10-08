@@ -102,7 +102,8 @@ from mcp.server.mcpserver import MCPServer
 # Under the stdio transport, stdout IS the protocol channel. Anything printed
 # there before the server starts is parsed as a JSON-RPC frame, and a stray
 # print() at import time breaks the connection in a way that is hard to
-# diagnose (once mcp.run() is serving, the SDK diverts later prints to stderr).
+# diagnose (once mcp.run() is serving, the SDK diverts flushed prints to stderr,
+# but a buffered one still reaches the pipe when the process exits).
 # Logging goes to stderr, which a host may capture into a log.
 logging.basicConfig(
     stream=sys.stderr,
@@ -655,7 +656,7 @@ what the server wrote to stderr:
     about to answer
 ```
 
-Once `mcp.run()` has started the stdio transport, the SDK serves the protocol from a private duplicate of standard output and points the process's own standard output at standard error, so a handler cannot reach the wire. Nothing protects a `print()` that runs before that, and the import-time one lands on the wire:
+Once `mcp.run()` has started the stdio transport, the SDK serves the protocol from a private duplicate of standard output and points the process's own standard output at standard error, so a handler's write made while the transport serves lands on standard error. Two writes escape it. Text a handler leaves in Python's stdout buffer, a `print()` without `flush=True`, is flushed at exit, after the SDK points standard output back at the pipe, and reaches the client as one bad line after the last response; [post 04](../04-transports/index.md) prints that run. And nothing protects a `print()` that runs before `mcp.run()`, so the import-time one lands on the wire:
 
 ```
 what the client logged:
@@ -765,7 +766,7 @@ That is not a bug in either the command or the layout; they simply want differen
 1. **Putting `"uv"` rather than the absolute path to `uv` in the configuration.** A desktop host is a graphical application with no shell profile and therefore no `PATH` additions, and this fails silently: the server just never appears.
 2. **Single backslashes in a Windows path inside JSON.** `\t` is an escape sequence and `\U` is invalid JSON, so double every backslash, or use forward slashes, which Windows accepts.
 3. **Closing the host window instead of quitting the host.** The surviving process does not re-read its configuration; end it and start the host again.
-4. **Debugging with `print()`.** Under stdio, standard output is the protocol channel, and the SDK diverts only what runs after `mcp.run()` starts; configure `logging` to `stderr` once in the first module the package imports.
+4. **Debugging with `print()`.** Under stdio, standard output is the protocol channel; the SDK diverts only flushed writes made after `mcp.run()` starts, and a buffered one still reaches the pipe at exit. Configure `logging` to `stderr` once in the first module the package imports.
 5. **Assuming a tool's schema is enforcement.** `limit: int = 25` guarantees an integer, nothing more; the bounds live in the docstring for the model and in the first line of the function body for everyone else.
 
 ## Further reading
