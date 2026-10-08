@@ -1,0 +1,733 @@
+{
+  "standard": "2.1.0",
+  "post": "mcp-003",
+  "next_ordinal": 17,
+  "questions": [
+    {
+      "id": "mcp-003-q01",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "4",
+      "est_minutes": 2,
+      "tags": [
+        "meta",
+        "required-keys"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A client writes a `tools/call` request by hand for a server at revision 2026-07-28. Which `_meta` keys does the specification require on that request, and on every other client request?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "`io.modelcontextprotocol/protocolVersion` and `io.modelcontextprotocol/clientInfo`, which names the caller.",
+          "correct": false,
+          "feedback": "`clientInfo` is a should, not a must, in the specification. The second required key is `clientCapabilities`, even when it is the empty object."
+        },
+        {
+          "key": "b",
+          "text": "`io.modelcontextprotocol/protocolVersion` and `io.modelcontextprotocol/clientCapabilities`.",
+          "correct": true,
+          "feedback": "These are the two keys the schema marks required. Missing either makes the request malformed, and the server answers `-32602` with HTTP status 400."
+        },
+        {
+          "key": "c",
+          "text": "None on `tools/call`, because `server/discover` already told the server who is calling.",
+          "correct": false,
+          "feedback": "There is no earlier message to remember. The server must not infer anything from a previous request, so every request carries its own revision and capabilities."
+        },
+        {
+          "key": "d",
+          "text": "Only `progressToken`, which ties the request to its response stream.",
+          "correct": false,
+          "feedback": "`progressToken` is optional and only opts a request into progress notifications. The correlation of request and response is the JSON-RPC `id`."
+        }
+      ],
+      "explanation": "Section 4 lists the reserved keys: `io.modelcontextprotocol/protocolVersion` and `io.modelcontextprotocol/clientCapabilities` are required on every client request, `clientInfo` is recommended, and the rest are optional. The `mcp==2.0.0b2` SDK of section 10 is stricter and also rejects a request without `clientInfo`, which is why a hand-written client sends all three.",
+      "hints": [
+        "Look for the two keys whose absence makes a request malformed rather than merely unidentified."
+      ]
+    },
+    {
+      "id": "mcp-003-q02",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "8",
+      "est_minutes": 2,
+      "tags": [
+        "error-channels",
+        "tool-execution-error"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A `book_flight` tool receives a well-formed `tools/call` whose `arguments` are `{\"date\": \"1999-01-01\"}` for a flight that must leave next week. How should the server answer?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "With a JSON-RPC `error` object, code `-32602`, because one of the tool's arguments is invalid.",
+          "correct": false,
+          "feedback": "The request satisfies `CallToolRequest` and names a real tool, so nothing is wrong at the protocol layer. A protocol error would also hide the reason from the model."
+        },
+        {
+          "key": "b",
+          "text": "With a result whose `isError` is true and whose text says the date must be in the future.",
+          "correct": true,
+          "feedback": "The request was valid, the tool ran, and the work failed. A successful response with `isError: true` puts the reason where the model can read it and retry."
+        },
+        {
+          "key": "c",
+          "text": "With HTTP status 500 and an empty body, since the booking could not be made.",
+          "correct": false,
+          "feedback": "A failed booking is not a server crash. An empty 500 tells the client nothing, and the model never learns that a different date would work."
+        },
+        {
+          "key": "d",
+          "text": "With a JSON-RPC `error` object, code `-32603`, because the tool raised internally.",
+          "correct": false,
+          "feedback": "`-32603` is an internal failure of the server, not a business rule that refused. The tool did its job and reported a reason the caller can act on."
+        }
+      ],
+      "explanation": "Section 8 separates the two channels: a request that breaks the shape of `CallToolRequest` is a protocol error, while a well-formed request whose values are wrong for the tool is a tool execution error, returned as a successful result with `isError: true` and a message written for the model.",
+      "hints": [
+        "Ask whether anything about the request itself was malformed, or only its value for this particular tool."
+      ]
+    },
+    {
+      "id": "mcp-003-q03",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "10",
+      "est_minutes": 4,
+      "tags": [
+        "sdk-behavior",
+        "error-channels"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "The script `what_can_go_wrong.py` sends broken requests to the post 05 server running on `mcp==2.0.0b2`. Which of these come back as HTTP 200 with a result whose `isError` is true? Select every one that does.",
+      "select": "multiple",
+      "options": [
+        {
+          "key": "a",
+          "text": "A `tools/call` naming `get_wether`, a tool the server does not have.",
+          "correct": true,
+          "feedback": "This SDK answers an unknown tool name with `isError: true` and the text `Unknown tool: get_wether`, although the Tools page prints a `-32602` error for the same case."
+        },
+        {
+          "key": "b",
+          "text": "A `tools/call` to `find_process` whose `name` argument is the number 42.",
+          "correct": true,
+          "feedback": "A value of the wrong type for the tool is an input validation error, which the Tools page and SEP-1303 put among tool execution errors, and the SDK reports it in the result."
+        },
+        {
+          "key": "c",
+          "text": "A `tools/call` to `find_process` whose `arguments` member is the string `\"python\"`.",
+          "correct": false,
+          "feedback": "`arguments` must be an object, so this request breaks the `CallToolRequest` shape. The server refuses it with HTTP 400 and `-32602` before any tool runs."
+        },
+        {
+          "key": "d",
+          "text": "A `tools/list` whose `params` carry no `_meta` object at all.",
+          "correct": false,
+          "feedback": "A request without the required `_meta` keys is malformed, and the server must reject it with `-32602` and HTTP 400 whatever the method is."
+        },
+        {
+          "key": "e",
+          "text": "A `tools/call` to `terminate_process` from a client that declared no capabilities.",
+          "correct": false,
+          "feedback": "The tool needs form elicitation, which the request did not declare, so the server returns `-32021` with HTTP 400 and lists the missing capability in `data`."
+        }
+      ],
+      "explanation": "Section 10 prints every case. The two that reach the result channel are the unknown tool name, where this SDK departs from the Tools page, and the wrong-typed argument, which the Tools page itself classifies as a tool execution error. The other three break the request: a non-object `arguments` and a missing `_meta` earn `-32602`, and an undeclared capability earns `-32021`, all with HTTP 400.",
+      "hints": [
+        "Separate requests that break a schema the server checks before running any tool from requests that reach a tool.",
+        "One of the result-channel cases is where the SDK differs from the specification's own example."
+      ]
+    },
+    {
+      "id": "mcp-003-q04",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "3",
+      "est_minutes": 2,
+      "tags": [
+        "server-discover",
+        "capabilities"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A `server/discover` result contains `\"capabilities\": {\"tools\": {\"listChanged\": true}}` and nothing else under `capabilities`. What can the client conclude from that object alone?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The server exposes tools and announces list changes, and `tools/list` says which tools.",
+          "correct": true,
+          "feedback": "`capabilities` declares that a primitive exists and which sub-features it supports. The catalog itself comes from `tools/list`."
+        },
+        {
+          "key": "b",
+          "text": "The server has exactly one tool, because the object has exactly one key.",
+          "correct": false,
+          "feedback": "The keys of `capabilities` are primitives such as `tools` and `prompts`, not tool names. One key says nothing about how many tools there are."
+        },
+        {
+          "key": "c",
+          "text": "The server also has prompts, since `prompts` is implied by `tools`.",
+          "correct": false,
+          "feedback": "A missing key means the capability is absent. Calling `prompts/list` on this server earns `-32601`, with HTTP 404 on Streamable HTTP."
+        },
+        {
+          "key": "d",
+          "text": "The client may now stop sending its own capabilities in `_meta` on later requests to this server.",
+          "correct": false,
+          "feedback": "Discovery is one-directional. The client still declares its capabilities in `_meta` on every request, because the server must not remember them."
+        }
+      ],
+      "explanation": "Section 3 says `capabilities` is a `ServerCapabilities` object: a present key means the primitive is supported, a missing key means it is absent, and it is not a catalog. The tools themselves are listed by `tools/list`.",
+      "hints": [
+        "Ask whether the keys of `capabilities` name primitives or individual tools."
+      ]
+    },
+    {
+      "id": "mcp-003-q05",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "7",
+      "est_minutes": 4,
+      "tags": [
+        "handles",
+        "list-variation"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A database server exposes a `connect` tool. After a client calls it, later `tools/list` requests from that client also show a `query` tool. The server runs as three replicas behind a round-robin load balancer. Which statement is correct?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "It is conformant, provided `tools/list` answers with a `ttlMs` of `0`.",
+          "correct": false,
+          "feedback": "Caching hints do not license variation. The rule forbids list results that vary per connection or as a side effect of other requests, whatever `ttlMs` says."
+        },
+        {
+          "key": "b",
+          "text": "It is conformant, because each caller is free to see a different tool list.",
+          "correct": false,
+          "feedback": "A list may differ by the authorization presented on the request, not by what the caller did earlier. Here the difference comes from history."
+        },
+        {
+          "key": "c",
+          "text": "It is non-conformant; `connect` should return a handle that `query` takes as an argument.",
+          "correct": true,
+          "feedback": "List results must not vary as a side effect of other requests. A server-minted handle carries the open connection forward as an ordinary argument, so any replica can serve `query`."
+        },
+        {
+          "key": "d",
+          "text": "It is non-conformant only because the balancer should pin each client to the replica that served `connect`.",
+          "correct": false,
+          "feedback": "Pinning would bring back the sticky routing that removing sessions was meant to end, and the list would still vary by history."
+        }
+      ],
+      "explanation": "Section 7 states the rule: list results must not vary per connection or as a side effect of other requests on that connection, but may vary by authorization. Cross-call state goes into a handle the server mints, returns in a result, and accepts back as a tool argument.",
+      "hints": [
+        "Compare filtering by credential with filtering by what the caller did before.",
+        "Ask where the fact that a connection is open should live so that a different replica can see it."
+      ]
+    },
+    {
+      "id": "mcp-003-q06",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "4",
+      "est_minutes": 1,
+      "tags": [
+        "meta",
+        "server-info"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "Which reserved `_meta` key does a server put on its results to identify the software that produced them?",
+      "answer": {
+        "model": "`io.modelcontextprotocol/serverInfo`, an `Implementation` object with at least a name and a version.",
+        "accept": [
+          "^(?![\\s\\S]*\\bserver[\\s_-]?info\\b[^.;\\n]*\\b(?:set|sent|written|added|put|carried)\\s+by\\s+(?:the\\s+|a\\s+)?client\\b)(?![\\s\\S]*\\b(?:the\\s+|a\\s+)?client\\s+(?:sets|sends|puts|adds|writes|includes)\\b[^.;\\n]*\\bserver[\\s_-]?info\\b)(?![\\s\\S]*\\bserver[\\s_-]?info\\b[^.;\\n]*\\bon\\s+(?:its\\s+|every\\s+|each\\s+|the\\s+|a\\s+)?(?:client\\s+)?requests?\\b)(?![\\s\\S]*\\b(?:maybe|perhaps|possibly|probably|unsure|not\\s+sure|i\\s+think|guess|might\\s+be|could\\s+be)\\b)(?![\\s\\S]*\\b(?:not|never|isn't|is\\s+not|rather\\s+than|instead\\s+of)\\s+(?:the\\s+)?`?(?:io\\.modelcontextprotocol/)?serverinfo\\b)(?![\\s\\S]*\\bclient[\\s_-]?info\\b[\\s`'\\\"]*(?:,|/|\\bor\\b|\\band\\b|&|\\+)[\\s`'\\\"]*(?!not\\b|never\\b)(?:the\\s+|also\\s+)?[\\s`'\\\"]*(?:io\\.modelcontextprotocol/)?server[\\s_-]?info\\b)(?![\\s\\S]*\\bserver[\\s_-]?info\\b[\\s`'\\\"]*(?:,|/|\\bor\\b|\\band\\b|&|\\+)[\\s`'\\\"]*(?!not\\b|never\\b)(?:the\\s+|also\\s+)?[\\s`'\\\"]*(?:io\\.modelcontextprotocol/)?client[\\s_-]?info\\b)[\\s\\S]*\\bserver[\\s_-]?info\\b"
+        ]
+      },
+      "explanation": "Section 4 lists `io.modelcontextprotocol/serverInfo` as the result-side key, recommended rather than required, and its client-side twin `io.modelcontextprotocol/clientInfo`. Both are self-reported and meant for logs, never for security decisions. Section 9 shows that `mcp==2.0.0b2` returns it as a top-level field of the discovery result instead.",
+      "hints": [
+        "It is the result-side twin of the key a client uses to name itself."
+      ]
+    },
+    {
+      "id": "mcp-003-q07",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "3",
+      "est_minutes": 1,
+      "tags": [
+        "server-discover",
+        "methods"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "Revision 2026-07-28 has no handshake. Which method does a client call, if it wants to, to learn the revisions a server supports and the capabilities it has?",
+      "answer": {
+        "model": "`server/discover`, which every server must implement and no client is required to call.",
+        "accept": [
+          "^(?![\\s\\S]*(?<!no longer )(?<!not )(?<!never )(?<!n't )\\b(?:sends?|sending|calls?|calling|first)\\s+(?:an?\\s+|the\\s+)?`?initialize\\b)(?![\\s\\S]*\\binitialize\\b[\\s`'\\\"]*,?\\s*(?:and\\s+)?then\\b)(?![\\s\\S]*server\\s*/?\\s*discover\\b[^.\\n]*\\b(?:sent|initiated|called)\\s+by\\s+the\\s+server\\b)(?![\\s\\S]*\\bthe\\s+server\\s+(?:sends|calls|initiates|answers\\s+with|replies\\s+with|responds\\s+with)\\s+(?:a\\s+|an\\s+)?`?server\\s*/?\\s*discover)(?![\\s\\S]*\\b(?:maybe|perhaps|possibly|probably|unsure|not\\s+sure|i\\s+think|guess|might\\s+be|could\\s+be)\\b)(?![\\s\\S]*\\b(?:not|never|isn't|is\\s+not|rather\\s+than|instead\\s+of)\\s+(?:the\\s+)?`?server\\s*/?\\s*discover\\b)(?![\\s\\S]*\\b(?:initialize|tools/list|ping)\\b[\\s`'\\\"]*(?:,|\\bor\\b|\\band\\b|&|\\+)[\\s`'\\\"]*(?!not\\b|never\\b)(?:the\\s+|also\\s+)?[\\s`'\\\"]*server\\s*/?\\s*discover)(?![\\s\\S]*server\\s*/?\\s*discover[\\s`'\\\"]*(?:,|\\bor\\b|\\band\\b|&|\\+)[\\s`'\\\"]*(?!not\\b|never\\b)(?:the\\s+|also\\s+)?[\\s`'\\\"]*\\b(?:initialize|tools/list|ping)\\b)[\\s\\S]*\\bserver\\s*/?\\s*discover\\b"
+        ]
+      },
+      "explanation": "Section 3 introduces `server/discover`: its `params` hold only `_meta`, and its result carries `supportedVersions`, `capabilities`, `ttlMs` and `cacheScope`. It replaced the `initialize` handshake, which no longer exists.",
+      "hints": [
+        "It is the one method every server must implement, and its params carry nothing but `_meta`."
+      ]
+    },
+    {
+      "id": "mcp-003-q08",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "8",
+      "est_minutes": 3,
+      "tags": [
+        "error-codes",
+        "http-status"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "Give the JSON-RPC error code and the HTTP status a 2026-07-28 server returns over Streamable HTTP for each case: (1) a `tools/list` POST whose `Mcp-Method` header says `prompts/list`; (2) a request for the method `tools/lsit`, which the server does not implement.",
+      "answer": {
+        "parts": [
+          {
+            "label": "case 1, JSON-RPC code",
+            "value": -32020,
+            "tolerance": 0,
+            "unit": ""
+          },
+          {
+            "label": "case 1, HTTP status",
+            "value": 400,
+            "tolerance": 0,
+            "unit": ""
+          },
+          {
+            "label": "case 2, JSON-RPC code",
+            "value": -32601,
+            "tolerance": 0,
+            "unit": ""
+          },
+          {
+            "label": "case 2, HTTP status",
+            "value": 404,
+            "tolerance": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "precision_note": "The table of section 8 gives `-32020` with 400 for a header that does not match the body and `-32601` with 404 for an unknown method; snippets/what_can_go_wrong.py prints `HTTP 400  error -32020` and `HTTP 404  error -32601` for exactly these two requests.",
+      "explanation": "A routing header that disagrees with the body is `HeaderMismatch`, `-32020`, one of the three codes MCP defines itself, always with HTTP 400. An unknown method is the JSON-RPC standard `-32601`, and on Streamable HTTP its status is 404 with a JSON-RPC body. Answering `-32001` uses the code from before the renumbering, and answering `-32602` for the second case confuses an unknown method with bad parameters.",
+      "hints": [
+        "The first case is one of the three codes MCP allocates in the range from `-32020` upward.",
+        "The second is a standard JSON-RPC code whose HTTP status is not 400."
+      ]
+    },
+    {
+      "id": "mcp-003-q09",
+      "type": "numeric",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "9",
+      "est_minutes": 6,
+      "tags": [
+        "meta",
+        "envelope-size",
+        "predict-output"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "`raw_discover.py` prints `_meta 183 bytes on every request`: the length of its `_meta` object encoded as compact JSON (separators `,` and `:` with no spaces). Suppose `build` were changed so that `clientInfo` has the name `probe` instead of `raw-discover`, and `clientCapabilities` is `{\"elicitation\": {\"form\": {}}}` instead of `{}`. How many bytes would the line print?",
+      "stimulus": {
+        "kind": "code",
+        "language": "python",
+        "content": "envelope = json.dumps(build(1, \"server/discover\")[\"params\"][\"_meta\"], separators=(\",\", \":\"))\nprint(f\"_meta         {len(envelope.encode())} bytes on every request\")\n"
+      },
+      "answer": {
+        "value": 201,
+        "tolerance": 0,
+        "unit": "bytes"
+      },
+      "precision_note": "From the 183 bytes snippets/raw_discover.py prints: the name loses 7 characters (176), the capabilities object grows from 2 to 27 characters (201). Rechecked with json.dumps on the changed dictionary and the same separators.",
+      "explanation": "Only two values change. `raw-discover` is 12 characters and `probe` is 5, so the name saves 7 bytes: 183 becomes 176. The empty object `{}` is 2 bytes and `{\"elicitation\":{\"form\":{}}}` is 27, so the capabilities add 25: 176 becomes 201. Forgetting the shorter name gives 208, and counting with the default separators, which add a space after every colon and comma, gives a larger number again; the tolerance of zero rejects both.",
+      "hints": [
+        "Count the change in each of the two values separately and add them to 183.",
+        "In compact JSON the new capabilities object is written with no spaces at all: count its characters, quotes and braces included."
+      ]
+    },
+    {
+      "id": "mcp-003-q10",
+      "type": "order",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "7",
+      "est_minutes": 3,
+      "tags": [
+        "handles",
+        "stateless"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "Put in order the steps by which a basket handle carries state across two tool calls on a server with three stateless replicas.",
+      "items": [
+        {
+          "key": "a",
+          "text": "The model includes `\"basket_id\": \"bsk_a1b2c3\"` in the arguments of an `add_item` call"
+        },
+        {
+          "key": "b",
+          "text": "A replica mints `bsk_a1b2c3` and returns it in the result's `structuredContent`"
+        },
+        {
+          "key": "c",
+          "text": "The client sends a `create_basket` tool call with empty arguments"
+        },
+        {
+          "key": "d",
+          "text": "Whichever replica receives `add_item` checks that this caller may touch the basket, then adds the item"
+        }
+      ],
+      "answer": [
+        "c",
+        "b",
+        "a",
+        "d"
+      ],
+      "partial_credit": true,
+      "explanation": "Section 7 traces the handle: the creating call comes first, the server mints the opaque identifier and returns it, the model carries it into a later call as an ordinary argument, and the replica that happens to receive that call validates the caller before acting. No step depends on which replica served an earlier one.",
+      "hints": [
+        "A handle cannot be passed back before some server has minted it."
+      ]
+    },
+    {
+      "id": "mcp-003-q11",
+      "type": "match",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "4",
+      "est_minutes": 4,
+      "tags": [
+        "meta",
+        "reserved-keys"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "Match each reserved `_meta` key to the side that sets it and the messages it rides on.",
+      "left": [
+        {
+          "key": "a",
+          "text": "`io.modelcontextprotocol/protocolVersion`"
+        },
+        {
+          "key": "b",
+          "text": "`io.modelcontextprotocol/serverInfo`"
+        },
+        {
+          "key": "c",
+          "text": "`io.modelcontextprotocol/subscriptionId`"
+        },
+        {
+          "key": "d",
+          "text": "`io.modelcontextprotocol/logLevel`"
+        },
+        {
+          "key": "e",
+          "text": "`traceparent`"
+        }
+      ],
+      "right": [
+        {
+          "key": "p",
+          "text": "The client, required on every request"
+        },
+        {
+          "key": "q",
+          "text": "The server, recommended on its results"
+        },
+        {
+          "key": "r",
+          "text": "The server, required on messages of a `subscriptions/listen` stream"
+        },
+        {
+          "key": "s",
+          "text": "The client, optional, opting one request into log notifications"
+        },
+        {
+          "key": "t",
+          "text": "Either side, optional on any message, unprefixed by design"
+        },
+        {
+          "key": "u",
+          "text": "The client, sent once in `initialize` and remembered by the server"
+        }
+      ],
+      "answer": {
+        "a": "p",
+        "b": "q",
+        "c": "r",
+        "d": "s",
+        "e": "t"
+      },
+      "explanation": "Section 4 tabulates the reserved keys. The revision is required on every client request; `serverInfo` is the server's recommended self-identification on results; `subscriptionId` is required on messages of a listen stream; `logLevel` is an optional per-request opt-in; the three trace keys may ride on any message and skip the prefix rule to match W3C Trace Context. Nothing is sent once and remembered, because `initialize` no longer exists.",
+      "hints": [
+        "Decide first which keys a server sets and which a client sets, then use the required-or-optional column."
+      ]
+    },
+    {
+      "id": "mcp-003-q12",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "9",
+      "est_minutes": 12,
+      "tags": [
+        "hand-written-client",
+        "headers",
+        "meta"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "Complete `build_call` so that the body and headers it returns form a `tools/call` POST that a 2026-07-28 server over Streamable HTTP accepts. The body must carry both required `_meta` keys plus `io.modelcontextprotocol/clientInfo`, since the SDK of section 10 rejects requests without it, and must declare `capabilities` as given, or no optional capabilities when it is `None`. The headers must carry everything a `tools/call` needs.",
+      "kind": "complete",
+      "language": "python",
+      "starter": "PROTOCOL_VERSION = \"2026-07-28\"\n\n\ndef build_call(request_id, tool, arguments, capabilities=None):\n    \"\"\"Return (body, headers) for one tools/call POST over Streamable HTTP.\"\"\"\n    body = {\n        \"jsonrpc\": \"2.0\",\n        \"id\": request_id,\n        \"method\": \"tools/call\",\n        \"params\": {\"name\": tool, \"arguments\": arguments},\n    }\n    headers = {\n        \"Content-Type\": \"application/json\",\n        \"Accept\": \"application/json, text/event-stream\",\n    }\n    return body, headers\n",
+      "solution": "PROTOCOL_VERSION = \"2026-07-28\"\n\n\ndef build_call(request_id, tool, arguments, capabilities=None):\n    \"\"\"Return (body, headers) for one tools/call POST over Streamable HTTP.\"\"\"\n    body = {\n        \"jsonrpc\": \"2.0\",\n        \"id\": request_id,\n        \"method\": \"tools/call\",\n        \"params\": {\n            \"name\": tool,\n            \"arguments\": arguments,\n            \"_meta\": {\n                \"io.modelcontextprotocol/protocolVersion\": PROTOCOL_VERSION,\n                \"io.modelcontextprotocol/clientInfo\": {\"name\": \"hand-client\", \"version\": \"1.0.0\"},\n                \"io.modelcontextprotocol/clientCapabilities\": dict(capabilities or {}),\n            },\n        },\n    }\n    headers = {\n        \"Content-Type\": \"application/json\",\n        \"Accept\": \"application/json, text/event-stream\",\n        \"MCP-Protocol-Version\": PROTOCOL_VERSION,\n        \"Mcp-Method\": \"tools/call\",\n        \"Mcp-Name\": tool,\n    }\n    return body, headers\n",
+      "tests": "import json\n\nbody, headers = build_call(7, \"find_process\", {\"name\": \"python\"})\njson.dumps(body)\nassert body[\"jsonrpc\"] == \"2.0\" and body[\"id\"] == 7 and body[\"method\"] == \"tools/call\"\nparams = body[\"params\"]\nassert params[\"name\"] == \"find_process\" and params[\"arguments\"] == {\"name\": \"python\"}\nassert \"_meta\" in params, \"the per-request metadata goes in params._meta\"\nmeta = params[\"_meta\"]\nassert meta.get(\"io.modelcontextprotocol/protocolVersion\") == \"2026-07-28\"\nassert \"io.modelcontextprotocol/clientCapabilities\" in meta, \"clientCapabilities is required, even when empty\"\nassert meta[\"io.modelcontextprotocol/clientCapabilities\"] == {}, \"no optional capabilities means an empty object\"\ninfo = meta.get(\"io.modelcontextprotocol/clientInfo\")\nassert isinstance(info, dict) and info.get(\"name\") and info.get(\"version\"), \"send clientInfo with a name and a version\"\n\nwanted = {k.lower(): v for k, v in headers.items()}\nassert wanted.get(\"content-type\") == \"application/json\"\naccept = wanted.get(\"accept\", \"\")\nassert \"application/json\" in accept and \"text/event-stream\" in accept\nassert wanted.get(\"mcp-protocol-version\") == meta[\"io.modelcontextprotocol/protocolVersion\"], \"header and body revisions must match\"\nassert wanted.get(\"mcp-method\") == \"tools/call\"\nassert wanted.get(\"mcp-name\") == \"find_process\", \"a tools/call mirrors the tool name into Mcp-Name\"\n\ncaps = {\"elicitation\": {\"form\": {}}}\nbody2, headers2 = build_call(\"c-2\", \"terminate_process\", {\"pid\": 4242}, caps)\nmeta2 = body2[\"params\"][\"_meta\"]\nassert meta2[\"io.modelcontextprotocol/clientCapabilities\"] == {\"elicitation\": {\"form\": {}}}\nassert {k.lower(): v for k, v in headers2.items()}.get(\"mcp-name\") == \"terminate_process\"\n\nbody3, _ = build_call(8, \"get_system_info\", {})\nbody3[\"params\"][\"_meta\"][\"io.modelcontextprotocol/clientCapabilities\"][\"elicitation\"] = {}\nbody4, _ = build_call(9, \"get_system_info\", {})\nassert body4[\"params\"][\"_meta\"][\"io.modelcontextprotocol/clientCapabilities\"] == {}, \"each request needs its own capabilities object\"\nprint(\"all tests passed\")\n",
+      "explanation": "Section 9's `build` puts the per-request metadata in `params._meta`: the revision, `clientInfo`, and `clientCapabilities`, which must be present even as `{}`. Section 6 adds the headers: `MCP-Protocol-Version` matching the body's revision, `Mcp-Method`, and, for a `tools/call`, `Mcp-Name` mirroring the tool name. A fresh capabilities object per call keeps one request's declaration from leaking into the next.",
+      "hints": [
+        "Copy the shape of `build` from section 9 for the body; the `_meta` object belongs inside `params`.",
+        "Section 6, step 5, lists the headers of a `tools/call`; one of them repeats the tool name.",
+        "When `capabilities` is `None`, declare an empty object, and build a new one on each call."
+      ]
+    },
+    {
+      "id": "mcp-003-q13",
+      "type": "code",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "8",
+      "est_minutes": 15,
+      "tags": [
+        "error-channels",
+        "result-type",
+        "client"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A client sorts every parsed JSON-RPC response with `classify`, but it reports a failed tool as a success and crashes on results from older servers. Fix it so that it returns `\"protocol-error\"` for an `error` response, `\"tool-error\"` for a completed result with `isError` true, `\"input-required\"` for `input_required`, `\"complete\"` for a successful completed result, an advertised extension value unchanged, and `\"invalid\"` for any other `resultType`. Treat an absent `resultType` and an absent `isError` as the specification says.",
+      "kind": "fix",
+      "language": "python",
+      "starter": "def classify(message, advertised=()):\n    \"\"\"Sort one parsed JSON-RPC response into the channel it arrived on.\n\n    Returns \"protocol-error\", \"tool-error\", \"input-required\", \"complete\",\n    an advertised extension value unchanged, or \"invalid\".\n    advertised holds the extra resultType values of extensions the client\n    has advertised in its capabilities.\n    \"\"\"\n    if \"error\" in message:\n        return \"protocol-error\"\n    result = message[\"result\"]\n    kind = result[\"resultType\"]\n    if kind == \"input_required\":\n        return \"input-required\"\n    return \"complete\"\n",
+      "solution": "def classify(message, advertised=()):\n    \"\"\"Sort one parsed JSON-RPC response into the channel it arrived on.\n\n    Returns \"protocol-error\", \"tool-error\", \"input-required\", \"complete\",\n    an advertised extension value unchanged, or \"invalid\".\n    advertised holds the extra resultType values of extensions the client\n    has advertised in its capabilities.\n    \"\"\"\n    if \"error\" in message:\n        return \"protocol-error\"\n    result = message[\"result\"]\n    kind = result.get(\"resultType\", \"complete\")\n    if kind == \"input_required\":\n        return \"input-required\"\n    if kind == \"complete\":\n        return \"tool-error\" if result.get(\"isError\", False) else \"complete\"\n    if kind in advertised:\n        return kind\n    return \"invalid\"\n",
+      "tests": "ok = {\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"resultType\": \"complete\", \"content\": []}}\nassert classify(ok) == \"complete\"\n\nfailed = {\"jsonrpc\": \"2.0\", \"id\": 4, \"result\": {\"resultType\": \"complete\", \"isError\": True,\n          \"content\": [{\"type\": \"text\", \"text\": \"Invalid departure date: must be in the future.\"}]}}\nassert classify(failed) == \"tool-error\", \"isError: true is a tool execution error, not a success\"\n\nexplicit_false = {\"jsonrpc\": \"2.0\", \"id\": 5, \"result\": {\"resultType\": \"complete\", \"isError\": False, \"content\": []}}\nassert classify(explicit_false) == \"complete\"\n\nlegacy = {\"jsonrpc\": \"2.0\", \"id\": 2, \"result\": {\"tools\": []}}\nassert classify(legacy) == \"complete\", \"an absent resultType must be treated as complete\"\n\nlegacy_failed = {\"jsonrpc\": \"2.0\", \"id\": 3, \"result\": {\"isError\": True, \"content\": []}}\nassert classify(legacy_failed) == \"tool-error\"\n\nerror = {\"jsonrpc\": \"2.0\", \"id\": 6, \"error\": {\"code\": -32602, \"message\": \"Unknown tool: get_wether\"}}\nassert classify(error) == \"protocol-error\"\n\nparse = {\"jsonrpc\": \"2.0\", \"id\": None, \"error\": {\"code\": -32700, \"message\": \"Parse error\"}}\nassert classify(parse) == \"protocol-error\"\n\nasking = {\"jsonrpc\": \"2.0\", \"id\": 7, \"result\": {\"resultType\": \"input_required\", \"requestState\": \"opaque\"}}\nassert classify(asking) == \"input-required\"\n\ntask = {\"jsonrpc\": \"2.0\", \"id\": 8, \"result\": {\"resultType\": \"task\", \"taskId\": \"t-1\"}}\nassert classify(task) == \"invalid\", \"a value from an extension the client did not advertise is invalid\"\nassert classify(task, advertised=(\"task\",)) == \"task\"\n\nodd = {\"jsonrpc\": \"2.0\", \"id\": 9, \"result\": {\"resultType\": \"partial\", \"content\": []}}\nassert classify(odd) == \"invalid\", \"an unrecognized resultType must be treated as invalid\"\nodd_failed = {\"jsonrpc\": \"2.0\", \"id\": 10, \"result\": {\"resultType\": \"partial\", \"isError\": True, \"content\": []}}\nassert classify(odd_failed) == \"invalid\", \"isError marks a tool error only on a result recognized as complete\"\nprint(\"all tests passed\")\n",
+      "explanation": "Section 8 puts a tool that ran and failed in a successful result with `isError: true`, which defaults to false when absent, so the `error` member alone cannot tell a client that the work failed. Section 5 adds the `resultType` rules: an absent value is `\"complete\"`, a value from an advertised extension is accepted, and any other unrecognized value is invalid.",
+      "hints": [
+        "Two fields can be missing in a valid response: read both with a default.",
+        "Section 5 gives four rules for `resultType`; the starter applies only one of them.",
+        "Only a `complete` result can carry a tool execution error, so check `isError` after recognizing the result type."
+      ]
+    },
+    {
+      "id": "mcp-003-q14",
+      "type": "long",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "8",
+      "est_minutes": 15,
+      "tags": [
+        "error-channels",
+        "critique",
+        "sdk-behavior"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A team reviews its server's errors. A booking date in the past is answered with a JSON-RPC error, code `-32602`. An unknown tool name is answered, as `mcp==2.0.0b2` does, with a result whose `isError` is true. A request without `_meta` is answered with HTTP 200 and an empty tool list. Critique each choice against revision 2026-07-28: say which channel each case belongs in, what the model or client sees under the team's choice, and what the server should send instead.",
+      "kind": "critique",
+      "solution": "**The past booking date.** The request is well formed and names a real tool; only the value is wrong for this tool, which the Tools page lists among tool execution errors. It belongs in a successful result with `resultType: \"complete\"`, `isError: true`, and text such as \"departure date must be in the future\". As a `-32602` error it reaches the client as a protocol failure, which a client is not required to pass to the model, so the model never learns that another date would work.\n\n**The unknown tool name.** The Tools page treats a name the server does not have as a protocol error, `-32602`, because no tool ran and a model is unlikely to fix the request by itself. The team's choice matches what `mcp==2.0.0b2` does, so the result reaches the model as text, `Unknown tool: ...`, and a client that only checks for an `error` member records a success. The conformant answer is the JSON-RPC error; a team that keeps the SDK's behavior should know that it differs from the specification and make its client check `isError` as well.\n\n**The request without `_meta`.** A request missing `io.modelcontextprotocol/protocolVersion` or `io.modelcontextprotocol/clientCapabilities` is malformed, and the server must reject it with `-32602` and HTTP 400. Answering 200 with an empty list hides the client's bug: the client concludes that the server has no tools, and nothing tells it that its own envelope is incomplete.",
+      "rubric": [
+        {
+          "criterion": "Places the past date in the tool execution channel with isError true and a corrective message, and explains that a protocol error hides the reason from the model",
+          "points": 3
+        },
+        {
+          "criterion": "Places the unknown tool name in the protocol channel as -32602 per the Tools page, and notes that the SDK's isError answer differs from the specification",
+          "points": 3
+        },
+        {
+          "criterion": "States that a request missing a required _meta key must be rejected with -32602 and HTTP 400, and says what the empty list misleads the client into concluding",
+          "points": 3
+        },
+        {
+          "criterion": "For each case says what the model or the client actually sees under the team's choice",
+          "points": 1
+        }
+      ],
+      "answer_length": "three short paragraphs",
+      "explanation": "Section 8 gives the rule: a request that breaks the method's shape, or names a tool or method the server lacks, is a protocol error; a well-formed request whose values are wrong for the tool is a tool execution error. Section 4 makes the missing `_meta` keys a `-32602` with HTTP 400, and section 10 shows where the SDK departs from the Tools page.",
+      "hints": [
+        "For each case, ask first whether any tool ran.",
+        "Then ask who needs to read the reason: the model, so that it can retry, or the client author, so that the request gets fixed."
+      ]
+    },
+    {
+      "id": "mcp-003-q15",
+      "type": "long",
+      "track": "connect",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "7",
+      "est_minutes": 12,
+      "tags": [
+        "handles",
+        "load-balancing",
+        "deployment"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A shopping server runs as three identical replicas behind a round-robin load balancer, with no session affinity. A customer creates a basket and then adds three items, and each of the four tool calls lands on a different replica than the one before. Explain why this works under revision 2026-07-28, where the basket's contents must live, and which two design considerations for handles matter most when the server is deployed this way.",
+      "kind": "connect",
+      "connects": [
+        "mcp-021"
+      ],
+      "solution": "**Why any replica can answer.** Every request carries its own revision and capabilities in `_meta`, and the server is forbidden from inferring anything from an earlier request, so a replica that has never seen this client has everything it needs to process the request. There is no `Mcp-Session-Id` for the balancer to pin on and no handshake whose outcome a later request depends on.\n\n**Where the basket lives.** Not in the memory of the replica that created it, which the next request will probably not reach. The basket's contents belong in storage every replica can read, such as a shared database, and the request carries only the handle `bsk_...` that names it, minted by the creating call and passed back by the model as an ordinary `basket_id` argument. The protocol knows nothing about it; to the wire it is a string in a result and a string in an argument object.\n\n**The two considerations.** Authorization: a handle is a name, not a capability, so whichever replica receives `add_item` must check that this caller may touch this basket, and on an unauthenticated server the handle needs the entropy of a version 4 universally unique identifier. Expiry: a replica that finds the basket gone returns a tool execution error, so the model can create a new basket rather than fail the conversation. Opacity and a lifetime stated in the tool description still apply, but those two are what a scaled deployment depends on. Post 21 deploys a server this way, as several replicas behind a plain round-robin load balancer.",
+      "rubric": [
+        {
+          "criterion": "Explains that each request is self-contained because of the per-request _meta and the ban on inferring state from earlier requests",
+          "points": 2
+        },
+        {
+          "criterion": "Places the basket contents in storage shared by all replicas and only the handle in the requests",
+          "points": 3
+        },
+        {
+          "criterion": "Describes the handle as server-minted, opaque, and passed back by the model as an ordinary tool argument",
+          "points": 2
+        },
+        {
+          "criterion": "Names authorization on every call and expiry as a tool execution error as the considerations that matter under round-robin routing",
+          "points": 3
+        }
+      ],
+      "answer_length": "three short paragraphs",
+      "explanation": "Section 7 introduces the handle as the answer to cross-call state and lists four design considerations from the Tools page; the round-robin argument comes from sections 6 and 7, and post 21 turns it into a deployment. The handle names state; it is not the state.",
+      "hints": [
+        "Start from what a replica that has never seen this client needs in order to process `add_item`.",
+        "Then ask where the items can be stored so that the next replica, not the one that created the basket, can see them."
+      ]
+    },
+    {
+      "id": "mcp-003-q16",
+      "type": "mcq",
+      "track": "connect",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "5",
+      "est_minutes": 3,
+      "tags": [
+        "result-type",
+        "request-state",
+        "mrtr"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-08",
+      "prompt": "A `tools/call` with id `3` is answered with `resultType: \"input_required\"`, a request for the user's confirmation, and a `requestState` string. What does the client do next?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Waits on the same connection for the server to send it an `elicitation/create` request with the question.",
+          "correct": false,
+          "feedback": "Servers must not initiate JSON-RPC requests in this revision. The question is already inside the result the client received."
+        },
+        {
+          "key": "b",
+          "text": "Answers request `3` again with a JSON-RPC response that carries the user's answer.",
+          "correct": false,
+          "feedback": "Clients do not send JSON-RPC responses. Request `3` is finished; the server answered it with a partial result."
+        },
+        {
+          "key": "c",
+          "text": "Sends a new `tools/call` with a new id, carrying the answer and the `requestState` unchanged.",
+          "correct": true,
+          "feedback": "The original request is over. The retry is a brand new request, and the client echoes `requestState` byte for byte without reading it."
+        },
+        {
+          "key": "d",
+          "text": "Decodes `requestState` to find out which question to show the user.",
+          "correct": false,
+          "feedback": "`requestState` is opaque to the client, which must echo it without inspecting it. The question to show comes from the input requests in the result."
+        }
+      ],
+      "explanation": "Section 5 says that an `input_required` result ends the original request, and anything the client does next is a new request with a new id; section 7 adds that `requestState` is opaque and echoed verbatim. Post 08 builds the whole loop.",
+      "connects": [
+        "mcp-008"
+      ],
+      "hints": [
+        "Ask whether request `3` is still open once its result has arrived."
+      ]
+    }
+  ]
+}
