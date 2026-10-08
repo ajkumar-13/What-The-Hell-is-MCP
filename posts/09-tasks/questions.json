@@ -1,0 +1,763 @@
+{
+  "standard": "2.1.0",
+  "post": "mcp-009",
+  "next_ordinal": 18,
+  "questions": [
+    {
+      "id": "mcp-009-q01",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "3",
+      "est_minutes": 1,
+      "tags": [
+        "extensions",
+        "server-directed"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A client puts `\"io.modelcontextprotocol/tasks\": {}` in the `extensions` map of its per-request capabilities on a `tools/call`. What has it told the server?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "That it asks for this call to be run as a task.",
+          "correct": false,
+          "feedback": "Declaring the extension is not a request for a task. The server is the sole decider; the client only says it can handle a task if one comes back."
+        },
+        {
+          "key": "b",
+          "text": "That it can handle a task result if the server chooses to return one for this request.",
+          "correct": true,
+          "feedback": "Right. The declaration signals support, and the server decides per request whether to materialize a task."
+        },
+        {
+          "key": "c",
+          "text": "That the server may return tasks to it on every later request without a further declaration.",
+          "correct": false,
+          "feedback": "A server must not return a task to a client that did not declare the extension on that request, regardless of prior declarations. Each request stands alone."
+        },
+        {
+          "key": "d",
+          "text": "That the tool it is calling advertised `execution.taskSupport` as `required`.",
+          "correct": false,
+          "feedback": "That per-tool field belonged to 2025-11-25 and does not exist in revision 2026-07-28; nothing about the tool is implied."
+        }
+      ],
+      "explanation": "Task creation is server-directed: the client signals support by including the extension in its per-request capabilities, and the server decides on a per-request basis whether to create a task. Declaring support is a statement of ability, not a request, and it holds only for the request that carries it.",
+      "hints": [
+        "Ask who the specification calls the sole decider."
+      ]
+    },
+    {
+      "id": "mcp-009-q02",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "6",
+      "est_minutes": 2,
+      "tags": [
+        "result-type",
+        "tasks-get"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A client polls a running task with `tasks/get`. Which `resultType` must the result carry?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "`\"task\"`, because the payload describes a task.",
+          "correct": false,
+          "feedback": "`\"task\"` is reserved for the `CreateTaskResult` that creates the task, and servers must not set it on anything else. The specification's own error examples get this wrong, which is why the mistake spreads."
+        },
+        {
+          "key": "b",
+          "text": "`\"complete\"`, because the task is just the content of an ordinary result.",
+          "correct": true,
+          "feedback": "Right. Every `tasks/get` result is a complete result whose content happens to be a task, whatever its status."
+        },
+        {
+          "key": "c",
+          "text": "`\"input_required\"` while the task is waiting for an answer, and `\"complete\"` otherwise.",
+          "correct": false,
+          "feedback": "A task waiting for input says so in `status: \"input_required\"` with `inputRequests`; the result's `resultType` is still `\"complete\"`. `resultType: \"input_required\"` is the MRTR shape on the original request."
+        },
+        {
+          "key": "d",
+          "text": "None at all, because `resultType` appears only on `tools/call` results.",
+          "correct": false,
+          "feedback": "Every result in revision 2026-07-28 carries `resultType`; `tasks/get` is no exception."
+        }
+      ],
+      "explanation": "Servers must set `resultType: \"task\"` on a `CreateTaskResult` and must not set it on anything else, so a `tasks/get` result is `\"complete\"`. In the post's run, the final `tasks/get` printed `\"resultType\": \"complete\"` with `\"status\": \"completed\"`, and the demonstration client's model accepts only `\"complete\"` there.",
+      "hints": [
+        "Separate the result's discriminator from the task's own status field.",
+        "On how many results per task does the value `\"task\"` appear?"
+      ]
+    },
+    {
+      "id": "mcp-009-q03",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 2,
+      "tags": [
+        "lifecycle",
+        "is-error"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A task wraps a `tools/call` whose tool finishes and returns a result with `isError: true` and the text `disk full`. What does the next `tasks/get` report?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "`status: \"failed\"`, with the tool's result in `error`.",
+          "correct": false,
+          "feedback": "That was the 2025-11-25 behavior. In the extension `failed` is reserved for JSON-RPC faults, and a tool error is not one."
+        },
+        {
+          "key": "b",
+          "text": "`status: \"completed\"`, with the `isError: true` result inside `result`.",
+          "correct": true,
+          "feedback": "Right. The machinery worked; the tool has bad news, and the bad news travels inside the completed task's result."
+        },
+        {
+          "key": "c",
+          "text": "A JSON-RPC `error` object with code `-32603` instead of a result.",
+          "correct": false,
+          "feedback": "The `tasks/get` itself succeeded. A JSON-RPC error on the poll would mean the poll failed, not the tool."
+        },
+        {
+          "key": "d",
+          "text": "`status: \"cancelled\"`, because the work did not finish successfully.",
+          "correct": false,
+          "feedback": "`cancelled` follows a `tasks/cancel`; nothing here asked for cancellation."
+        }
+      ],
+      "explanation": "The extension moves a task whose tool returned `isError: true` to `completed`, with the error inside `result`, to keep protocol-level faults (`failed`) apart from other faults. A client that shows an error only when `status == \"failed\"` shows nothing for this ordinary tool failure.",
+      "hints": [
+        "Ask whether anything in the protocol machinery broke.",
+        "Recall which status the extension reserves for JSON-RPC errors, and how 2025-11-25 differed."
+      ]
+    },
+    {
+      "id": "mcp-009-q04",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "8",
+      "est_minutes": 2,
+      "tags": [
+        "mrtr",
+        "input-requests"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A tool deletes a directory tree and needs the user to confirm the path before it touches anything; the deletion itself may take ten minutes. How should the server ask for the confirmation?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Create the task at once and put the question in the task's `inputRequests`, answered by `tasks/update`.",
+          "correct": false,
+          "feedback": "That puts the question inside a task that already exists. The specification says input needed before the task is created goes through the multi round-trip flow on the original request, resolved first."
+        },
+        {
+          "key": "b",
+          "text": "Return `input_required` on the `tools/call`, and a `CreateTaskResult` only on the retry that carries the answer.",
+          "correct": true,
+          "feedback": "Right. The answer is needed before the work starts, so it is MRTR on the original request, and the task comes after."
+        },
+        {
+          "key": "c",
+          "text": "Send an `elicitation/create` request to the client while the `tools/call` is still open, then create the task.",
+          "correct": false,
+          "feedback": "Revision 2026-07-28 removed the server-to-client request channel; a server cannot initiate a request at all."
+        },
+        {
+          "key": "d",
+          "text": "Return the task at once, then wait for the client to send the confirmation with its next `tasks/get` poll.",
+          "correct": false,
+          "feedback": "`tasks/get` carries only a `taskId`; answers travel in `tasks/update` or, before a task exists, in a retried request."
+        }
+      ],
+      "explanation": "The practical test is time: input needed before the work can start is MRTR, returned as `input_required` on the original request and resolved synchronously before any `CreateTaskResult`; input needed while the task is already running is a task input request surfaced on `tasks/get` and answered with `tasks/update`.",
+      "hints": [
+        "Does the work start before or after the answer arrives?"
+      ]
+    },
+    {
+      "id": "mcp-009-q05",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "1",
+      "est_minutes": 3,
+      "tags": [
+        "extensions",
+        "naming"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Which of these extension identifiers use a prefix reserved for MCP? Select every one that does.",
+      "select": "multiple",
+      "options": [
+        {
+          "key": "a",
+          "text": "`dev.mcp/batch`",
+          "correct": true,
+          "feedback": "Reserved: the second label of `dev.mcp` is `mcp`."
+        },
+        {
+          "key": "b",
+          "text": "`com.example.mcp/batch`",
+          "correct": false,
+          "feedback": "Not reserved: the second label is `example`; `mcp` as a third label does not matter."
+        },
+        {
+          "key": "c",
+          "text": "`org.modelcontextprotocol.api/batch`",
+          "correct": true,
+          "feedback": "Reserved: the second label is `modelcontextprotocol`, and extra labels after it do not change that."
+        },
+        {
+          "key": "d",
+          "text": "`mcp.example/batch`",
+          "correct": false,
+          "feedback": "Not reserved: `mcp` is the first label here, and the rule looks at the second, which is `example`."
+        },
+        {
+          "key": "e",
+          "text": "`io.modelcontextprotocol/batch`",
+          "correct": true,
+          "feedback": "Reserved: this is the official vendor prefix itself, second label `modelcontextprotocol`."
+        }
+      ],
+      "explanation": "Any prefix whose second label is `modelcontextprotocol` or `mcp` is reserved for MCP. That catches `dev.mcp`, `org.modelcontextprotocol.api` and `io.modelcontextprotocol`, and leaves `com.example.mcp` and `mcp.example` free, because their second labels are `example`.",
+      "hints": [
+        "The rule looks at exactly one label of the prefix.",
+        "Split each prefix on dots and read the second piece."
+      ]
+    },
+    {
+      "id": "mcp-009-q06",
+      "type": "mcq",
+      "track": "run",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "2",
+      "est_minutes": 2,
+      "tags": [
+        "progress",
+        "sdk"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "In `snippets/tasks_extension.py`, the background job for a task calls `watch_cpu` directly with `ctx` left at `None`, so the tool never calls `ctx.report_progress`. Why is losing those progress notifications correct for a task rather than a shortcut?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Progress is not supported on tasks; a task reports its state through `statusMessage` and polling.",
+          "correct": true,
+          "feedback": "Right. The extension forbids `notifications/progress` on a task's stream, unlike 2025-11-25, where the `progressToken` carried into the task."
+        },
+        {
+          "key": "b",
+          "text": "The SDK removed `Context.report_progress` in `mcp==2.3.0`, so no tool can report progress anymore.",
+          "correct": false,
+          "feedback": "It is still there: `progress_today.py` receives three `notifications/progress` from the same tool called normally."
+        },
+        {
+          "key": "c",
+          "text": "Progress would still reach the client, but only in one batch once the task has completed.",
+          "correct": false,
+          "feedback": "There is no delayed delivery; the extension simply does not support progress on tasks."
+        },
+        {
+          "key": "d",
+          "text": "A task's progress travels in `notifications/message` on the task's notification stream instead.",
+          "correct": false,
+          "feedback": "`notifications/message` is also forbidden on a task's notification stream."
+        }
+      ],
+      "explanation": "`notifications/progress` and `notifications/message` must not be sent on a task's notification stream, and progress is not supported on tasks at all, so turning a tool into a task trades progress for `statusMessage` plus polling. There is also no request for the job to report on: running it through `MCPServer.call_tool` instead fails with `Context is not available outside of a request`.",
+      "hints": [
+        "Compare what section 2 says about progress inside a synchronous call with what the extension allows on a task."
+      ]
+    },
+    {
+      "id": "mcp-009-q07",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "2",
+      "est_minutes": 1,
+      "tags": [
+        "progress",
+        "meta"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Which key must a client put in a request's `_meta` before a server may send `notifications/progress` for that request?",
+      "answer": {
+        "model": "`progressToken`, an unprefixed `_meta` key.",
+        "accept": [
+          "(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|no|never|without)\\s+(?:a\\s+|the\\s+)?`?progress[\\s_-]?token)(?![\\s\\S]*\\bprogress[\\s_-]?token`?\\s+(?:is\\s+)?(?:not|isn't|never)\\b)^[\\s\\S]{0,200}\\bprogress[\\s_-]?token\\b[\\s\\S]{0,200}$"
+        ]
+      },
+      "explanation": "A request opts into `notifications/progress` by carrying a `progressToken` in its `_meta`; the notifications then flow on that request's own response stream. The SDK client adds one when `call_tool` is given a `progress_callback`, which is what `progress_today.py` does.",
+      "hints": [
+        "It is one of the reserved `_meta` keys that has no reverse-DNS prefix."
+      ]
+    },
+    {
+      "id": "mcp-009-q08",
+      "type": "short",
+      "track": "edge",
+      "difficulty": 2,
+      "outcomes": [
+        "o1",
+        "o2"
+      ],
+      "section": "9",
+      "est_minutes": 2,
+      "tags": [
+        "capabilities",
+        "errors"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A client declared the tasks extension on the `tools/call` that created a task, then sends `tasks/get` for it without the extension in that request's capabilities. What does a conformant server answer? Give the error code or its name.",
+      "answer": {
+        "model": "A JSON-RPC error, Missing Required Client Capability, code `-32021`, with `data.requiredCapabilities` naming the tasks extension.",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:(?<!not )(?<!n't )(?<!never )returns? the task|answers?(?: the (?:poll|request|tasks/get))? normally|(?<!not )succeeds|(?<!not )works)\\b)(?![\\s\\S]*\\b(?:not|no|never)\\s+(?:a\\s+|an\\s+|the\\s+)?(?:-?\\s?32021|missing))(?=[\\s\\S]*(?:-?\\s?32021|missing[\\s_-]+required[\\s_-]+(?:client[\\s_-]+)?capabilit|missingrequiredclientcapability))[\\s\\S]{3,400}$"
+        ]
+      },
+      "explanation": "The capability must be re-asserted on every task request, including `tasks/get`, `tasks/update` and `tasks/cancel`. A server must answer a non-declaring client with Missing Required Client Capability, which the core 2026-07-28 specification numbers `-32021`; the extension text still prints the old `-32003`. In the post's run the SDK's helper answered `error -32021` with `requiredCapabilities` naming `io.modelcontextprotocol/tasks`.",
+      "hints": [
+        "Statelessness: what does the server know about this request beyond what it carries?",
+        "The core revision renumbered this error out of the legacy range."
+      ]
+    },
+    {
+      "id": "mcp-009-q09",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "6",
+      "est_minutes": 2,
+      "tags": [
+        "polling",
+        "ttl"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A `CreateTaskResult` carries `ttlMs: 60000` and `pollIntervalMs: 500`. A client honors the interval exactly: its first `tasks/get` goes out 500 ms after `createdAt`, then one every 500 ms, and it stops at the `createdAt + ttlMs` backstop, sending a poll that falls exactly on the backstop. If the task never leaves `working`, how many `tasks/get` requests does the client send?",
+      "answer": {
+        "value": 120,
+        "tolerance": 0,
+        "unit": "requests"
+      },
+      "precision_note": "Closed form: polls at 500, 1000, ..., 60000 ms, so 60000 / 500 = 120. Counting a poll at time 0 as well would give 121.",
+      "explanation": "The polls fall at $500k$ ms for $k = 1, 2, \\ldots$ up to the backstop at 60,000 ms, so $k$ runs to $60000 / 500 = 120$. Giving up at that backstop is something a client may do, not must, and a server may also mark the task failed any time after the TTL elapses.",
+      "hints": [
+        "List the times at which polls go out.",
+        "Divide the TTL by the interval, and check whether time 0 is a poll in this setup."
+      ]
+    },
+    {
+      "id": "mcp-009-q10",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "4",
+      "est_minutes": 3,
+      "tags": [
+        "result-type",
+        "lifecycle"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "One task's whole life on the wire: a `tools/call` that the server answers with a `CreateTaskResult`, seven `tasks/get` polls answered while the task is `working` or `input_required`, one `tasks/update` and its acknowledgment, one `tasks/cancel` and its acknowledgment, and a final `tasks/get` that reports `cancelled`. Count the results by their `resultType`.",
+      "answer": {
+        "parts": [
+          {
+            "label": "results with resultType task",
+            "value": 1,
+            "tolerance": 0,
+            "unit": "results"
+          },
+          {
+            "label": "results with resultType complete",
+            "value": 10,
+            "tolerance": 0,
+            "unit": "results"
+          }
+        ]
+      },
+      "precision_note": "Closed form from the rule that resultType task appears only on the CreateTaskResult: 1 task; 7 + 1 (update ack) + 1 (cancel ack) + 1 (final poll) = 10 complete. Matches tasks_by_hand.py, whose create result prints resultType task and whose polls and cancel acknowledgment print resultType complete.",
+      "explanation": "Servers must set `resultType: \"task\"` on the `CreateTaskResult` and must not set it on anything else, so exactly one result says `\"task\"`. Every `tasks/get` result is `\"complete\"`, whatever the task's status, and the `tasks/update` and `tasks/cancel` acknowledgments are empty results whose `resultType` must be `\"complete\"`: $7 + 1 + 1 + 1 = 10$.",
+      "hints": [
+        "Only one kind of result may carry `\"task\"`.",
+        "Count every other result, including the two empty acknowledgments and the last poll."
+      ]
+    },
+    {
+      "id": "mcp-009-q11",
+      "type": "numeric",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "7",
+      "est_minutes": 3,
+      "tags": [
+        "input-requests",
+        "tasks-update"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A task in `input_required` surfaces two input requests, keyed `path` and `owner`. The client sends a `tasks/update` answering `path` only, and the server accepts the partial answer. The server asks nothing new. On the next `tasks/get` after the server has processed the update, how many entries does `inputRequests` hold?",
+      "answer": {
+        "value": 1,
+        "tolerance": 0,
+        "unit": "entries"
+      },
+      "precision_note": "Closed form from the extension's rules: inputRequests is a snapshot of every outstanding request; path was answered and its key may not be reused, owner is still outstanding, so 1.",
+      "explanation": "`inputRequests` is a point-in-time snapshot of every outstanding request, re-sent on every poll. A server may accept a partial set of answers, and the task stays `input_required` until the rest arrive; `path` is answered and its key must not be reused, so only `owner` remains. The update's acknowledgment is eventually consistent, which is why the prompt says the server has processed it.",
+      "hints": [
+        "Is `inputRequests` a queue of new questions or a snapshot of open ones?",
+        "Which of the two keys is still waiting for an answer?"
+      ]
+    },
+    {
+      "id": "mcp-009-q12",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "12",
+      "est_minutes": 10,
+      "tags": [
+        "polling",
+        "client"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Write `drive(call, get, sleep)` for a client that declared the tasks extension. `call()` sends the `tools/call` and returns its result as a dict; `get(task_id)` sends `tasks/get` and returns its result as a dict; `sleep(seconds)` waits. If the call's result is not a task, return it unchanged. If it is, poll until the task is terminal, sleeping `pollIntervalMs` between polls (default 1,000 ms when absent), and return the tool's own result for `completed`; raise `RuntimeError` for `failed` or `cancelled`. Use only the standard library.",
+      "kind": "implement",
+      "language": "python",
+      "starter": "def drive(call, get, sleep):\n    \"\"\"Return the tools/call result, polling a task to completion if one comes back.\"\"\"\n    raise NotImplementedError\n",
+      "solution": "def drive(call, get, sleep):\n    \"\"\"Return the tools/call result, polling a task to completion if one comes back.\"\"\"\n    first = call()\n    if first.get(\"resultType\") != \"task\":\n        return first\n    task_id = first[\"taskId\"]\n    interval = first.get(\"pollIntervalMs\", 1000)\n    while True:\n        sleep(interval / 1000)\n        task = get(task_id)\n        interval = task.get(\"pollIntervalMs\", interval)\n        if task[\"status\"] == \"completed\":\n            return task[\"result\"]\n        if task[\"status\"] in (\"failed\", \"cancelled\"):\n            raise RuntimeError(f\"task {task_id} ended {task['status']}\")\n",
+      "tests": "\ndef script(first, polls):\n    events = []\n    queue = list(polls)\n    def call():\n        events.append(('call',))\n        return first\n    def get(task_id):\n        events.append(('get', task_id))\n        return queue.pop(0)\n    def sleep(seconds):\n        events.append(('sleep', seconds))\n    return call, get, sleep, events, queue\n\n\ndef check_waits(first, polls, events):\n    \"\"\"Every pair of polls has exactly one wait between them, and each wait uses the\n    interval of the latest result received (1,000 ms when none carried one).\"\"\"\n    assert events[0] == ('call',), events\n    results = [first] + list(polls)\n    interval, received, gap = first.get('pollIntervalMs', 1000), 0, 0\n    for event in events[1:]:\n        if event[0] == 'sleep':\n            assert event[1] == interval / 1000, f'wait {event[1]} s, expected {interval / 1000} s: {events}'\n            gap += 1\n        else:\n            assert gap == 1 or (received == 0 and gap == 0), f'one wait between polls: {events}'\n            received += 1\n            interval = results[received].get('pollIntervalMs', interval)\n            gap = 0\n    assert received == len(polls), events\n\n\ndirect = {'resultType': 'complete', 'content': [{'type': 'text', 'text': 'done'}], 'isError': False}\ncall, get, sleep, events, queue = script(direct, [])\nassert drive(call, get, sleep) is direct, 'a complete result is returned unchanged'\nassert events == [('call',)], 'no polling and no waiting without a task'\n\ncreated = {'resultType': 'task', 'taskId': 't-1', 'status': 'working', 'pollIntervalMs': 500}\nbad_news = {'content': [{'type': 'text', 'text': 'disk full'}], 'isError': True}\npolls = [\n    {'resultType': 'complete', 'taskId': 't-1', 'status': 'working', 'pollIntervalMs': 500},\n    {'resultType': 'complete', 'taskId': 't-1', 'status': 'input_required', 'pollIntervalMs': 2000,\n     'inputRequests': {'ok': {'method': 'elicitation/create', 'params': {}}}},\n    {'resultType': 'complete', 'taskId': 't-1', 'status': 'working', 'pollIntervalMs': 2000},\n    {'resultType': 'complete', 'taskId': 't-1', 'status': 'completed', 'result': bad_news},\n]\ncall, get, sleep, events, queue = script(created, polls)\ngot = drive(call, get, sleep)\nassert got == bad_news, 'completed returns the inner result, even when isError is true'\nassert queue == [], 'input_required is not terminal: keep polling until completed'\nassert [e for e in events if e[0] == 'get'] == [('get', 't-1')] * 4, events\ncheck_waits(created, polls, events)\n\nno_interval = {'resultType': 'task', 'taskId': 't-2', 'status': 'working'}\npolls = [{'resultType': 'complete', 'taskId': 't-2', 'status': 'working'},\n         {'resultType': 'complete', 'taskId': 't-2', 'status': 'completed', 'result': direct}]\ncall, get, sleep, events, queue = script(no_interval, polls)\nassert drive(call, get, sleep) == direct\nassert ('sleep', 1.0) in events, f'default 1,000 ms when no pollIntervalMs: {events}'\ncheck_waits(no_interval, polls, events)\n\nfor status in ('failed', 'cancelled'):\n    call, get, sleep, events, queue = script(created, [{'resultType': 'complete', 'taskId': 't-1', 'status': status, 'pollIntervalMs': 500}])\n    try:\n        drive(call, get, sleep)\n    except RuntimeError:\n        pass\n    else:\n        raise AssertionError(f'{status} must raise RuntimeError')\nprint('all drive tests passed')\n",
+      "explanation": "A client that declared the extension must accept either shape on any `tools/call`, so it branches on `resultType` first. The task is then just a handle: poll with its `taskId`, honor `pollIntervalMs` (which may change), and stop on a terminal status. A tool error arrives as `completed` with `isError: true` inside `result`, so it is returned, not raised; only `failed` and `cancelled` end the drive with an exception.",
+      "hints": [
+        "Decide from `resultType` whether there is anything to poll at all.",
+        "Read the interval from each poll, not only from the create result, and remember which statuses are terminal.",
+        "The `result` of a completed task is what to return, whatever its `isError` says."
+      ]
+    },
+    {
+      "id": "mcp-009-q13",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o1",
+        "o2"
+      ],
+      "section": "9",
+      "est_minutes": 8,
+      "tags": [
+        "headers",
+        "capabilities"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`poll_request` below builds the body and headers of a `tasks/get` sent over Streamable HTTP, but a conformant server refuses every poll it builds. Fix it without changing its signature. The body must carry both required `_meta` keys with the tasks extension declared, and the headers must let an intermediary route the poll to the instance holding the task.",
+      "kind": "fix",
+      "language": "python",
+      "starter": "TASKS = \"io.modelcontextprotocol/tasks\"\nREVISION = \"2026-07-28\"\n\n\ndef poll_request(request_id, task_id):\n    \"\"\"Return (body, headers) for one tasks/get over Streamable HTTP.\"\"\"\n    body = {\n        \"jsonrpc\": \"2.0\",\n        \"id\": request_id,\n        \"method\": \"tasks/get\",\n        \"params\": {\n            \"taskId\": task_id,\n            \"_meta\": {\n                \"io.modelcontextprotocol/protocolVersion\": REVISION,\n                \"io.modelcontextprotocol/clientCapabilities\": {},\n            },\n        },\n    }\n    headers = {\n        \"Content-Type\": \"application/json\",\n        \"Accept\": \"application/json, text/event-stream\",\n        \"MCP-Protocol-Version\": REVISION,\n        \"Mcp-Method\": \"tasks/get\",\n        \"Mcp-Name\": \"tasks/get\",\n    }\n    return body, headers\n",
+      "solution": "TASKS = \"io.modelcontextprotocol/tasks\"\nREVISION = \"2026-07-28\"\n\n\ndef poll_request(request_id, task_id):\n    \"\"\"Return (body, headers) for one tasks/get over Streamable HTTP.\"\"\"\n    body = {\n        \"jsonrpc\": \"2.0\",\n        \"id\": request_id,\n        \"method\": \"tasks/get\",\n        \"params\": {\n            \"taskId\": task_id,\n            \"_meta\": {\n                \"io.modelcontextprotocol/protocolVersion\": REVISION,\n                \"io.modelcontextprotocol/clientCapabilities\": {\"extensions\": {TASKS: {}}},\n            },\n        },\n    }\n    headers = {\n        \"Content-Type\": \"application/json\",\n        \"Accept\": \"application/json, text/event-stream\",\n        \"MCP-Protocol-Version\": REVISION,\n        \"Mcp-Method\": \"tasks/get\",\n        \"Mcp-Name\": task_id,\n    }\n    return body, headers\n",
+      "tests": "\nimport json\n\ntid = '786512e2-9e0d-44bd-8f29-789f320fe840'\nbody, headers = poll_request(3, tid)\nassert body['jsonrpc'] == '2.0' and body['id'] == 3 and body['method'] == 'tasks/get'\nassert body['params']['taskId'] == tid\nmeta = body['params']['_meta']\nassert meta['io.modelcontextprotocol/protocolVersion'] == '2026-07-28'\ncaps = meta['io.modelcontextprotocol/clientCapabilities']\nassert caps.get('extensions', {}).get('io.modelcontextprotocol/tasks') == {}, 'declare the extension on the poll itself'\nassert 'io.modelcontextprotocol/tasks' not in meta, 'the extension goes inside clientCapabilities.extensions, not at the top of _meta'\nh = {k.lower(): v for k, v in headers.items()}\nassert h['mcp-method'] == 'tasks/get'\nassert h['mcp-name'] == tid, 'Mcp-Name mirrors params.taskId on tasks/*'\nassert h['mcp-protocol-version'] == meta['io.modelcontextprotocol/protocolVersion']\naccept = [part.strip() for part in h['accept'].split(',')]\nassert 'application/json' in accept and 'text/event-stream' in accept, 'Accept lists both types'\nother, other_headers = poll_request(4, 'another-id')\nassert {k.lower(): v for k, v in other_headers.items()}['mcp-name'] == 'another-id', 'the header follows the task id'\njson.dumps(body)\nprint('all poll_request tests passed')\n",
+      "explanation": "Two things are wrong. The poll does not declare the extension, and a server must answer a non-declaring client's `tasks/get` with Missing Required Client Capability (`-32021`), whatever earlier requests declared. And `Mcp-Name` must mirror `params.taskId` on the `tasks/*` methods, so that an intermediary can route the poll to the instance holding the task; copying the method name there routes nothing.",
+      "hints": [
+        "Check each request on its own: what does this one poll say it supports?",
+        "On `tasks/get`, which params key does `Mcp-Name` mirror?"
+      ]
+    },
+    {
+      "id": "mcp-009-q14",
+      "type": "order",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o3",
+        "o2"
+      ],
+      "section": "8",
+      "est_minutes": 3,
+      "tags": [
+        "mrtr",
+        "lifecycle"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A tool needs the user's confirmation before it starts, and then runs long enough that the server makes it a task. Put the messages in the order they occur.",
+      "answer": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f"
+      ],
+      "items": [
+        {
+          "key": "a",
+          "text": "The client sends `tools/call` with the tasks extension in its `_meta` capabilities."
+        },
+        {
+          "key": "b",
+          "text": "The server answers that request with `resultType: \"input_required\"`, asking for the confirmation, and a `requestState`."
+        },
+        {
+          "key": "c",
+          "text": "The client retries the `tools/call` under a new JSON-RPC id, carrying `inputResponses` and the echoed `requestState`."
+        },
+        {
+          "key": "d",
+          "text": "The server answers the retry with `resultType: \"task\"` and a fresh `taskId`."
+        },
+        {
+          "key": "e",
+          "text": "The client sends `tasks/get` with `Mcp-Name` set to the `taskId`."
+        },
+        {
+          "key": "f",
+          "text": "A `tasks/get` result reports `status: \"completed\"` with the tool's result inside."
+        }
+      ],
+      "explanation": "Input needed before the work starts is MRTR on the original request: `input_required`, then a retry under a new id with the answers and the echoed `requestState`. The specification says those exchanges should be resolved synchronously before the server answers with a `CreateTaskResult`; only then does the `taskId` exist to be polled.",
+      "hints": [
+        "Which exchange can only happen once the `taskId` exists?",
+        "The confirmation travels on the original method, not on a task method."
+      ]
+    },
+    {
+      "id": "mcp-009-q15",
+      "type": "match",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "7",
+      "est_minutes": 3,
+      "tags": [
+        "methods",
+        "lifecycle"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Match each message of the tasks extension to what it does in revision 2026-07-28.",
+      "answer": {
+        "a": "a",
+        "b": "b",
+        "c": "c",
+        "d": "d",
+        "e": "e"
+      },
+      "left": [
+        {
+          "key": "a",
+          "text": "`tasks/get`"
+        },
+        {
+          "key": "b",
+          "text": "`tasks/update`"
+        },
+        {
+          "key": "c",
+          "text": "`tasks/cancel`"
+        },
+        {
+          "key": "d",
+          "text": "`subscriptions/listen` with `taskIds`"
+        },
+        {
+          "key": "e",
+          "text": "`notifications/tasks`"
+        }
+      ],
+      "right": [
+        {
+          "key": "a",
+          "text": "Returns the whole task, with `result`, `error` or `inputRequests` as its status implies."
+        },
+        {
+          "key": "b",
+          "text": "Delivers `inputResponses` for outstanding input requests, acknowledged with an empty result."
+        },
+        {
+          "key": "c",
+          "text": "Asks the server to stop; the server must acknowledge but need not stop."
+        },
+        {
+          "key": "d",
+          "text": "Opts in to being told about named tasks instead of only polling for them."
+        },
+        {
+          "key": "e",
+          "text": "Carries a complete task, identical to what a poll would return at that moment."
+        },
+        {
+          "key": "f",
+          "text": "Blocks until a finished task's payload is ready."
+        },
+        {
+          "key": "g",
+          "text": "Lists every task the caller has created."
+        }
+      ],
+      "explanation": "`tasks/get` returns the whole task; `tasks/update` answers its input requests; `tasks/cancel` is a cooperative request; `subscriptions/listen` with `taskIds` opts in to `notifications/tasks`, each of which carries a complete task. The two leftovers describe `tasks/result` and `tasks/list`, which the extension removed: the first held a stream open for server-initiated requests, and the second has no scope a server can define without sessions.",
+      "hints": [
+        "Two descriptions belong to methods that no longer exist.",
+        "Which message is a request the server may answer without doing what it asks?"
+      ]
+    },
+    {
+      "id": "mcp-009-q16",
+      "type": "long",
+      "track": "connect",
+      "difficulty": 4,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "8",
+      "est_minutes": 12,
+      "tags": [
+        "mrtr",
+        "design"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A `migrate_database` tool must ask the user which backup to restore from before it starts, then runs for twenty minutes, and may hit a schema conflict halfway that only the user can resolve. Using post 08's account of multi round-trip requests and this post's account of task input requests, design the message flow for both questions, and say for each where the server's state lives and how a key is kept unique.",
+      "kind": "design",
+      "solution": "**Before the task exists: the backup question is MRTR.** The client's `tools/call` declares the tasks extension. The server cannot start without the backup choice, so it answers that request with `resultType: \"input_required\"`, an `inputRequests` map holding one `elicitation/create` (key, for example, `backup`), and an opaque `requestState` that encodes what it needs to resume, integrity-protected because the client could alter it. The host shows the question; the client retries the `tools/call` under a new JSON-RPC id, carrying `inputResponses` keyed `backup` and the echoed `requestState`. Nothing is stored at the server between the two requests: the state lives in `requestState`, and keys need only be unique within that one request. The specification says these exchanges should be resolved synchronously before any task is created, so only now does the server answer the retry with a `CreateTaskResult` (`resultType: \"task\"`), after the task is durably stored so that a `tasks/get` would resolve.\n\n**During the task: the conflict question is a task input request.** The original `tools/call` finished long ago, so there is no request to answer with `input_required`. The server moves the task to `status: \"input_required\"` and every `tasks/get` result (still `resultType: \"complete\"`) carries an `inputRequests` map with the conflict question under a new key, for example `conflict-1`. The client deduplicates by key, because the snapshot repeats on every poll, shows the question once, and answers with `tasks/update` carrying the `taskId` and `inputResponses` keyed `conflict-1`; the acknowledgment is an empty complete result and is eventually consistent. Here the state lives at the server, keyed by `taskId`, and keys must be unique over the whole life of the task: `conflict-1` can never be reused, so a second conflict gets `conflict-2`.\n\nBoth questions get the same consent and rendering treatment; a task is not a higher-trust channel.",
+      "rubric": [
+        {
+          "criterion": "Puts the backup question on the original tools/call as input_required, answered by a retry with a new id, inputResponses and the echoed requestState.",
+          "points": 3
+        },
+        {
+          "criterion": "Creates the task only after that exchange is resolved, and only once a tasks/get for it would resolve.",
+          "points": 2
+        },
+        {
+          "criterion": "Surfaces the conflict question in inputRequests on tasks/get, with status input_required, answered by tasks/update with the taskId.",
+          "points": 3
+        },
+        {
+          "criterion": "Says MRTR state lives in requestState with keys unique per request, and task state lives at the server keyed by taskId with keys unique for the task's life.",
+          "points": 2
+        },
+        {
+          "criterion": "Mentions client deduplication of repeated inputRequests or the equal trust treatment of both questions.",
+          "points": 1
+        }
+      ],
+      "answer_length": "three paragraphs",
+      "explanation": "The deciding question is time: an answer needed before the work can start is MRTR on the original request, and an answer needed while the work runs is a task input request. The two share value shapes but differ in where they surface, how they are answered, where state lives, and how long a key must stay unique.",
+      "hints": [
+        "For each question, ask whether the task exists yet.",
+        "Post 08 put MRTR state in an opaque blob the client echoes; ask what holds the state once a `taskId` exists.",
+        "Compare the key-uniqueness rules: one request against the whole task."
+      ],
+      "connects": [
+        "mcp-008"
+      ]
+    },
+    {
+      "id": "mcp-009-q17",
+      "type": "long",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o4",
+        "o1"
+      ],
+      "section": "10",
+      "est_minutes": 12,
+      "tags": [
+        "sdk",
+        "review",
+        "security"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A colleague's tasks extension on `mcp==2.3.0` has three features: its interceptor decides whether to create a task by looking up the client's capabilities in a dictionary filled from `ctx.session.client_params` on the client's first request; the background job runs the tool through `MCPServer.call_tool`; and task identifiers are `task-1`, `task-2`, and so on. Critique each choice, saying what goes wrong and what to do instead.",
+      "kind": "critique",
+      "solution": "**The capability cache.** Revision 2026-07-28 is stateless: a server must not return a task to a client that did not declare the extension on that request, regardless of prior declarations, so a dictionary filled on a first request answers later requests with a fact they did not assert. A client that drops the extension, or a different client behind the same connection or load balancer, would get a task it cannot handle. Reading `client_params` makes it worse under this SDK: it is `None` whenever the request carried no `clientInfo`, which the specification only says a client should send, so a client that declared the extension but sent no `clientInfo` would never get a task. The check belongs in the handler, every time, on `ctx.session.client_capabilities`, and the same check guards `tasks/get`, `tasks/update` and `tasks/cancel`.\n\n**The background job through `call_tool`.** A tool that reports progress calls its `Context`, and a job running out of band has no request behind it: the SDK raises `ValueError: Context is not available outside of a request`, wrapped in an `UnexpectedToolError` whose message is only `Error executing tool <name>`. Progress is not supported on tasks anyway, so the job should run the work without a request context (the demonstration calls `watch_cpu` with `ctx=None`), and it must catch every exception and record `failed` with a JSON-RPC error, or the task stays `working` until its TTL.\n\n**Sequential identifiers.** With no session and possibly no authorization, the `taskId` is the only boundary around the task, and the specification allows it to serve as a bearer token, so servers must generate identifiers with enough entropy that a third party cannot guess them. `task-2` invites anyone holding `task-1` to read or cancel someone else's work. A random identifier such as a version-4 UUID fixes it.",
+      "rubric": [
+        {
+          "criterion": "Explains that capabilities must be read per request, citing the regardless-of-prior-declarations rule and the re-assertion on tasks/* methods.",
+          "points": 3
+        },
+        {
+          "criterion": "Notes that client_params is None without clientInfo, so client_capabilities is the attribute to read.",
+          "points": 2
+        },
+        {
+          "criterion": "Explains that call_tool outside a request fails because the tool's Context is unavailable, and prescribes running the work without a request context and recording failures.",
+          "points": 3
+        },
+        {
+          "criterion": "Explains that guessable task identifiers break the only access boundary, and prescribes high-entropy identifiers.",
+          "points": 2
+        }
+      ],
+      "answer_length": "three paragraphs",
+      "explanation": "Each choice breaks a rule the post shows in code or output: per-request capabilities read from `client_capabilities`, a background job that never needs a request context and always records a terminal status, and identifiers random enough to act as bearer tokens. `what_can_go_wrong.py` prints the `call_tool` failure, and `tasks_extension.py` shows all three fixes.",
+      "hints": [
+        "Ask what a stateless server may assume about a request from an earlier one.",
+        "Ask what a tool's `Context` needs that a background job does not have.",
+        "Ask what stops one caller from polling another caller's task."
+      ]
+    }
+  ]
+}

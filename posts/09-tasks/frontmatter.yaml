@@ -1,8 +1,23 @@
 id: mcp-009
 slug: 09-tasks
-title: "09 · Tasks: work that outlives a single request"
+title: "09 - Tasks: work that outlives a single request"
+summary: "The tasks extension turns a long tool call into a task that the server creates at its own discretion and the client polls and cancels by its identifier. The post reads it on the wire and builds it on the Python SDK's extension seams."
 date: 2026-07-23
-tags: [model-context-protocol, mcp, servers, tasks, extensions, async]
-hero: diagrams/01-task-state-machine.svg
-reading_time: 28
+updated: 2026-10-09
+status: complete
 part: "Part II - Building servers"
+level: intermediate
+reading_time: 35
+tags: [mcp, servers, tasks, extensions, progress, async]
+hero: diagrams/01-task-state-machine.svg
+prerequisites: [mcp-008]
+code: included
+outcomes:
+  - id: o1
+    text: "Declare an extension in per-request capabilities and read a server's extensions from its `server/discover` result."
+  - id: o2
+    text: "Drive a task by hand from `tools/call` through `tasks/get` polling to a terminal status, including a cancellation."
+  - id: o3
+    text: "Tell a task apart from a multi round-trip request and choose the one an interaction needs."
+  - id: o4
+    text: "Report progress from a slow tool with `notifications/progress`, and stand up the tasks extension on the seams the Python SDK ships."

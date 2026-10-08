@@ -1,56 +1,70 @@
-"""The tasks extension, hand-built on the seams the SDK actually gives you.
+"""Post 09, section 10: the tasks extension, hand-built on the SDK's seams.
 
-This is not the tasks extension. It is the smallest program that proves the
-2.0.0b2 SDK can carry one: a server that decides per request whether to hand
-back a task, a `tasks/get` method that did not exist until this file defined
-it, and a client that resolves `resultType: "task"` back into an ordinary
-`CallToolResult` without its caller ever learning a task happened.
+Run from the series root:
+    uv run python posts/09-tasks/snippets/tasks_extension.py
 
-    uv run --with 'mcp==2.0.0b2' python tasks_extension.py
+This is not the tasks extension. It is the smallest program that shows the
+mcp 2.3.0 SDK can carry one: a server that decides per request whether to hand
+back a task, `tasks/get` and `tasks/cancel` methods that did not exist until
+this file defined them, and a client that resolves `resultType: "task"` back
+into an ordinary `CallToolResult` without its caller learning a task happened.
 
-Expected output, from an in-memory client and server in one process:
+The slow work is the real `watch_cpu` from code/05-first-server/, registered a
+second time on a demonstration server that carries the extension. Everything
+runs in memory in one process, as that project's tests do: no subprocess, no
+socket. tasks_by_hand.py imports this module and drives the same server one
+request at a time.
 
-    server advertises: {'io.modelcontextprotocol/tasks': {}}
-    poll 1 -> working
-    poll 2 -> completed
-    tasks client got: done 3
-    plain client got: done 3   (resultType complete, no task involved)
-
-Two shortcuts, so the file stays readable. The work runs eagerly inside the
-interceptor rather than out of band, and the store is a dict rather than
-anything durable. A real server must do neither: the specification forbids
-returning a task before a `tasks/get` for it would resolve.
+Two shortcuts keep the file readable, and a real server can afford neither.
+The store is a dict in this process, and the work runs as an asyncio task in
+the same process. The specification forbids returning a task before a
+`tasks/get` for it would resolve, which a dict satisfies only because nothing
+else ever reads it.
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
+import sys
 import uuid
+from dataclasses import asdict
+from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Literal
 
-from mcp.client import Client, ClientExtension
-from mcp.client.extension import ClaimContext, ResultClaim
-from mcp.server.extension import Extension, MethodBinding
-from mcp.server.mcpserver import MCPServer, require_client_extension
-from mcp_types import CallToolResult, Request, RequestParams, Result
+sys.dont_write_bytecode = True  # leave no __pycache__ behind in code/
+ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "code" / "05-first-server" / "src"))
+
+from mcp import Client  # noqa: E402
+from mcp.client import ClientExtension  # noqa: E402
+from mcp.client.extension import ClaimContext, ResultClaim  # noqa: E402
+from mcp.server.extension import Extension, MethodBinding  # noqa: E402
+from mcp.server.mcpserver import MCPServer, require_client_extension  # noqa: E402
+from mcp.shared.exceptions import MCPError  # noqa: E402
+from mcp_types import CallToolResult, Request, RequestParams, Result  # noqa: E402
+
+from system_info.progress import watch_cpu  # noqa: E402
 
 TASKS = "io.modelcontextprotocol/tasks"
 
-# Stand-in for durable storage. Keyed by taskId, which is the only handle there
-# is: no session, no connection, no per-caller scope.
+# Stand-in for durable storage, keyed by taskId: the only handle there is. No
+# session, no connection, no per-caller scope.
 STORE: dict[str, dict[str, Any]] = {}
+RUNNING: dict[str, asyncio.Task[None]] = {}
 
 
 # --- wire shapes the core schema does not define ---------------------------
 
 
-class GetTaskParams(RequestParams):
+class TaskIdParams(RequestParams):
     task_id: str
 
 
-class GetTaskRequest(Request[GetTaskParams, Literal["tasks/get"]]):
+class GetTaskRequest(Request[TaskIdParams, Literal["tasks/get"]]):
     method: Literal["tasks/get"] = "tasks/get"
-    params: GetTaskParams
+    params: TaskIdParams
 
     # The SDK mirrors this params key into the Mcp-Name header on every send,
     # which is what lets an intermediary route the poll to the instance holding
@@ -58,76 +72,142 @@ class GetTaskRequest(Request[GetTaskParams, Literal["tasks/get"]]):
     name_param = "taskId"
 
 
+class CancelTaskRequest(Request[TaskIdParams, Literal["tasks/cancel"]]):
+    method: Literal["tasks/cancel"] = "tasks/cancel"
+    params: TaskIdParams
+    name_param = "taskId"
+
+
 class GetTaskResult(Result):
+    # Literal["complete"]: a tasks/get result that said "task" would fail here.
+    result_type: Literal["complete"]
     task_id: str
     status: str
+    created_at: str
+    last_updated_at: str
+    ttl_ms: int | None
     poll_interval_ms: int
     result: dict[str, Any] | None = None
+    error: dict[str, Any] | None = None
+
+
+class AckResult(Result):
+    """The empty acknowledgment of tasks/cancel (and tasks/update)."""
+
+    result_type: Literal["complete"]
 
 
 class CreateTaskResult(Result):
     result_type: Literal["task"]
     task_id: str
     status: str
+    created_at: str
+    last_updated_at: str
+    ttl_ms: int | None
     poll_interval_ms: int
 
 
 # --- server side -----------------------------------------------------------
 
 
+def declared_tasks(ctx: Any) -> bool:
+    """Did the client put the extension in the capabilities of THIS request?"""
+    caps = ctx.session.client_capabilities
+    return bool(caps and caps.extensions and TASKS in caps.extensions)
+
+
+def now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
+
+
+def lookup(task_id: str) -> dict[str, Any]:
+    if task_id not in STORE:
+        raise MCPError(code=-32602, message="Failed to retrieve task: Task not found")
+    return STORE[task_id]
+
+
+def public(task: dict[str, Any]) -> dict[str, Any]:
+    """The task's wire fields, minus the final result."""
+    return {k: v for k, v in task.items() if k != "result"}
+
+
 class TasksExtension(Extension):
-    """Adds one method and one interceptor. Adds no tools."""
+    """Adds two methods and one interceptor. Adds no tools."""
 
     identifier = TASKS
 
     def methods(self) -> tuple[MethodBinding, ...]:
-        async def get_task(ctx: Any, params: GetTaskParams) -> dict[str, Any]:
-            # Re-checked here, not just on the tools/call. A capability the
+        async def get_task(ctx: Any, params: TaskIdParams) -> dict[str, Any]:
+            # Re-checked here, not only on the tools/call. A capability the
             # client did not assert on *this* request does not exist.
             require_client_extension(ctx, TASKS)
-            task = STORE[params.task_id]
-            if task["polls_left"] > 0:  # stands in for the work still running
-                task["polls_left"] -= 1
-                return {"resultType": "complete", **_public(task)}
-            task["status"] = "completed"
-            # resultType is "complete", not "task". "task" appears exactly once
+            task = lookup(params.task_id)
+            # resultType is "complete", not "task": "task" appears exactly once
             # per task, on the CreateTaskResult that minted it.
-            return {"resultType": "complete", **_public(task), "result": task["result"]}
+            body = {"resultType": "complete", **public(task)}
+            if task["status"] == "completed":
+                body["result"] = task["result"]
+            return body
+
+        async def cancel_task(ctx: Any, params: TaskIdParams) -> dict[str, Any]:
+            require_client_extension(ctx, TASKS)
+            lookup(params.task_id)
+            running = RUNNING.get(params.task_id)
+            if running is not None and not running.done():
+                running.cancel()  # this server chooses to stop; the spec only asks it to acknowledge
+            return {"resultType": "complete"}
 
         return (
-            MethodBinding(
-                method="tasks/get", params_type=GetTaskParams, handler=get_task
-            ),
+            MethodBinding(method="tasks/get", params_type=TaskIdParams, handler=get_task),
+            MethodBinding(method="tasks/cancel", params_type=TaskIdParams, handler=cancel_task),
         )
 
     async def intercept_tool_call(self, params: Any, ctx: Any, call_next: Any) -> Any:
-        client = ctx.session.client_params
-        declared = client.capabilities.extensions if client else None
-        if not declared or TASKS not in declared:
-            return await call_next(ctx)  # core behavior, per SEP-2133
+        if not declared_tasks(ctx):
+            return await call_next(ctx)  # core behavior, as SEP-2133 requires
+        if params.name != "watch_cpu":
+            return await call_next(ctx)  # only the slow tool becomes a task
+        arguments = dict(params.arguments or {})
+        if arguments.get("seconds", 5) < 2:
+            return await call_next(ctx)  # the server's choice: short work is answered directly
 
-        finished = await call_next(ctx)  # shortcut: see the module docstring
-        task_id = str(uuid.uuid4())  # uuid4, because the id is the access boundary
+        task_id = str(uuid.uuid4())  # random, because the id is the access boundary
+        stamp = now()
         STORE[task_id] = {
             "taskId": task_id,
             "status": "working",
-            "pollIntervalMs": 20,
-            "polls_left": 1,
-            "result": _wire(finished),
+            "createdAt": stamp,
+            "lastUpdatedAt": stamp,
+            "ttlMs": 60000,
+            "pollIntervalMs": 500,
         }
-        return {"resultType": "task", **_public(STORE[task_id])}
+        RUNNING[task_id] = asyncio.create_task(run(task_id, arguments))
+        return {"resultType": "task", **STORE[task_id]}
 
 
-def _public(task: dict[str, Any]) -> dict[str, Any]:
-    """The task minus its result and minus this file's bookkeeping."""
-    return {k: v for k, v in task.items() if k not in ("result", "polls_left")}
+async def run(task_id: str, arguments: dict[str, Any]) -> None:
+    """The work, out of band. There is no request to report progress on, so
+    watch_cpu runs with ctx=None, the branch that skips report_progress."""
+    task = STORE[task_id]
+    try:
+        watch = await watch_cpu(**arguments)
+        data = asdict(watch)
+        task["result"] = {
+            "content": [{"type": "text", "text": json.dumps(data)}],
+            "structuredContent": data,
+            "isError": False,
+        }
+        task["status"] = "completed"
+    except asyncio.CancelledError:
+        task["status"] = "cancelled"
+    except Exception as exc:  # a fault in the machinery, not a tool error
+        task["error"] = {"code": -32603, "message": str(exc)}
+        task["status"] = "failed"
+    task["lastUpdatedAt"] = now()
 
 
-def _wire(result: Any) -> dict[str, Any]:
-    """A handler result as JSON. The chain hands back a model or a plain dict."""
-    if hasattr(result, "model_dump"):
-        return result.model_dump(by_alias=True, mode="json", exclude_none=True)
-    return dict(result)
+server = MCPServer("tasks-demo", extensions=[TasksExtension()])
+server.add_tool(watch_cpu, title="Watch CPU over time")
 
 
 # --- client side -----------------------------------------------------------
@@ -135,15 +215,15 @@ def _wire(result: Any) -> dict[str, Any]:
 
 async def resolve(created: CreateTaskResult, ctx: ClaimContext) -> CallToolResult:
     """Turn a task back into the result the caller asked for."""
-    attempt = 0
+    seen: list[str] = []
     while True:
-        attempt += 1
         got = await ctx.session.send_request(
-            GetTaskRequest(params=GetTaskParams(task_id=created.task_id)),
-            GetTaskResult,
+            GetTaskRequest(params=TaskIdParams(task_id=created.task_id)), GetTaskResult
         )
-        print(f"poll {attempt} -> {got.status}")
+        if not seen or seen[-1] != got.status:
+            seen.append(got.status)
         if got.status == "completed":
+            print("  statuses seen while polling:", " -> ".join(seen))
             return CallToolResult.model_validate(got.result)
         if got.status in ("failed", "cancelled"):
             raise RuntimeError(f"task {created.task_id} ended {got.status}")
@@ -154,36 +234,33 @@ class TasksClientExtension(ClientExtension):
     identifier = TASKS
 
     def claims(self) -> tuple[ResultClaim[CreateTaskResult], ...]:
-        return (
-            ResultClaim(result_type="task", model=CreateTaskResult, resolve=resolve),
-        )
+        return (ResultClaim(result_type="task", model=CreateTaskResult, resolve=resolve),)
 
 
 # --- the demonstration -----------------------------------------------------
 
-mcp = MCPServer("tasks-demo", extensions=[TasksExtension()])
 
-
-@mcp.tool()
-def render(n: int = 1) -> str:
-    """Pretend to be slow."""
-    return f"done {n}"
+def summary(result: CallToolResult) -> str:
+    data = result.structured_content or {}
+    return f"resultType {result.result_type}, {len(data.get('samples', []))} samples"
 
 
 async def main() -> None:
-    async with Client(mcp, extensions=[TasksClientExtension()]) as tasks_client:
+    async with Client(server, extensions=[TasksClientExtension()]) as tasks_client:
         print("server advertises:", tasks_client.server_capabilities.extensions)
-        result = await tasks_client.call_tool("render", {"n": 3})
-        print("tasks client got:", result.content[0].text)
+        print("tasks client, watch_cpu seconds=1:")
+        result = await tasks_client.call_tool("watch_cpu", {"seconds": 1})
+        print("  got", summary(result), "(answered directly)")
+        print("tasks client, watch_cpu seconds=3:")
+        result = await tasks_client.call_tool("watch_cpu", {"seconds": 3})
+        print("  got", summary(result))
 
     # Same server, same process, same registered tool. This client never
     # declares the extension, so the interceptor falls through to core.
-    async with Client(mcp) as plain_client:
-        result = await plain_client.call_tool("render", {"n": 3})
-        print(
-            f"plain client got: {result.content[0].text}   "
-            f"(resultType {result.result_type}, no task involved)"
-        )
+    async with Client(server) as plain_client:
+        print("plain client, watch_cpu seconds=3:")
+        result = await plain_client.call_tool("watch_cpu", {"seconds": 3})
+        print("  got", summary(result), "(no task involved)")
 
 
 if __name__ == "__main__":
