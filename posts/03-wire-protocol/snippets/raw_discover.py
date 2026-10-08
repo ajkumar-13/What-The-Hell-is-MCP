@@ -102,12 +102,13 @@ def call(client: httpx.Client, url: str, request_id: int, method: str, params=No
 
 
 def server_info(result: dict) -> tuple[dict, str]:
-    """Find serverInfo where the specification puts it, or where mcp==2.0.0b2 does."""
+    """Find serverInfo and say where it was: result._meta is where the specification puts it."""
     meta = result.get("_meta") or {}
     if "io.modelcontextprotocol/serverInfo" in meta:
-        return meta["io.modelcontextprotocol/serverInfo"], "in result._meta, as the specification asks"
+        return meta["io.modelcontextprotocol/serverInfo"], "in result._meta"
     if "serverInfo" in result:
-        return result["serverInfo"], "a top-level result field, not in result._meta"
+        # Some servers put it at the top level of the result instead.
+        return result["serverInfo"], "a top-level result field"
     return {}, "absent"
 
 
@@ -148,9 +149,14 @@ def local_server():
 def discover_and_list(url: str) -> None:
     with httpx.Client(timeout=30.0) as client:
         discover = call(client, url, 1, "server/discover")
+        listing = call(client, url, 2, "tools/list")
         info, where = server_info(discover)
-        print(f"server        {info.get('name', '?')} {info.get('version', '')}".rstrip())
-        print(f"serverInfo    {where}")
+        _, where_in_list = server_info(listing)
+        print(f"server        {info.get('name', '?')}, version {json.dumps(info.get('version'))}")
+        if where == where_in_list:
+            print(f"serverInfo    {where} of server/discover and of tools/list")
+        else:
+            print(f"serverInfo    {where} of server/discover, {where_in_list} of tools/list")
         print(f"versions      {', '.join(discover.get('supportedVersions', []))}")
         print(f"capabilities  {', '.join(discover.get('capabilities', {})) or 'none'}")
         if discover.get("ttlMs") is not None:
@@ -158,7 +164,6 @@ def discover_and_list(url: str) -> None:
         envelope = json.dumps(build(1, "server/discover")["params"]["_meta"], separators=(",", ":"))
         print(f"_meta         {len(envelope.encode())} bytes on every request")
 
-        listing = call(client, url, 2, "tools/list")
         tools = listing["tools"]
         print(f"\n{len(tools)} tools, cacheable {listing.get('ttlMs', '?')} ms, scope {listing.get('cacheScope', '?')}")
         for tool in tools:

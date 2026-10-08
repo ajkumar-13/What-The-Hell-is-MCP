@@ -3,7 +3,7 @@ slug: 03-wire-protocol
 title: "03 - The wire protocol: JSON-RPC, discovery, and the stateless model"
 summary: "Since revision 2026-07-28 every MCP request carries its own revision, capabilities and identity, so any copy of a server can answer it. The post reads the format field by field and separates protocol errors from tool failures."
 date: 2026-07-22
-updated: 2026-10-08
+updated: 2026-10-09
 status: complete
 part: "Part I - Foundations"
 level: beginner

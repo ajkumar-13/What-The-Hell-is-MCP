@@ -546,7 +546,7 @@ HTTP `200`. `resultType: "complete"`, because the request completed. `isError: t
 
 The boundary between the two is narrower than it looks, because "invalid input" sits on both sides. The rule that resolves it: a request that violates the *shape* of `CallToolRequest` is a protocol error, and a request that is well formed but whose values are wrong for this tool is a tool execution error. `"arguments": "python"`, a string where `CallToolRequest` requires an object, is `-32602`. `{"date": "1999-01-01"}` for a flight next week is `isError: true`, and so is `{"date": 42}` against a tool whose schema wants a string: the Tools page lists input validation errors among tool execution errors, a split that SEP-1303 formalized.
 
-> **A note on the text.** The schema's comment on `-32602` still lists "invalid tool arguments" beside "unknown tool name", which reads as if a schema-violating argument were a protocol error. The Tools page and SEP-1303 say the opposite for argument values, and the Python software development kit (SDK) follows them, so this post does too. The same SDK also departs from the Tools page in one place: `mcp==2.0.0b2` answers an unknown tool name with `isError: true` and the text `Unknown tool: get_wether`, where the page prints `-32602`. Section 10 shows both answers as they arrive.
+> **A note on the text.** The schema's comment on `-32602` still lists "invalid tool arguments" beside "unknown tool name", which reads as if a schema-violating argument were a protocol error. The Tools page and SEP-1303 say the opposite for argument values, and the Python software development kit (SDK) follows them, so this post does too. The same SDK also departs from the Tools page in one place: `mcp==2.3.0` answers an unknown tool name with `isError: true` and the text `Unknown tool: get_wether`, where the page prints `-32602`. Section 10 shows both answers as they arrive.
 
 ## 9. Make it run: doing it by hand with `httpx`
 
@@ -566,7 +566,7 @@ def build(request_id: int, method: str, params: dict | None = None) -> dict:
     return {"jsonrpc": "2.0", "id": request_id, "method": method, "params": body}
 ```
 
-The full file adds the four headers every POST carries (`Content-Type`, `Accept`, `MCP-Protocol-Version`, `Mcp-Method`, plus `Mcp-Name` on a `tools/call`), a reader that copes with either a single JSON reply or a Server-Sent Events (SSE) stream, and a `main` that sends `server/discover` and then `tools/list` and prints both results. Both scripts run from the series root, whose `pyproject.toml` pins `mcp[cli]==2.0.0b2` and `httpx<1`:
+The full file adds the four headers every POST carries (`Content-Type`, `Accept`, `MCP-Protocol-Version`, `Mcp-Method`, plus `Mcp-Name` on a `tools/call`), a reader that copes with either a single JSON reply or a Server-Sent Events (SSE) stream, and a `main` that sends `server/discover` and then `tools/list` and prints both results. Both scripts run from the series root, whose `pyproject.toml` pins `mcp[cli]==2.3.0` and `httpx<1`:
 
 ```text
 uv run python posts/03-wire-protocol/snippets/raw_discover.py
@@ -579,8 +579,8 @@ With no argument, `raw_discover.py` starts the server built in [post 05](../05-f
 Against the post 05 server, `raw_discover.py` prints this:
 
 ```text
-server        system-info 2.0.0b2
-serverInfo    a top-level result field, not in result._meta
+server        system-info, version ""
+serverInfo    in result._meta of server/discover and of tools/list
 versions      2026-07-28
 capabilities  completions, prompts, resources, tools
 cacheable     0 ms, scope private
@@ -595,24 +595,24 @@ _meta         183 bytes on every request
 
 Five things in that output are worth pausing on. The revision on the `versions` line is the one this series targets, and it was read rather than negotiated. The capability list came from `server/discover` rather than from a handshake. The two `cacheable` lines are the `ttlMs` and `cacheScope` pair that `server/discover` and `tools/list`, two of the six cacheable methods, must carry; a `ttlMs` of `0` means the result is stale at once, so this server declines to be cached. The `_meta` line is the per-request cost of section 7. And `terminate_process` requires only `pid`, even though the tool cannot run without a human approving it, because the approval is not something the caller supplies; [post 08](../08-elicitation-and-mrtr/index.md) explains why.
 
-Two things in that output are not what they look like. The `2.0.0b2` beside the server name is the SDK's version, not this project's: `app.py` constructs `MCPServer("system-info")` with no version argument, so the SDK fills in its own, and the `0.2.0` in the project's `pyproject.toml` never reaches the wire. A server that wants `serverInfo` to mean anything in a log passes a version explicitly. And the `serverInfo` line records an SDK lag: the specification puts `serverInfo` in the result's `_meta` under `io.modelcontextprotocol/serverInfo`, while `mcp==2.0.0b2` returns it as a top-level `serverInfo` field of the discovery result and leaves it off the `tools/list` result. The script's `server_info` function looks in both places, so it reads either kind of server.
+The first two lines are about identity. The `serverInfo` line says where the script found the server's self-description: in each result's `_meta` under `io.modelcontextprotocol/serverInfo`, on `tools/list` as well as on `server/discover`, which is where the specification puts it. The script's `server_info` function also looks for a top-level `serverInfo` field and names that place if the field turns up there, so a server that misplaces it is reported as such rather than as having none. The empty version is the project's doing: `app.py` constructs `MCPServer("system-info")` with no version argument, so the server reports an empty string, and the `0.2.0` in the project's `pyproject.toml` never reaches the wire. A server that wants `serverInfo` to mean anything in a log passes a version explicitly.
 
 The client half of the file, `build`, `headers`, `read_result`, `call`, and `server_info`, is a complete MCP client for two methods. That is the honest measure of how much protocol there is here. When something goes wrong in post 05 and later, this script is the fastest way to find out whether the problem is the server or the thing calling it.
 
 ## 10. What can go wrong?
 
-Every failure below is triggered on purpose by `snippets/what_can_go_wrong.py` against the same post 05 server, and each request differs from a working one by one change. The script prints the HTTP status, then either the JSON-RPC error or the first line of the tool result.
+Every case below is triggered on purpose by `snippets/what_can_go_wrong.py` against the same post 05 server, and each request differs from a working one by one change. The script prints the HTTP status, then either the JSON-RPC error or, for a result, the first line of the tool's text or the number of tools listed.
 
-**The `_meta` keys are left out**, for example because a request was copied from a feature page that abbreviated them. The server refuses before it looks at the method:
+**The `_meta` keys are left out**, for example because a request was copied from a feature page that abbreviated them. The server refuses before it looks at the method, and its message names the two keys it requires:
 
 ```text
 _meta left out, as the feature pages print requests
-  HTTP 400  error -32602  params._meta must carry the reserved protocol-version, client-info and client-capabilities envelope keys  id=1
+  HTTP 400  error -32602  params._meta must be an object carrying the required 'io.modelcontextprotocol/protocolVersion' and 'io.modelcontextprotocol/clientCapabilities' envelope keys  id=1
 clientInfo left out
-  HTTP 400  error -32602  params._meta must carry the reserved protocol-version, client-info and client-capabilities envelope keys  id=2
+  HTTP 200  result  4 tools
 ```
 
-The second case is the SDK being stricter than the specification. `io.modelcontextprotocol/clientInfo` is a **should** in the specification, but `mcp==2.0.0b2` rejects a request without it, so a hand-written client sends all three keys, as `build` does.
+The second case is not a failure. `io.modelcontextprotocol/clientInfo` is a **should** in the specification, and the server answers a request without it in full. `build` still sends it, because it is what makes the server's log readable.
 
 **The revision or a routing header disagrees with the server.** A revision the server does not implement earns `-32022` with the list it does implement; a header that names a different method from the body, or a `tools/call` without its `Mcp-Name` header, earns `-32020`:
 
@@ -676,6 +676,7 @@ The script's last case sends the same `tools/list` with nothing missing, and its
 - SEP-2575, *Stateless MCP*, and SEP-2567, *Sessionless MCP*. The reasoning behind removing the handshake and the session, including the load-balancing argument.
 - SEP-1303, *Input validation errors as tool execution errors*. Why a wrong argument value is reported in the result, as section 8 says.
 - JSON-RPC 2.0 specification. The base standard MCP profiles.
+- MCP Python SDK, release 2.3.0. The server behind every transcript in sections 9 and 10, driving [code/05-first-server/](../../code/05-first-server/).
 
 Full citations are in [REFERENCES.md](../../REFERENCES.md).
 

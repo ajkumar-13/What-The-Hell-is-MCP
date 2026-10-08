@@ -32,8 +32,13 @@ def show(label: str, response: httpx.Response) -> None:
         print(line + f"  id={json.dumps(message.get('id'))}")
     else:
         result = message["result"]
-        text = result.get("content", [{}])[0].get("text", "").splitlines()[0]
-        print(f"  HTTP {response.status_code}  result  isError={json.dumps(result.get('isError', False))}  {text}")
+        if "tools" in result:
+            # A tools/list that succeeded: there is no content block to quote.
+            print(f"  HTTP {response.status_code}  result  {len(result['tools'])} tools")
+            return
+        content = result.get("content") or [{}]
+        lines = content[0].get("text", "").splitlines() or ["(no text)"]
+        print(f"  HTTP {response.status_code}  result  isError={json.dumps(result.get('isError', False))}  {lines[0]}")
 
 
 def main() -> None:
@@ -47,7 +52,7 @@ def main() -> None:
         del body["params"]["_meta"]
         send("_meta left out, as the feature pages print requests", body, headers("tools/list"))
 
-        # 2. clientInfo is a SHOULD in the specification; this SDK build requires it.
+        # 2. clientInfo is a SHOULD in the specification, so leaving it out is allowed.
         body = build(2, "tools/list")
         del body["params"]["_meta"]["io.modelcontextprotocol/clientInfo"]
         send("clientInfo left out", body, headers("tools/list"))

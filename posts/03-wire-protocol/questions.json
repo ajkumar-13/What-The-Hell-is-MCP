@@ -18,7 +18,7 @@
         "required-keys"
       ],
       "status": "reviewed",
-      "updated": "2026-10-08",
+      "updated": "2026-10-09",
       "prompt": "A client writes a `tools/call` request by hand for a server at revision 2026-07-28. Which `_meta` keys does the specification require on that request, and on every other client request?",
       "select": "single",
       "options": [
@@ -47,7 +47,7 @@
           "feedback": "`progressToken` is optional and only opts a request into progress notifications. The correlation of request and response is the JSON-RPC `id`."
         }
       ],
-      "explanation": "Section 4 lists the reserved keys: `io.modelcontextprotocol/protocolVersion` and `io.modelcontextprotocol/clientCapabilities` are required on every client request, `clientInfo` is recommended, and the rest are optional. The `mcp==2.0.0b2` SDK of section 10 is stricter and also rejects a request without `clientInfo`, which is why a hand-written client sends all three.",
+      "explanation": "Section 4 lists the reserved keys: `io.modelcontextprotocol/protocolVersion` and `io.modelcontextprotocol/clientCapabilities` are required on every client request, `clientInfo` is recommended, and the rest are optional. The `mcp==2.3.0` server of section 10 answers a request without `clientInfo` in full; a hand-written client still sends it, because it is what makes a server's log readable.",
       "hints": [
         "Look for the two keys whose absence makes a request malformed rather than merely unidentified."
       ]
@@ -116,8 +116,8 @@
         "error-channels"
       ],
       "status": "reviewed",
-      "updated": "2026-10-08",
-      "prompt": "The script `what_can_go_wrong.py` sends broken requests to the post 05 server running on `mcp==2.0.0b2`. Which of these come back as HTTP 200 with a result whose `isError` is true? Select every one that does.",
+      "updated": "2026-10-09",
+      "prompt": "The script `what_can_go_wrong.py` sends requests that each differ from a working one by one change to the post 05 server running on `mcp==2.3.0`. Which of these come back as HTTP 200 with a result whose `isError` is true? Select every one that does.",
       "select": "multiple",
       "options": [
         {
@@ -149,9 +149,15 @@
           "text": "A `tools/call` to `terminate_process` from a client that declared no capabilities.",
           "correct": false,
           "feedback": "The tool needs form elicitation, which the request did not declare, so the server returns `-32021` with HTTP 400 and lists the missing capability in `data`."
+        },
+        {
+          "key": "f",
+          "text": "A `tools/list` whose `_meta` carries both required keys but no `io.modelcontextprotocol/clientInfo`.",
+          "correct": false,
+          "feedback": "It does come back with HTTP 200, but as an ordinary `tools/list` result with the four tools and no `isError`. `clientInfo` is only recommended, so nothing failed."
         }
       ],
-      "explanation": "Section 10 prints every case. The two that reach the result channel are the unknown tool name, where this SDK departs from the Tools page, and the wrong-typed argument, which the Tools page itself classifies as a tool execution error. The other three break the request: a non-object `arguments` and a missing `_meta` earn `-32602`, and an undeclared capability earns `-32021`, all with HTTP 400.",
+      "explanation": "Section 10 prints every case. The two that reach the result channel with `isError: true` are the unknown tool name, where this SDK departs from the Tools page, and the wrong-typed argument, which the Tools page itself classifies as a tool execution error. Three others break the request: a non-object `arguments` and a missing `_meta` earn `-32602`, and an undeclared capability earns `-32021`, all with HTTP 400. The request without `clientInfo` is not broken at all and is answered in full.",
       "hints": [
         "Separate requests that break a schema the server checks before running any tool from requests that reach a tool.",
         "One of the result-channel cases is where the SDK differs from the specification's own example."
@@ -271,7 +277,7 @@
         "server-info"
       ],
       "status": "reviewed",
-      "updated": "2026-10-08",
+      "updated": "2026-10-09",
       "prompt": "Which reserved `_meta` key does a server put on its results to identify the software that produced them?",
       "answer": {
         "model": "`io.modelcontextprotocol/serverInfo`, an `Implementation` object with at least a name and a version.",
@@ -279,7 +285,7 @@
           "^(?![\\s\\S]*\\bserver[\\s_-]?info\\b[^.;\\n]*\\b(?:set|sent|written|added|put|carried)\\s+by\\s+(?:the\\s+|a\\s+)?client\\b)(?![\\s\\S]*\\b(?:the\\s+|a\\s+)?client\\s+(?:sets|sends|puts|adds|writes|includes)\\b[^.;\\n]*\\bserver[\\s_-]?info\\b)(?![\\s\\S]*\\bserver[\\s_-]?info\\b[^.;\\n]*\\bon\\s+(?:its\\s+|every\\s+|each\\s+|the\\s+|a\\s+)?(?:client\\s+)?requests?\\b)(?![\\s\\S]*\\b(?:maybe|perhaps|possibly|probably|unsure|not\\s+sure|i\\s+think|guess|might\\s+be|could\\s+be)\\b)(?![\\s\\S]*\\b(?:not|never|isn't|is\\s+not|rather\\s+than|instead\\s+of)\\s+(?:the\\s+)?`?(?:io\\.modelcontextprotocol/)?serverinfo\\b)(?![\\s\\S]*\\bclient[\\s_-]?info\\b[\\s`'\\\"]*(?:,|/|\\bor\\b|\\band\\b|&|\\+)[\\s`'\\\"]*(?!not\\b|never\\b)(?:the\\s+|also\\s+)?[\\s`'\\\"]*(?:io\\.modelcontextprotocol/)?server[\\s_-]?info\\b)(?![\\s\\S]*\\bserver[\\s_-]?info\\b[\\s`'\\\"]*(?:,|/|\\bor\\b|\\band\\b|&|\\+)[\\s`'\\\"]*(?!not\\b|never\\b)(?:the\\s+|also\\s+)?[\\s`'\\\"]*(?:io\\.modelcontextprotocol/)?client[\\s_-]?info\\b)[\\s\\S]*\\bserver[\\s_-]?info\\b"
         ]
       },
-      "explanation": "Section 4 lists `io.modelcontextprotocol/serverInfo` as the result-side key, recommended rather than required, and its client-side twin `io.modelcontextprotocol/clientInfo`. Both are self-reported and meant for logs, never for security decisions. Section 9 shows that `mcp==2.0.0b2` returns it as a top-level field of the discovery result instead.",
+      "explanation": "Section 4 lists `io.modelcontextprotocol/serverInfo` as the result-side key, recommended rather than required, and its client-side twin `io.modelcontextprotocol/clientInfo`. Both are self-reported and meant for logs, never for security decisions. Section 9 shows the post 05 server putting it in the `_meta` of both its `server/discover` and its `tools/list` results.",
       "hints": [
         "It is the result-side twin of the key a client uses to name itself."
       ]
@@ -299,12 +305,12 @@
         "methods"
       ],
       "status": "reviewed",
-      "updated": "2026-10-08",
+      "updated": "2026-10-09",
       "prompt": "Revision 2026-07-28 has no handshake. Which method does a client call, if it wants to, to learn the revisions a server supports and the capabilities it has?",
       "answer": {
         "model": "`server/discover`, which every server must implement and no client is required to call.",
         "accept": [
-          "^(?![\\s\\S]*(?<!no longer )(?<!not )(?<!never )(?<!n't )\\b(?:sends?|sending|calls?|calling|first)\\s+(?:an?\\s+|the\\s+)?`?initialize\\b)(?![\\s\\S]*\\binitialize\\b[\\s`'\\\"]*,?\\s*(?:and\\s+)?then\\b)(?![\\s\\S]*server\\s*/?\\s*discover\\b[^.\\n]*\\b(?:sent|initiated|called)\\s+by\\s+the\\s+server\\b)(?![\\s\\S]*\\bthe\\s+server\\s+(?:sends|calls|initiates|answers\\s+with|replies\\s+with|responds\\s+with)\\s+(?:a\\s+|an\\s+)?`?server\\s*/?\\s*discover)(?![\\s\\S]*\\b(?:maybe|perhaps|possibly|probably|unsure|not\\s+sure|i\\s+think|guess|might\\s+be|could\\s+be)\\b)(?![\\s\\S]*\\b(?:not|never|isn't|is\\s+not|rather\\s+than|instead\\s+of)\\s+(?:the\\s+)?`?server\\s*/?\\s*discover\\b)(?![\\s\\S]*\\b(?:initialize|tools/list|ping)\\b[\\s`'\\\"]*(?:,|\\bor\\b|\\band\\b|&|\\+)[\\s`'\\\"]*(?!not\\b|never\\b)(?:the\\s+|also\\s+)?[\\s`'\\\"]*server\\s*/?\\s*discover)(?![\\s\\S]*server\\s*/?\\s*discover[\\s`'\\\"]*(?:,|\\bor\\b|\\band\\b|&|\\+)[\\s`'\\\"]*(?!not\\b|never\\b)(?:the\\s+|also\\s+)?[\\s`'\\\"]*\\b(?:initialize|tools/list|ping)\\b)[\\s\\S]*\\bserver\\s*/?\\s*discover\\b"
+          "^(?![\\s\\S]*(?<!no longer )(?<!not )(?<!never )(?<!n't )\\b(?:sends?|sending|calls?|calling|first)\\s+(?:an?\\s+|the\\s+)?`?initialize\\b)(?![\\s\\S]*\\binitialize\\b[\\s`'\\\"]*,?\\s*(?:and\\s+)?then\\b)(?![\\s\\S]*server\\s*/?\\s*discover\\b[^.\\n]*\\b(?:sent|initiated|called)\\s+by\\s+the\\s+server\\b)(?![\\s\\S]*\\bthe\\s+server\\s+(?:sends|calls|initiates|answers\\s+with|replies\\s+with|responds\\s+with)\\s+(?:a\\s+|an\\s+)?`?server\\s*/?\\s*discover)(?![\\s\\S]*\\b(?:maybe|perhaps|possibly|probably|unsure|not\\s+sure|i\\s+think|guess|might\\s+be|could\\s+be)\\b)(?![\\s\\S]*\\b(?:not|never|isn't|is\\s+not|rather\\s+than|instead\\s+of)\\s+(?:the\\s+)?`?server\\s*/?\\s*discover\\b)(?![\\s\\S]*(?<!instead of )(?<!rather than )(?<!no longer )\\b(?:initialize|tools/list|ping)\\b[\\s`'\\\"]*(?:,|\\bor\\b|\\band\\b|&|\\+)[\\s`'\\\"]*(?!not\\b|never\\b)(?:the\\s+|also\\s+)?[\\s`'\\\"]*server\\s*/?\\s*discover)(?![\\s\\S]*server\\s*/?\\s*discover[\\s`'\\\"]*(?:,|\\bor\\b|\\band\\b|&|\\+)[\\s`'\\\"]*(?!not\\b|never\\b)(?:the\\s+|also\\s+)?[\\s`'\\\"]*\\b(?:initialize|tools/list|ping)\\b)[\\s\\S]*\\bserver\\s*/?\\s*discover\\b"
         ]
       },
       "explanation": "Section 3 introduces `server/discover`: its `params` hold only `_meta`, and its result carries `supportedVersions`, `capabilities`, `ttlMs` and `cacheScope`. It replaced the `initialize` handshake, which no longer exists.",
@@ -539,8 +545,8 @@
         "meta"
       ],
       "status": "reviewed",
-      "updated": "2026-10-08",
-      "prompt": "Complete `build_call` so that the body and headers it returns form a `tools/call` POST that a 2026-07-28 server over Streamable HTTP accepts. The body must carry both required `_meta` keys plus `io.modelcontextprotocol/clientInfo`, since the SDK of section 10 rejects requests without it, and must declare `capabilities` as given, or no optional capabilities when it is `None`. The headers must carry everything a `tools/call` needs.",
+      "updated": "2026-10-09",
+      "prompt": "Complete `build_call` so that the body and headers it returns form a `tools/call` POST that a 2026-07-28 server over Streamable HTTP accepts. The body must carry both required `_meta` keys plus `io.modelcontextprotocol/clientInfo`, which the specification recommends so that a server's log names the caller, and must declare `capabilities` as given, or no optional capabilities when it is `None`. The headers must carry everything a `tools/call` needs.",
       "kind": "complete",
       "language": "python",
       "starter": "PROTOCOL_VERSION = \"2026-07-28\"\n\n\ndef build_call(request_id, tool, arguments, capabilities=None):\n    \"\"\"Return (body, headers) for one tools/call POST over Streamable HTTP.\"\"\"\n    body = {\n        \"jsonrpc\": \"2.0\",\n        \"id\": request_id,\n        \"method\": \"tools/call\",\n        \"params\": {\"name\": tool, \"arguments\": arguments},\n    }\n    headers = {\n        \"Content-Type\": \"application/json\",\n        \"Accept\": \"application/json, text/event-stream\",\n    }\n    return body, headers\n",
@@ -599,10 +605,10 @@
         "sdk-behavior"
       ],
       "status": "reviewed",
-      "updated": "2026-10-08",
-      "prompt": "A team reviews its server's errors. A booking date in the past is answered with a JSON-RPC error, code `-32602`. An unknown tool name is answered, as `mcp==2.0.0b2` does, with a result whose `isError` is true. A request without `_meta` is answered with HTTP 200 and an empty tool list. Critique each choice against revision 2026-07-28: say which channel each case belongs in, what the model or client sees under the team's choice, and what the server should send instead.",
+      "updated": "2026-10-09",
+      "prompt": "A team reviews its server's errors. A booking date in the past is answered with a JSON-RPC error, code `-32602`. An unknown tool name is answered, as `mcp==2.3.0` does, with a result whose `isError` is true. A request without `_meta` is answered with HTTP 200 and an empty tool list. Critique each choice against revision 2026-07-28: say which channel each case belongs in, what the model or client sees under the team's choice, and what the server should send instead.",
       "kind": "critique",
-      "solution": "**The past booking date.** The request is well formed and names a real tool; only the value is wrong for this tool, which the Tools page lists among tool execution errors. It belongs in a successful result with `resultType: \"complete\"`, `isError: true`, and text such as \"departure date must be in the future\". As a `-32602` error it reaches the client as a protocol failure, which a client is not required to pass to the model, so the model never learns that another date would work.\n\n**The unknown tool name.** The Tools page treats a name the server does not have as a protocol error, `-32602`, because no tool ran and a model is unlikely to fix the request by itself. The team's choice matches what `mcp==2.0.0b2` does, so the result reaches the model as text, `Unknown tool: ...`, and a client that only checks for an `error` member records a success. The conformant answer is the JSON-RPC error; a team that keeps the SDK's behavior should know that it differs from the specification and make its client check `isError` as well.\n\n**The request without `_meta`.** A request missing `io.modelcontextprotocol/protocolVersion` or `io.modelcontextprotocol/clientCapabilities` is malformed, and the server must reject it with `-32602` and HTTP 400. Answering 200 with an empty list hides the client's bug: the client concludes that the server has no tools, and nothing tells it that its own envelope is incomplete.",
+      "solution": "**The past booking date.** The request is well formed and names a real tool; only the value is wrong for this tool, which the Tools page lists among tool execution errors. It belongs in a successful result with `resultType: \"complete\"`, `isError: true`, and text such as \"departure date must be in the future\". As a `-32602` error it reaches the client as a protocol failure, which a client is not required to pass to the model, so the model never learns that another date would work.\n\n**The unknown tool name.** The Tools page treats a name the server does not have as a protocol error, `-32602`, because no tool ran and a model is unlikely to fix the request by itself. The team's choice matches what `mcp==2.3.0` does, so the result reaches the model as text, `Unknown tool: ...`, and a client that only checks for an `error` member records a success. The conformant answer is the JSON-RPC error; a team that keeps the SDK's behavior should know that it differs from the specification and make its client check `isError` as well.\n\n**The request without `_meta`.** A request missing `io.modelcontextprotocol/protocolVersion` or `io.modelcontextprotocol/clientCapabilities` is malformed, and the server must reject it with `-32602` and HTTP 400. Answering 200 with an empty list hides the client's bug: the client concludes that the server has no tools, and nothing tells it that its own envelope is incomplete.",
       "rubric": [
         {
           "criterion": "Places the past date in the tool execution channel with isError true and a corrective message, and explains that a protocol error hides the reason from the model",
