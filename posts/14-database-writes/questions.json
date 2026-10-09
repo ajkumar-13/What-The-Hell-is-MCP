@@ -1,0 +1,782 @@
+{
+  "standard": "2.1.0",
+  "post": "mcp-014",
+  "next_ordinal": 19,
+  "questions": [
+    {
+      "id": "mcp-014-q01",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "4",
+      "est_minutes": 2,
+      "tags": [
+        "resolve",
+        "approval"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`write_database` takes three Python parameters, `sql`, `approval` and `dry_run`. What stops a model from approving its own write?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The annotation `destructive_hint=True` makes the host discard any approval the model supplies.",
+          "correct": false,
+          "feedback": "Annotations are hints, and the Tools page has clients treat them as untrusted unless the server is trusted. Nothing in a hint removes a field from the arguments."
+        },
+        {
+          "key": "b",
+          "text": "The SDK strips the `Resolve`-backed `approval` from the published input schema.",
+          "correct": true,
+          "feedback": "The schema the model reads lists only `sql` and `dry_run`, so there is no argument in which to put an approval; only the resolver's elicitation can fill it."
+        },
+        {
+          "key": "c",
+          "text": "The approval travels inside the sealed `requestState`, which the model cannot read.",
+          "correct": false,
+          "feedback": "The user's answer comes back in `inputResponses` on the retry. `requestState` carries the SDK's own state, and the model does not fill either field."
+        },
+        {
+          "key": "d",
+          "text": "The SQL validator refuses any statement that mentions an approval column.",
+          "correct": false,
+          "feedback": "The validator inspects the statement's shape; it knows nothing about the approval, which is not part of the SQL at all."
+        }
+      ],
+      "explanation": "Section 4 reads the tool back through an in-memory client: the input properties are `sql` and `dry_run`, because the SDK removes every parameter annotated with `Resolve(...)` from the published schema. A model fills arguments from that schema, so it has no field in which to forge `approval`.",
+      "hints": [
+        "Ask what the model reads before it fills in the arguments."
+      ]
+    },
+    {
+      "id": "mcp-014-q02",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "4",
+      "est_minutes": 2,
+      "tags": [
+        "elicitation",
+        "accept"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The confirmation form for a `DELETE` comes back with `action: \"accept\"` and `content` `{\"confirm\": false}`. What does `write_database` return?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "A result with `status: \"committed\"`, since the user accepted and submitted the form.",
+          "correct": false,
+          "feedback": "Accept means the form was submitted, not that the answer was yes. The tool checks `approval.data.confirm` and stops when it is false."
+        },
+        {
+          "key": "b",
+          "text": "A result with `isError: true` saying the elicitation was declined.",
+          "correct": false,
+          "feedback": "With the full `ElicitationResult[T]` annotation nothing becomes a tool error; that is what the `| None` spelling inside `Annotated` does on a decline."
+        },
+        {
+          "key": "c",
+          "text": "A `complete` result with `status: \"declined\"` and an answered-no detail.",
+          "correct": true,
+          "feedback": "The body sees an `AcceptedElicitation` whose `confirm` is false and returns `declined` with `The user answered no to the confirmation.`, `isError` false."
+        },
+        {
+          "key": "d",
+          "text": "Another `input_required` result asking the same question again.",
+          "correct": false,
+          "feedback": "The answer matched the recorded question, so the call completes; the server re-asks only when the rendered question has changed."
+        }
+      ],
+      "explanation": "Section 4's four answers show it: `accept {\"confirm\": false}` gives `status='declined'` with `detail='The user answered no to the confirmation.'` and `isError=false`. An unchecked box arrives as an accept, so a tool that equates accept with approval would commit a write its owner refused.",
+      "hints": [
+        "Separate what `action` says from what the form's fields say."
+      ]
+    },
+    {
+      "id": "mcp-014-q03",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "4",
+      "est_minutes": 3,
+      "tags": [
+        "resolve",
+        "annotation"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A tool declares `ap: Annotated[ElicitationResult[Approval] | None, Resolve(ask)]`, and the user declines the question. What does the model receive under `mcp==2.3.0`?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "A result whose body saw `DeclinedElicitation`, with `isError` false, as any decline gives.",
+          "correct": false,
+          "feedback": "That is the behavior of `Annotated[ElicitationResult[T], Resolve(f)]` without the `| None`. The optional spelling unwraps on accept and fails on anything else."
+        },
+        {
+          "key": "b",
+          "text": "`InvalidSignature`, raised when the decorator runs.",
+          "correct": false,
+          "feedback": "Registration refuses a union around the whole `Annotated[...]`. With the `| None` inside `Annotated`, the tool registers without complaint."
+        },
+        {
+          "key": "c",
+          "text": "A result whose body received `None` for `ap`.",
+          "correct": false,
+          "feedback": "The SDK does not pass `None` for a decline; it fails the resolution, so the body never runs."
+        },
+        {
+          "key": "d",
+          "text": "An `isError: true` result saying the resolver could not resolve `ap`.",
+          "correct": true,
+          "feedback": "The SDK prints `Error executing tool ...: Resolver for parameter 'ap' could not resolve: elicitation was decline`; a person saying no became a tool error."
+        }
+      ],
+      "explanation": "Section 4's table, printed by `snippets/resolver_spellings.py`: the optional inner spelling unwraps an accept to the bare model and turns a decline or a cancel into an `isError` result. Only `Annotated[ElicitationResult[T], Resolve(f)]` keeps the three outcomes as values the tool can branch on.",
+      "hints": [
+        "Find where the `| None` sits: inside `Annotated` or around it.",
+        "Inside, the tool registers; ask what the SDK does when it cannot produce a non-optional value."
+      ]
+    },
+    {
+      "id": "mcp-014-q04",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "2",
+      "est_minutes": 4,
+      "tags": [
+        "fallback",
+        "roles"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A server runs the earlier line `write_url = os.getenv(\"DATABASE_WRITE_URL\", os.getenv(\"DATABASE_URL\"))` with `ENABLE_WRITES=true` and only `DATABASE_URL` set, naming `mcp_readonly`, and is launched so that a user can approve an `UPDATE`. What happens?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The server does not start: the lifespan's `CREATE TABLE` runs through the write pool, which is the read-only role.",
+          "correct": true,
+          "feedback": "The fallback opens the write pool as `mcp_readonly`, and with writes enabled the lifespan creates the audit table through it before any tool runs. PostgreSQL refuses `CREATE TABLE` in a read-only transaction, the exception leaves the lifespan, and nobody is ever asked."
+        },
+        {
+          "key": "b",
+          "text": "The server starts, and the tool returns `failed`, saying that `DATABASE_WRITE_URL` is not set on this server.",
+          "correct": false,
+          "feedback": "That is today's behavior without the fallback, when `write_url` is `None` and no write pool opens. The fallback hides exactly that message."
+        },
+        {
+          "key": "c",
+          "text": "The server starts; the human approves the `UPDATE`, and PostgreSQL then refuses the statement.",
+          "correct": false,
+          "feedback": "That is the story the fallback suggests, but the approval never happens: the write pool's first statement is the audit table's `CREATE TABLE` at startup, and the read-only role refuses it there."
+        },
+        {
+          "key": "d",
+          "text": "The server starts and the `UPDATE` commits, because the human approved it and a write pool exists.",
+          "correct": false,
+          "feedback": "Approval does not grant privileges, and `mcp_readonly` runs every transaction read-only; in any case the server stops at startup before a tool can be called."
+        }
+      ],
+      "explanation": "Section 2: with only `DATABASE_URL` set the fallback resolves to the read-only role's URL, as `snippets/write_gates.py` prints, so the write pool logs in as `mcp_readonly`. With writes enabled and a write pool open, the lifespan calls `ensure_audit_table()` through that pool, and the read-only role refuses `CREATE TABLE` in a read-only transaction. The exception propagates out of the lifespan and the server never starts: a confusing failure far from the line that caused it.",
+      "hints": [
+        "Evaluate the fallback expression with only one variable set.",
+        "Then follow the lifespan: what does the server do through the write pool before any tool is called?"
+      ]
+    },
+    {
+      "id": "mcp-014-q05",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 2,
+      "tags": [
+        "transactions",
+        "audit"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Why does `write_database` record a failed write on a fresh connection instead of on the connection the statement ran on?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The rollback discarded every row the transaction wrote, an audit row too.",
+          "correct": true,
+          "feedback": "By the time the failure is known, the transaction is gone, and so is any audit row written inside it; only a separate write survives."
+        },
+        {
+          "key": "b",
+          "text": "`asyncpg` allows only one statement per connection.",
+          "correct": false,
+          "feedback": "The success path runs the statement and the audit insert on the same connection; the limit is not the driver's."
+        },
+        {
+          "key": "c",
+          "text": "The failed statement holds a lock on `mcp_audit_log` until the connection closes.",
+          "correct": false,
+          "feedback": "The statement touched a seeded table, not the audit table, and its locks end with the rollback."
+        },
+        {
+          "key": "d",
+          "text": "Failures go to the read pool, which only a fresh connection can reach.",
+          "correct": false,
+          "feedback": "The failure row must come from the write pool; giving it the read pool is the mistake section 9 prints."
+        }
+      ],
+      "explanation": "Section 5's failure trace: `ROLLBACK`, then `acquire: write pool` and the failure insert. The insert cannot ride on the rolled-back transaction because everything written inside it went with the rollback, so `_record_failure` writes on a new write-pool connection.",
+      "hints": [
+        "Ask what a rollback does to every row the transaction inserted."
+      ]
+    },
+    {
+      "id": "mcp-014-q06",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "2",
+      "est_minutes": 4,
+      "tags": [
+        "postgresql",
+        "privileges",
+        "audit"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`mcp_writer` creates `mcp_audit_log` at startup. An operator then runs `REVOKE UPDATE, DELETE ON mcp_audit_log FROM mcp_writer` to make the trail append-only for the write path. Does that work?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Yes; a revoke binds every role, the table's creator included, until a superuser re-grants it.",
+          "correct": false,
+          "feedback": "PostgreSQL treats an owner as holding every grant option on its table, so the owner can re-grant itself whatever was revoked."
+        },
+        {
+          "key": "b",
+          "text": "No; `mcp_writer` owns the table, so it can re-grant itself and can drop the table.",
+          "correct": true,
+          "feedback": "Ownership carries the grant options and the right to drop; an append-only trail needs a table owned by a different role that grants `mcp_writer` only what the insert needs."
+        },
+        {
+          "key": "c",
+          "text": "No; `mcp_readonly` can still delete rows, through its `SELECT` grant.",
+          "correct": false,
+          "feedback": "`SELECT` does not allow `DELETE`, and every `mcp_readonly` transaction is read-only anyway."
+        },
+        {
+          "key": "d",
+          "text": "Yes, as long as `ENABLE_WRITES` stays false afterwards.",
+          "correct": false,
+          "feedback": "With writes switched off nothing writes to the table at all; the question is what a compromised write path could do with the switch on."
+        }
+      ],
+      "explanation": "Section 2: because `mcp_writer` creates the audit table it owns it, and an owner can always re-grant its own privileges and drop the table. The revoke narrows the role only for as long as the role cooperates; append-only for the write path needs the table to belong to someone else.",
+      "hints": [
+        "Ask who owns a table that a role creates.",
+        "Then ask what an owner can do that no revoke takes away."
+      ]
+    },
+    {
+      "id": "mcp-014-q07",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 2,
+      "tags": [
+        "transactions",
+        "pools"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Count the write-pool connections `write_database` acquires after the human approves: (1) for a statement that commits, and (2) for a statement that fails and whose failure row is recorded.",
+      "answer": {
+        "parts": [
+          {
+            "label": "connections acquired for a committed write",
+            "value": 1,
+            "tolerance": 0,
+            "unit": "connections"
+          },
+          {
+            "label": "connections acquired for a failed write",
+            "value": 2,
+            "tolerance": 0,
+            "unit": "connections"
+          }
+        ]
+      },
+      "precision_note": "snippets/transaction_trace.py prints one 'acquire: write pool' in the committed trace and two in the failure trace (steps 1 and 5).",
+      "explanation": "Section 5: a committed write runs the statement and its audit insert inside one transaction on one connection. A failed write rolls that transaction back and then acquires a second write-pool connection for the failure row, because the first transaction no longer exists.",
+      "hints": [
+        "Follow the success trace: is a second acquire needed when the audit row rides on the same connection?"
+      ]
+    },
+    {
+      "id": "mcp-014-q08",
+      "type": "numeric",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "3",
+      "est_minutes": 4,
+      "tags": [
+        "gates",
+        "consent"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A client whose user always accepts with `confirm` true calls `write_database` five times on a server with `ENABLE_WRITES=true` and no write pool, with these arguments in order. How many confirmation dialogs does the user see in total?",
+      "stimulus": {
+        "kind": "code",
+        "language": "text",
+        "content": "{\"sql\": \"DELETE FROM users\"}\n{\"sql\": \"UPDATE users SET active = false WHERE id = 3\", \"dry_run\": true}\n{\"sql\": \"TRUNCATE TABLE users\"}\n{\"sql\": \"DELETE FROM orders WHERE id = 4242\"}\n{\"sql\": \"DELETE FROM orders WHERE id = 4242\"}"
+      },
+      "answer": {
+        "value": 2,
+        "tolerance": 0,
+        "unit": "dialogs"
+      },
+      "precision_note": "snippets/write_gates.py prints 'questions asked: 0' for DELETE FROM users, TRUNCATE TABLE users and the dry run; snippets/confirm_wire.py prints asked=1 for each answered call of DELETE FROM orders WHERE id = 4242, so 0 + 0 + 0 + 1 + 1.",
+      "explanation": "Sections 3 and 4: a statement the validator refuses and a dry run return before the resolver asks anybody, so the first three calls show nothing. Each of the last two is a separate call with a valid statement, and each asks once; the missing write pool is noticed only after the approval.",
+      "hints": [
+        "Mark which calls the resolver answers with its stand-in instead of a question.",
+        "Two calls with the same arguments are still two calls."
+      ]
+    },
+    {
+      "id": "mcp-014-q09",
+      "type": "numeric",
+      "track": "edge",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "9",
+      "est_minutes": 2,
+      "tags": [
+        "capabilities",
+        "errors"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A test opens `Client(mcp)` on the analyst server with no `elicitation_callback`, sets `ENABLE_WRITES=true`, and calls `write_database` with `{\"sql\": \"DELETE FROM orders WHERE id = 4242\"}`. Which JSON-RPC error code does the call raise?",
+      "answer": {
+        "value": -32021,
+        "tolerance": 0,
+        "unit": ""
+      },
+      "precision_note": "snippets/confirm_wire.py prints 'MCPError -32021: Client did not declare the form elicitation capability required by resolver ...'.",
+      "explanation": "Section 9: without a callback the client declares no elicitation capability, and the MRTR page forbids an `inputRequests` entry for a capability the client did not declare. The resolver therefore cannot ask, and the call fails with `-32021` (`MISSING_REQUIRED_CLIENT_CAPABILITY`), naming the resolver and the missing capability.",
+      "hints": [
+        "A server may not ask a question the client has not declared it can answer.",
+        "The code is the MCP-specific one about a missing client capability."
+      ]
+    },
+    {
+      "id": "mcp-014-q10",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "4",
+      "est_minutes": 2,
+      "tags": [
+        "prompt",
+        "comments"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`write_database` receives `update  users   set active = false where id = 3 /* and everything else */`. Ignoring letter case, write the statement text that the confirmation prompt shows the human.",
+      "answer": {
+        "model": "`UPDATE users SET active = FALSE WHERE id = 3`",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:not|never|n't)\\s+(?:\\w+\\s+){0,2}?[`\\\"']?update\\b)[\\s\\S]*?\\bupdate\\s+users\\s+set\\s+active\\s*=\\s*false\\s+where\\s+id\\s*=\\s*3\\b(?!\\s*(?:and\\b|or\\b|,|\\d|[-+*/<>=|]))[\\s\\S]*$"
+        ]
+      },
+      "explanation": "Section 4: `plan.sql` is regenerated from the parse tree with `comments=False`, so the whitespace is normalized and the comment is dropped. The prompt, the audit row and the executed statement are that one string, and there is nowhere left to hide text from the person reading the dialog.",
+      "hints": [
+        "The prompt is built from `plan.sql`, which is regenerated rather than copied.",
+        "Ask what `comments=False` removes."
+      ]
+    },
+    {
+      "id": "mcp-014-q11",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "4",
+      "est_minutes": 1,
+      "tags": [
+        "elicitation",
+        "cancel"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The user closes the confirmation dialog without choosing, so the client answers with `action: \"cancel\"`. Which `status` value does `write_database` return?",
+      "answer": {
+        "model": "`declined`",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:not|never|n't|isn't)\\s+(?:\\w+\\s+){0,2}?[`\\\"']?declined)(?![\\s\\S]*\\b(?:committed|failed|rejected|disabled|dry_run|either|maybe|probably|perhaps)\\b)(?![\\s\\S]*\\bdeclined[`\\\"']?\\s+or\\b)(?![\\s\\S]*\\b(?:status|returns?|is|gives?)\\s+(?:\\w+\\s+){0,2}?[`\\\"']?cancell?ed\\b)[\\s\\S]*\\bdeclined\\b[\\s\\S]*$"
+        ]
+      },
+      "explanation": "Section 4: a cancel lands as a plain `complete` result with `status: \"declined\"` and the detail `The confirmation prompt was dismissed.`. The tool keeps decline and cancel apart in the detail, but neither is an error and neither runs anything.",
+      "hints": [
+        "The tool's statuses are disabled, rejected, dry_run, declined, committed and failed."
+      ]
+    },
+    {
+      "id": "mcp-014-q12",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "2",
+      "est_minutes": 1,
+      "tags": [
+        "pools",
+        "audit"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A write has failed and its transaction has rolled back. From which of the server's two pools must the connection that records the failure come?",
+      "answer": {
+        "model": "The write pool.",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:either|both|any|maybe|perhaps|probably|unsure)\\b)(?![\\s\\S]*\\b(?:not|never|n't)\\s+(?:\\w+\\s+){0,2}?(?:from\\s+)?(?:the\\s+)?(?:mcp_)?writ)(?![\\s\\S]*\\b(?:from|use|uses|using|on|is|answer:?)\\s+(?:the\\s+|a\\s+)?(?:\\w+\\s+)?read(?:[- ]?only)?[\\s_]+(?:pool|connection|role)\\b)(?!\\s*(?:the\\s+)?read\\b)(?![\\s\\S]*\\bwrite\\s+read\\b)[\\s\\S]*\\b(?:write|writer|mcp_writer)\\b[\\s\\S]*$"
+        ]
+      },
+      "explanation": "Sections 2 and 5: the failure row is a second write after the rollback, on a fresh connection, and it must come from the write pool. The read-only role runs every transaction read-only, so a failure path given the read pool records no failures at all.",
+      "hints": [
+        "The failure row is itself an insert."
+      ]
+    },
+    {
+      "id": "mcp-014-q13",
+      "type": "order",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 2,
+      "tags": [
+        "transactions",
+        "trace"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Put the calls of an approved write whose statement fails, and whose failure is recorded, in the order `write_database` makes them.",
+      "items": [
+        {
+          "key": "a",
+          "text": "ROLLBACK"
+        },
+        {
+          "key": "b",
+          "text": "acquire a write-pool connection for the transaction"
+        },
+        {
+          "key": "c",
+          "text": "insert the audit row with success false"
+        },
+        {
+          "key": "d",
+          "text": "BEGIN"
+        },
+        {
+          "key": "e",
+          "text": "acquire a second write-pool connection"
+        },
+        {
+          "key": "f",
+          "text": "execute the statement, which raises"
+        }
+      ],
+      "answer": [
+        "b",
+        "d",
+        "f",
+        "a",
+        "e",
+        "c"
+      ],
+      "explanation": "Section 5's failure trace, recorded by `snippets/transaction_trace.py`: acquire, `BEGIN`, execute, `ROLLBACK`, acquire again, and the failure insert. The second acquire comes after the rollback because the first transaction, and anything written inside it, is gone.",
+      "hints": [
+        "The failure row cannot be written until the server knows the statement failed and the transaction is over."
+      ]
+    },
+    {
+      "id": "mcp-014-q14",
+      "type": "match",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "6",
+      "est_minutes": 3,
+      "tags": [
+        "audit",
+        "provenance"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Match each column of `mcp_audit_log` to where its value comes from. Two sources on the right match nothing.",
+      "left": [
+        {
+          "key": "a",
+          "text": "`operation`"
+        },
+        {
+          "key": "b",
+          "text": "`sql_text`"
+        },
+        {
+          "key": "c",
+          "text": "`affected_rows`"
+        },
+        {
+          "key": "d",
+          "text": "`note`"
+        },
+        {
+          "key": "e",
+          "text": "`actor`"
+        }
+      ],
+      "right": [
+        {
+          "key": "p",
+          "text": "the root node type of the parse tree"
+        },
+        {
+          "key": "q",
+          "text": "the statement regenerated from the tree with comments removed"
+        },
+        {
+          "key": "r",
+          "text": "the last field of PostgreSQL's command tag"
+        },
+        {
+          "key": "s",
+          "text": "the reason typed by the approving human"
+        },
+        {
+          "key": "t",
+          "text": "an environment variable set by the operator"
+        },
+        {
+          "key": "u",
+          "text": "the statement exactly as the model submitted it"
+        },
+        {
+          "key": "v",
+          "text": "a row count the server estimated before running"
+        }
+      ],
+      "answer": {
+        "a": "p",
+        "b": "q",
+        "c": "r",
+        "d": "s",
+        "e": "t"
+      },
+      "explanation": "Section 6 walks the fields: `operation` from the tree's root node, `sql_text` from `plan.sql` regenerated with `comments=False`, `affected_rows` from the command tag, `note` from the confirmation form, and `actor` from `AUDIT_ACTOR`. The model's raw string and an estimated count feed no column.",
+      "hints": [
+        "None of the columns stores the model's text verbatim."
+      ]
+    },
+    {
+      "id": "mcp-014-q15",
+      "type": "code",
+      "track": "run",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "2",
+      "est_minutes": 6,
+      "tags": [
+        "fallback",
+        "configuration"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "This function picks the URL the write pool opens against. It carries the fallback the project removed. Fix it so that the write pool never opens against the read-only role, and so that an empty `DATABASE_WRITE_URL` counts as unset, as `Database.write_url` treats it.",
+      "kind": "fix",
+      "language": "python",
+      "starter": "def write_url(env):\n    \"\"\"Return the URL the write pool should open against, or None.\n\n    `env` is a mapping like os.environ. DATABASE_WRITE_URL names the write\n    role and DATABASE_URL names the read-only role.\n    \"\"\"\n    return env.get(\"DATABASE_WRITE_URL\", env.get(\"DATABASE_URL\"))\n",
+      "solution": "def write_url(env):\n    \"\"\"Return the URL the write pool should open against, or None.\n\n    `env` is a mapping like os.environ. DATABASE_WRITE_URL names the write\n    role and DATABASE_URL names the read-only role.\n    \"\"\"\n    return env.get(\"DATABASE_WRITE_URL\") or None\n",
+      "tests": "\nREAD = \"postgresql://mcp_readonly:readonly_password@localhost:5432/analytics\"\nWRITE = \"postgresql://mcp_writer:writer_password@localhost:5432/analytics\"\nassert write_url({\"DATABASE_URL\": READ}) is None, \"only the read URL set: there is no write pool\"\nassert write_url({\"DATABASE_URL\": READ, \"DATABASE_WRITE_URL\": WRITE}) == WRITE\nassert write_url({\"DATABASE_WRITE_URL\": WRITE}) == WRITE\nassert write_url({\"DATABASE_URL\": READ, \"DATABASE_WRITE_URL\": \"\"}) is None, \"an empty value counts as unset\"\nassert write_url({}) is None\nfor env in ({\"DATABASE_URL\": READ}, {\"DATABASE_URL\": READ, \"DATABASE_WRITE_URL\": \"\"}):\n    assert write_url(env) != READ, \"the write pool must never open against the read-only role\"\nprint(\"all write_url tests passed\")\n",
+      "explanation": "Section 2: the fallback made the write pool the read-only role whenever only `DATABASE_URL` was set, which turned a clear startup condition into a confusing failure at the database. Returning the write URL or `None`, and nothing else, keeps the two-role design a boundary: with no write URL there is no write pool, and the tool says so.",
+      "hints": [
+        "The read URL must never be a candidate.",
+        "`env.get(key)` returns an empty string as it is; decide what an empty value should mean."
+      ]
+    },
+    {
+      "id": "mcp-014-q16",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 12,
+      "tags": [
+        "transactions",
+        "audit"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`write(db, sql)` should behave like `write_database` after approval: the statement and its success audit row in one transaction; on a `DatabaseError`, a failure row (success false, 0 rows) on a fresh `db.connection()` after the rollback; and if that row cannot be written either, `audit_id` 0 and no exception. `db.transaction()` yields a connection and rolls back if a call inside it failed; `c.execute(sql)` returns a tag such as `UPDATE 1`; `c.insert_audit(sql, success, rows)` returns an id. Fix it.",
+      "kind": "fix",
+      "language": "python",
+      "starter": "def write(db, sql):\n    \"\"\"Run one statement with its audit row, as write_database does.\n\n    Returns {\"status\": \"committed\" or \"failed\", \"audit_id\": int, \"rows\": int}.\n    \"\"\"\n    with db.transaction() as c:\n        try:\n            tag = c.execute(sql)\n            rows = int(tag.split()[-1])\n            audit_id = c.insert_audit(sql, True, rows)\n            return {\"status\": \"committed\", \"audit_id\": audit_id, \"rows\": rows}\n        except DatabaseError:\n            audit_id = c.insert_audit(sql, False, 0)\n            return {\"status\": \"failed\", \"audit_id\": audit_id, \"rows\": 0}\n",
+      "solution": "def write(db, sql):\n    \"\"\"Run one statement with its audit row, as write_database does.\n\n    Returns {\"status\": \"committed\" or \"failed\", \"audit_id\": int, \"rows\": int}.\n    \"\"\"\n    try:\n        with db.transaction() as c:\n            tag = c.execute(sql)\n            rows = int(tag.split()[-1])\n            audit_id = c.insert_audit(sql, True, rows)\n    except DatabaseError:\n        # The transaction has rolled back; record the failure on a new connection.\n        try:\n            with db.connection() as fresh:\n                audit_id = fresh.insert_audit(sql, False, 0)\n        except DatabaseError:\n            audit_id = 0  # never lose the original failure behind a second one\n        return {\"status\": \"failed\", \"audit_id\": audit_id, \"rows\": 0}\n    return {\"status\": \"committed\", \"audit_id\": audit_id, \"rows\": rows}\n",
+      "tests": "\nfrom contextlib import contextmanager\n\n\nclass DatabaseError(Exception):\n    pass\n\n\nclass FakeDB:\n    \"\"\"A tiny stand-in with PostgreSQL's transaction rules.\n\n    A statement or insert that fails inside a transaction aborts it: every\n    later call on that connection fails, and leaving the block rolls back.\n    \"\"\"\n\n    def __init__(self, tag=\"UPDATE 1\", fail_sql=False, fail_audit=False):\n        self.tag, self.fail_sql, self.fail_audit = tag, fail_sql, fail_audit\n        self.applied, self.audit, self.next_id = [], [], 1\n\n    @contextmanager\n    def transaction(self):\n        c = Conn(self, in_tx=True)\n        try:\n            yield c\n        except BaseException:\n            raise\n        else:\n            if not c.aborted:\n                self.applied += c.pending_sql\n                self.audit += c.pending_audit\n\n    @contextmanager\n    def connection(self):\n        yield Conn(self, in_tx=False)\n\n\nclass Conn:\n    def __init__(self, db, in_tx):\n        self.db, self.in_tx, self.aborted = db, in_tx, False\n        self.pending_sql, self.pending_audit = [], []\n\n    def _fail(self, message):\n        if self.in_tx:\n            self.aborted = True\n        raise DatabaseError(message)\n\n    def execute(self, sql):\n        if self.aborted:\n            raise DatabaseError(\"current transaction is aborted\")\n        if self.db.fail_sql:\n            self._fail(\"permission denied for table orders\")\n        (self.pending_sql if self.in_tx else self.db.applied).append(sql)\n        return self.db.tag\n\n    def insert_audit(self, sql, success, rows):\n        if self.aborted:\n            raise DatabaseError(\"current transaction is aborted\")\n        if self.db.fail_audit:\n            self._fail(\"permission denied for table mcp_audit_log\")\n        row_id = self.db.next_id\n        self.db.next_id += 1\n        (self.pending_audit if self.in_tx else self.db.audit).append((row_id, sql, success, rows))\n        return row_id\n\n\nSQL = \"UPDATE users SET active = FALSE WHERE id = 3\"\n\ndb = FakeDB()\nassert write(db, SQL) == {\"status\": \"committed\", \"audit_id\": 1, \"rows\": 1}\nassert db.applied == [SQL] and db.audit == [(1, SQL, True, 1)]\n\ndb = FakeDB(tag=\"DELETE 2\")\nassert write(db, \"DELETE FROM orders WHERE id < 3\")[\"rows\"] == 2, \"the count is the tag's last field\"\ndb = FakeDB(tag=\"INSERT 0 3\")\nassert write(db, \"INSERT INTO users (email) VALUES ('a@x'), ('b@x'), ('c@x')\")[\"rows\"] == 3, \"an INSERT tag has three fields; the count is the last\"\n\ndb = FakeDB(fail_sql=True)\nresult = write(db, SQL)\nassert result[\"status\"] == \"failed\" and result[\"rows\"] == 0\nassert db.applied == [], \"a failed statement changes nothing\"\nassert [(s, ok) for _, s, ok, _ in db.audit] == [(SQL, False)], \"the failure must be recorded\"\nassert result[\"audit_id\"] == db.audit[0][0]\n\ndb = FakeDB(fail_audit=True)\nresult = write(db, SQL)\nassert db.applied == [], \"a change whose audit row failed must roll back with it\"\nassert result == {\"status\": \"failed\", \"audit_id\": 0, \"rows\": 0}, \"a lost failure row is reported as id 0\"\nassert db.audit == []\nprint(\"all write tests passed\")\n",
+      "explanation": "Section 5: after a failed statement the transaction is aborted, so an audit insert on the same connection fails and would be rolled back anyway. The failure row has to be a second write on a new connection after the rollback, wrapped so that losing it never hides the original failure; the success row stays inside the transaction so that a failed audit insert rolls the change back.",
+      "hints": [
+        "Move the error handling outside the `with db.transaction()` block, so the rollback has happened before the failure is recorded.",
+        "The failure insert itself can fail; catch that too and report id 0."
+      ]
+    },
+    {
+      "id": "mcp-014-q17",
+      "type": "long",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o1",
+        "o2"
+      ],
+      "section": "1",
+      "est_minutes": 15,
+      "tags": [
+        "design",
+        "critique"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A teammate proposes `delete_rows(table: str, where: str, approved: bool = False)`. When `approved` is true it builds `DELETE FROM {table} WHERE {where}`, runs it on the server's only pool, and then inserts an audit row on a new connection. Critique the design against this post and describe the version that is defensible.",
+      "kind": "critique",
+      "answer_length": "half a page",
+      "solution": "1. **The approval is forgeable.** `approved` is in the published input schema, so the model can set it to true. The approval must be a parameter annotated `Annotated[ElicitationResult[T], Resolve(f)]`, which the SDK strips from the schema and fills only from the human's answer over MRTR.\n2. **No deployment switch.** Nothing keeps a server that should never write from writing. Add `ENABLE_WRITES`, off by default, checked first.\n3. **One pool, one role.** Reads and writes share a login, so a bug in the read path can borrow write privileges. Writes need a second role (`mcp_writer`) on its own pool, with no fallback to the read URL.\n4. **String-built SQL with no validation.** `table` and `where` are interpolated, so `where` can be `true` or carry a second statement. Accept one statement, parse it, allow only `INSERT`, `UPDATE`, `DELETE`, require a `WHERE`, and regenerate it with comments removed so the prompt, the audit row and the executed text are one string.\n5. **The audit row is not atomic with the change.** Inserted afterwards on another connection, it can fail after the delete committed, leaving an unlogged change. The success row belongs inside the statement's transaction, on the same connection; only the failure row goes on a fresh write-pool connection, after the rollback, and swallows its own errors.\n6. **Consent is spent badly.** Ask only after validation, offer a dry run first, never ask for a statement that will be refused, and build the question purely from the arguments so the retry matches the recorded answer.",
+      "rubric": [
+        {
+          "criterion": "Identifies `approved` as forgeable and replaces it with a `Resolve`-backed parameter hidden from the schema",
+          "points": 3
+        },
+        {
+          "criterion": "Calls for the deployment switch and a separate write role on its own pool with no fallback",
+          "points": 2
+        },
+        {
+          "criterion": "Replaces string building with single-statement validation, an allowlist of operations, a required `WHERE`, and regeneration without comments",
+          "points": 2
+        },
+        {
+          "criterion": "Moves the success audit row inside the statement's transaction and records failures on a fresh write-pool connection after the rollback",
+          "points": 3
+        },
+        {
+          "criterion": "Places the question after validation, offers a dry run, and keeps the question a pure function of the arguments",
+          "points": 2
+        }
+      ],
+      "explanation": "Section 1 names the four gates, and sections 2 to 5 show each one: the switch, the second role with no fallback, the human through an approval the model cannot see, and one transaction holding the change and its audit row. The proposal misses all four, and its audit row can disagree with the database.",
+      "hints": [
+        "Check the proposal against the four gates of section 1, one at a time.",
+        "For the audit row, ask what happens if the insert fails after the delete committed."
+      ]
+    },
+    {
+      "id": "mcp-014-q18",
+      "type": "long",
+      "track": "connect",
+      "difficulty": 4,
+      "outcomes": [
+        "o1",
+        "o3"
+      ],
+      "section": "4",
+      "est_minutes": 15,
+      "tags": [
+        "resolve",
+        "stand-in"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Post 08's `terminate_process` resolver always returns an `Elicit`. This post's `_confirm_write` sometimes returns `DeclinedElicitation()` instead. Explain what the tool body receives in that case under `mcp==2.3.0`, why `write_database` is still correct, and what an author must do before adding a no-ask branch to post 08's resolver.",
+      "kind": "connect",
+      "answer_length": "one or two paragraphs",
+      "connects": [
+        "mcp-008"
+      ],
+      "solution": "A resolver that returns a value instead of an `Elicit` is treated as already resolved: no question goes on the wire, and the tool body receives an `AcceptedElicitation` whose `.data` is the returned `DeclinedElicitation`. `snippets/resolver_spellings.py` prints `body got AcceptedElicitation[Any], data=DeclinedElicitation(action='decline'), isinstance(ap, DeclinedElicitation)=False`. So the stand-in does not arrive as a decline; a body that branched on `isinstance(approval, DeclinedElicitation)` would fall through to the accept branch and read `approval.data.confirm` from an object that has no such field.\n\n`write_database` is correct because every condition under which `_confirm_write` returns the stand-in (writes switched off, a dry run, a statement the validator refuses) is checked again in the body, in that order, and returns before the body inspects `approval`. The resolver and the body agree on the no-ask cases, so the stand-in is never read.\n\nPost 08's tool always asks, so its body can branch on the three outcomes directly. An author adding a no-ask branch there (for example, skipping the question for a process id that does not exist) must make the body detect the same condition and return before it looks at `approval`, or else unwrap the stand-in explicitly; otherwise the synthetic skip is read as a real accept.",
+      "rubric": [
+        {
+          "criterion": "States that the body receives an `AcceptedElicitation` wrapping the `DeclinedElicitation`, so `isinstance` against `DeclinedElicitation` is false",
+          "points": 3
+        },
+        {
+          "criterion": "Explains that `write_database` re-checks the switch, the validator and the dry run before inspecting `approval`",
+          "points": 3
+        },
+        {
+          "criterion": "Says what post 08's author must add: the same condition checked in the body first, or an explicit unwrap",
+          "points": 2
+        },
+        {
+          "criterion": "Notes that no question reaches the wire in the stand-in case",
+          "points": 1
+        }
+      ],
+      "explanation": "Section 4 prints the stand-in caveat and shows the ordering in `write_database` that makes it harmless. Post 08's resolver always elicits, so the hazard appears only when a no-ask branch is added without the matching check in the body.",
+      "hints": [
+        "Run or read `snippets/resolver_spellings.py`'s last line.",
+        "Compare the three no-ask conditions in `_confirm_write` with the first three checks in `write_database`'s body."
+      ]
+    }
+  ]
+}

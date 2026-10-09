@@ -1,8 +1,23 @@
 id: mcp-014
 slug: 14-database-writes
-title: "14 · Project 1 · Writes, transactions, and an audit trail"
+title: "14 - Project 1: Writes, transactions, and an audit trail"
+summary: "Adding writes to the PostgreSQL analyst behind a deployment switch, a second role, a dry run, and a human approval the model cannot forge, with an audit row that commits inside the write's own transaction."
 date: 2026-07-24
-tags: [model-context-protocol, mcp, project, postgresql, transactions, audit, elicitation]
-hero: diagrams/01-the-write-path.svg
-reading_time: 21
+updated: 2026-10-09
+status: complete
 part: "Part IV - Projects"
+level: intermediate
+reading_time: 30
+tags: [mcp, project, postgresql, transactions, audit, elicitation]
+hero: diagrams/01-the-write-path.svg
+prerequisites: [mcp-013, mcp-008]
+code: required
+outcomes:
+  - id: o1
+    text: "Put a human confirmation on the critical path of a tool call, in a parameter the model cannot forge."
+  - id: o2
+    text: "Keep an audit row atomic with the change it describes, and record the failed writes too."
+  - id: o3
+    text: "Choose the annotation of a resolved approval parameter that keeps accept, decline, and cancel apart."
+  - id: o4
+    text: "Recognize the pool and fallback mistakes that quietly turn a write boundary back into nothing."
