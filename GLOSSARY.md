@@ -114,7 +114,7 @@ Two terms are deliberately listed twice, because MCP and OAuth 2.1 use the same 
 
 **`Origin` validation**: The requirement that a server check the `Origin` header on every incoming connection and answer `403 Forbidden` where it is present and invalid. It is what stops a DNS rebinding attack reaching a local server through the user's own browser, and the Python SDK arms it automatically only when the bind address is loopback.
 
-**`outputSchema`**: The optional JSON Schema a tool publishes for its `structuredContent`. Publishing one is a promise: the server **must** return conforming results and clients validate them. A return class with no class-body annotations publishes `null` here, silently.
+**`outputSchema`**: The optional JSON Schema a tool publishes for its `structuredContent`. Publishing one is a promise: the server **must** return conforming results and clients **should** validate them. A return class with no class-body annotations publishes `null` here, silently, and since SDK 2.1.0 a content-block return annotation publishes none unless the tool is registered with `structured_output=True`.
 
 **PKCE (Proof Key for Code Exchange)**: The OAuth extension binding an authorization code to the client that requested it. Necessary and not sufficient: it does not prevent the mix-up attack, because the client sends its verifier to whichever token endpoint it was pointed at.
 
@@ -174,7 +174,7 @@ Two terms are deliberately listed twice, because MCP and OAuth 2.1 use the same 
 
 **Streamable HTTP**: The HTTP transport: one endpoint, ordinary POSTs, optional streaming. Replaced the older HTTP+SSE transport, which is deprecated.
 
-**Structured content**: A tool result's machine-readable form, returned alongside the human-readable content blocks. Any JSON value, and where the tool published an `outputSchema` the server **must** make it conform and the client validates it.
+**Structured content**: A tool result's machine-readable form, returned alongside the human-readable content blocks. Any JSON value, and where the tool published an `outputSchema` the server **must** make it conform and the client **should** validate it.
 
 **`subscriptions/listen`**: The single long-lived stream a client opts into for list-changed notifications and resource updates. Replaced `resources/subscribe` and the HTTP GET stream. The server **must** send `notifications/subscriptions/acknowledged` before any other notification on the subscription.
 

@@ -7,7 +7,7 @@ and is not testable from Python.
 
 As in every project in this series, the client is opened with `async with`
 inside the test body. The client owns an anyio task group, and a task group has
-to be exited by the task that entered it, so a yield fixture fails every test
+to be exited by the task that entered it, so a yield fixture makes every test error in teardown
 with a cancel-scope error.
 """
 

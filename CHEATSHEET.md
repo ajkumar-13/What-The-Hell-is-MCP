@@ -115,7 +115,7 @@ The retry is a new request with a new id and may land on a different replica, so
 | | Protocol error | Tool execution error |
 |---|---|---|
 | Shape | JSON-RPC `error` object | successful `result`, `isError: true` |
-| Cause | unknown method or tool, a request that breaks the method's shape, missing `_meta` | the work failed, including argument values the tool rejects |
+| Cause | unknown method, a request that breaks the method's shape, missing `_meta`; the specification also lists an unknown tool here | the work failed, including argument values the tool rejects; the Python SDK 2.3.0 also answers an unknown tool this way |
 | Who sees it | the client | **the model**, so it can retry |
 
 Codes: `-32700` parse, `-32600` invalid request, `-32601` method not found (`404` over HTTP), `-32602` invalid params, `-32603` internal, `-32020` header missing or not matching the body, `-32021` missing client capability, `-32022` unsupported protocol version. `-32002` and `-32042` are retired; resource-not-found is now `-32602`. Never *send* a retired code, but a client **should** still accept `-32002` from an older server. The range `-32020` to `-32099` belongs to the specification; never mint a code inside it.
@@ -141,7 +141,7 @@ mcp.run()                       # stdio; run("streamable-http", host=, port=) fo
 | v1 | v2 |
 |---|---|
 | `mcp.server.fastmcp` / `FastMCP` | `mcp.server.mcpserver` / `MCPServer` |
-| `mcp.types` | `mcp_types` |
+| `mcp.types` | `mcp_types` (2.3.0 keeps `mcp.types` as a compatibility mirror of it) |
 | `McpError` | `MCPError` |
 | camelCase attributes | snake_case (`read_only_hint`) |
 | `ClientSession` plus `initialize()` | `from mcp import Client`, and nothing to initialize |
@@ -150,7 +150,7 @@ mcp.run()                       # stdio; run("streamable-http", host=, port=) fo
 
 **Python is snake_case, the wire is camelCase.** `read_only_hint` becomes `readOnlyHint`.
 
-**Silent failure to know:** a return class with no class-body annotations yields `outputSchema: null` with no warning. Use a dataclass or `structured_output=True`.
+**Silent failure to know:** a return class with no class-body annotations yields `outputSchema: null` with no warning. Use a dataclass, a `TypedDict` or a Pydantic model; `structured_output=True` turns the silence into a registration error. In the Python SDK, raise `ToolError("...")` for a failure the model should read; any other exception reaches the model only as `Error executing tool <name>`.
 
 **Testing:** `async with Client(mcp) as c:` inside each test body. Never a yield fixture; the task group must be exited by the task that entered it.
 

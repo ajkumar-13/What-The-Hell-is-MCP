@@ -7,6 +7,12 @@ dependencies = [
     "mcp[cli]==2.3.0",
     "psutil>=7.0.0",
     "httpx<1",
+    # imported by the snippets of the database analyst posts (13 and 14)
+    "sqlglot==30.13.0",
+    "asyncpg>=0.30.0",
+    "python-dotenv>=1.0.0",
+    # imported by the snippets of the DevOps responder posts (15 and 16)
+    "kubernetes==36.0.3",
 ]
 
 [project.optional-dependencies]

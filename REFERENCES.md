@@ -77,7 +77,7 @@ The Specification Enhancement Proposals (SEPs) this series leans on. Each explai
 | SEP-2596 | Feature lifecycle and deprecation policy |
 | SEP-414 | OpenTelemetry trace context in `_meta` |
 | SEP-986 | Tool naming guidance |
-| SEP-2106 | Arbitrary JSON Schema 2020-12 keywords in `inputSchema` |
+| SEP-2106 | Arbitrary JSON Schema 2020-12 keywords in `inputSchema` and `outputSchema`; `structuredContent` may be any JSON value |
 | SEP-1303 | Input validation errors as tool execution errors |
 | SEP-1613 | JSON Schema 2020-12 as the default dialect |
 | SEP-1036 | URL-mode elicitation |
@@ -109,7 +109,8 @@ These attack classes are **not** covered by the normative specification. All are
 - Trail of Bits, *"Jumping the line: how MCP servers can attack you before you ever use them"* (2025). https://blog.trailofbits.com/2025/04/21/jumping-the-line-how-mcp-servers-can-attack-you-before-you-ever-use-them/
 - Trail of Bits, *"How MCP servers can steal your conversation history"* (2025). https://blog.trailofbits.com/2025/04/23/how-mcp-servers-can-steal-your-conversation-history/
 - Trail of Bits, *"Deceiving users with ANSI terminal codes in MCP"* (2025). https://blog.trailofbits.com/2025/04/29/deceiving-users-with-ansi-terminal-codes-in-mcp/
-- Willison, S. *"Supabase MCP can leak your entire SQL database"* (2025), the post that coined *"the lethal trifecta"*. Post 13 cites it by the coined phrase, post 19 by the title. https://simonwillison.net/2025/Jul/6/supabase-mcp-lethal-trifecta/
+- Willison, S. *"The lethal trifecta for AI agents"* (2025-06-16), the post that coined the phrase. https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/
+- Willison, S. *"Supabase MCP can leak your entire SQL database"* (2025-07-06), the trifecta applied to an MCP database server. Posts 13 and 19 cite it. https://simonwillison.net/2025/Jul/6/supabase-mcp-lethal-trifecta/
 - Anthropic, *"How we contain Claude"* (2026). https://www.anthropic.com/engineering/how-we-contain-claude
 - Anthropic, *"Code execution with MCP"*. https://www.anthropic.com/engineering/code-execution-with-mcp
 
@@ -179,6 +180,12 @@ Each host documents its own configuration file, and they disagree with each othe
 - `asyncpg`. https://magicstack.github.io/asyncpg/current/
 - `sqlglot`. https://github.com/tobymao/sqlglot
 - PostgreSQL roles and privileges. https://www.postgresql.org/docs/current/user-manag.html
+- PostgreSQL documentation, *Privileges* (ddl-priv), the grant and ownership rules posts 13 and 14 rely on. https://www.postgresql.org/docs/current/ddl-priv.html
+- PostgreSQL documentation, *Client Connection Defaults* (runtime-config-client): `statement_timeout` and `default_transaction_read_only` as role settings a session can override. https://www.postgresql.org/docs/current/runtime-config-client.html
+- PostgreSQL documentation, *Schemas* (ddl-schemas): the `public` schema no longer grants `CREATE` to every role from PostgreSQL 15. https://www.postgresql.org/docs/current/ddl-schemas.html
+- PostgreSQL documentation, *EXPLAIN*: `EXPLAIN ANALYZE` executes the statement it explains. https://www.postgresql.org/docs/current/sql-explain.html
+- PostgreSQL documentation, *Row Security Policies* (ddl-rowsecurity). https://www.postgresql.org/docs/current/ddl-rowsecurity.html
+- PostgreSQL documentation, *Transactions* (tutorial-transactions): the atomic commit post 14 builds the audit row on. https://www.postgresql.org/docs/current/tutorial-transactions.html
 - Kubernetes Python client. https://github.com/kubernetes-client/python
 - Kubernetes, *"Debug Running Pods"*. https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/
 - Kubernetes, *"Rolling Back a Deployment"*. https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-back-a-deployment

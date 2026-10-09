@@ -28,8 +28,8 @@ uv sync --extra dev
 
 The `mcp` dependency is **pinned exactly** to `2.3.0`, a release of the 2.x line that
 implements protocol revision 2026-07-28. Floating that pin breaks the imports
-outright: the 1.x line uses `mcp.server.fastmcp` and `mcp.types`, neither of
-which exists any more.
+outright: the 1.x line uses `mcp.server.fastmcp`, which no longer exists
+(`mcp.types` survives in 2.x only as a mirror of `mcp_types`).
 
 Nothing else is installed. The ranking in `index.py` is Okapi BM25 written out
 against the standard library, so there is no search dependency to install, pin,
