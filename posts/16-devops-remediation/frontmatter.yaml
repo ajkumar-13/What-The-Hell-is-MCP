@@ -1,8 +1,24 @@
 id: mcp-016
 slug: 16-devops-remediation
-title: "16 · Project 2 · Safe remediation with approval"
+title: "16 - Project 2: Safe remediation with approval"
+summary: "Adds restart, scale, and rollback tools to the Kubernetes first responder, each gated by an approval the model cannot see, previewed from its arguments alone, and limited before any human is asked."
 date: 2026-07-25
-tags: [model-context-protocol, mcp, project, kubernetes, remediation, tasks, approval]
-hero: diagrams/01-propose-preview-approve.svg
-reading_time: 26
+updated: 2026-10-09
+status: complete
 part: "Part IV - Projects"
+level: intermediate
+reading_time: 37
+tags: [mcp, project, kubernetes, remediation, approval, elicitation]
+hero: diagrams/01-propose-preview-approve.svg
+prerequisites: [mcp-015, mcp-008]
+code: required
+outcomes:
+  - id: o1
+    text: "Gate a mutating tool behind an approval the model can neither see nor forge."
+  - id: o2
+    text: "Render a change preview that is provably identical in the question and in the result."
+  - id: o3
+    text: "Roll a deployment back the way kubectl rollout undo does, and say what that does not cover."
+  - id: o4
+    text: "Put blast-radius limits where they fire before a human is asked."
+recommended: [mcp-009]

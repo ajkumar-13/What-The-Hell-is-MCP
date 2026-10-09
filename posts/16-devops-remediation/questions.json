@@ -1,0 +1,809 @@
+{
+  "standard": "2.1.0",
+  "post": "mcp-016",
+  "next_ordinal": 19,
+  "questions": [
+    {
+      "id": "mcp-016-q01",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 2,
+      "tags": [
+        "approval",
+        "annotations"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A host ignores tool annotations entirely and never shows a confirmation dialog of its own. Its model calls `restart_pod` on this server for a pod a ReplicaSet owns. What keeps the pod from being deleted before a person has agreed?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The server answers the first call with an `input_required` result and deletes nothing until a retry carries the person's answer.",
+          "correct": true,
+          "feedback": "Correct. The resolved `approval` parameter makes the server ask first; the first leg makes no cluster call at all, whatever the host does with annotations."
+        },
+        {
+          "key": "b",
+          "text": "The SDK refuses to run a tool annotated `destructiveHint: true` until the host confirms the call, so a host that ignores annotations gets an error.",
+          "correct": false,
+          "feedback": "The SDK publishes the hint and enforces nothing with it; the Tools page calls every annotation a hint that clients must treat as untrusted."
+        },
+        {
+          "key": "c",
+          "text": "The model has to pass `approved: true`, and a model will not set that field on its own.",
+          "correct": false,
+          "feedback": "The tool publishes no such field, and if it did the model would fill it in: a field in the input schema is exactly what the model writes."
+        },
+        {
+          "key": "d",
+          "text": "The kubelet waits for a person before it terminates any pod that a controller owns.",
+          "correct": false,
+          "feedback": "Kubernetes has no such pause; an accepted delete marks the pod for deletion at once. The gate is in the server, not in the cluster."
+        }
+      ],
+      "explanation": "Section 2: annotations are hints a host may use or ignore, so the approval cannot depend on them. `Resolve` makes the server answer the call with a question, end the request, and act only when the client retries with an answer, which the transcript shows with no Kubernetes call before the person is asked.",
+      "hints": [
+        "Ask which party refuses to act, and when."
+      ]
+    },
+    {
+      "id": "mcp-016-q02",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 2,
+      "tags": [
+        "mrtr",
+        "wire"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "After the user approves, the client retries `tools/call` for `scale_deployment`. Where in that retry do `inputResponses` and `requestState` appear?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Inside `params`, beside `name` and `arguments`, in a request with a new JSON-RPC id.",
+          "correct": true,
+          "feedback": "Correct. The tapped retry shows both fields as siblings of `name` and `arguments`, and its id is 3 where the first leg's was 2."
+        },
+        {
+          "key": "b",
+          "text": "Inside `params._meta`, next to the protocol revision and the client's capabilities.",
+          "correct": false,
+          "feedback": "`_meta` carries the per-request envelope keys; the answer and the sealed state are ordinary members of `params`."
+        },
+        {
+          "key": "c",
+          "text": "Inside `arguments`, as two extra entries the tool receives with `deployment_name` and `replicas`.",
+          "correct": false,
+          "feedback": "The retry's `arguments` are the same as the first call's; the tool never sees an `approval` argument from the model or the client."
+        },
+        {
+          "key": "d",
+          "text": "At the top level of the JSON-RPC message, beside `id` and `method`, under the first leg's id.",
+          "correct": false,
+          "feedback": "Both are members of `params`, and the retry must use a new id: the first request already ended with its `input_required` result."
+        }
+      ],
+      "explanation": "Section 2 prints the retry the client sent: `params` holds `inputResponses`, `requestState`, `name`, `arguments` and `_meta`, and the message's id differs from the first leg's, as the MRTR page requires.",
+      "hints": [
+        "Look at the second client-to-server message in section 2, field by field."
+      ]
+    },
+    {
+      "id": "mcp-016-q03",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "3",
+      "est_minutes": 3,
+      "tags": [
+        "preview",
+        "digest"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A developer changes the preview so that its `change` line reads `scale from N to 5`, where N is read from the cluster when the question is rendered. An autoscaler moves the replica count between every two rounds, and the user approves every question. What happens to the call?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The server asks again every round, because each rendering differs, until the SDK client gives up after ten rounds with `InputRequiredRoundsExceededError`.",
+          "correct": true,
+          "feedback": "Correct. The recorded answer is matched by a digest of the rendered question; a question that changes each round never matches, as section 12's live tool shows with ten distinct questions."
+        },
+        {
+          "key": "b",
+          "text": "The first approval is applied with the count it showed, because `requestState` carries the recorded answer forward and the server reuses it on every later round.",
+          "correct": false,
+          "feedback": "The answer is pinned to the digest of the question it answered; when the next rendering differs, the server treats it as stale and asks again."
+        },
+        {
+          "key": "c",
+          "text": "Registration fails, because the SDK rejects a resolver that reads anything other than its arguments.",
+          "correct": false,
+          "feedback": "The SDK cannot see what a resolver reads; the tool registers and the failure only shows at call time."
+        },
+        {
+          "key": "d",
+          "text": "The call succeeds after two rounds, as it does for the unchanged preview.",
+          "correct": false,
+          "feedback": "Two rounds is the stable case: the second rendering matches the first. Here the second rendering differs, so the match never happens."
+        }
+      ],
+      "explanation": "Section 3: the SDK re-runs the resolver every round and recognizes an answered question by its digest. With a live reading that moves, every round renders a new question, so every answer looks stale; section 12 prints the result, ten questions shown and `InputRequiredRoundsExceededError`.",
+      "hints": [
+        "How does the server know that the answer it received belongs to the question it would ask now?",
+        "Count what changes between two renderings when the count moves."
+      ]
+    },
+    {
+      "id": "mcp-016-q04",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "3",
+      "est_minutes": 2,
+      "tags": [
+        "elicitation",
+        "actions"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The approval dialog for `scale_deployment(\"checkout\", 6)` has an `approve` checkbox. The user leaves it unchecked and presses submit. What does the tool return?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "A complete result with `isError: false`, `approved: false`, `applied: false`, and an outcome saying the user answered no.",
+          "correct": true,
+          "feedback": "Correct. The form came back, so the action is `accept` with `approve: false`, and `_refusal` maps that to its own sentence with nothing patched."
+        },
+        {
+          "key": "b",
+          "text": "The same result as a decline, because a form submitted with the box unchecked is sent with action `decline` rather than `accept`.",
+          "correct": false,
+          "feedback": "Submitting the form is an `accept`; `decline` is an explicit refusal of the request itself, and the project reports it with a different sentence."
+        },
+        {
+          "key": "c",
+          "text": "A result with `isError: true`, because a refused change is a tool failure.",
+          "correct": false,
+          "feedback": "This server reports a user's no, whether a decline, a cancel, or an unchecked box, as a complete result without `isError`, so the model gets a sentence to relay; only the guards' policy refusals carry `isError`."
+        },
+        {
+          "key": "d",
+          "text": "The deployment is scaled, because `accept` means the user agreed to the change.",
+          "correct": false,
+          "feedback": "`accept` means the form was submitted, not that the answer was yes; the tool checks `approval.data.approve` before acting."
+        }
+      ],
+      "explanation": "Section 3: accept means the form came back. `_refusal` checks for decline, then cancel, then an accepted form whose `approve` is false, and the four-answer transcript shows that last case as `approved=false applied=false` with the outcome 'The user answered no'.",
+      "hints": [
+        "Separate whether the form was submitted from what the form said."
+      ]
+    },
+    {
+      "id": "mcp-016-q05",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "7",
+      "est_minutes": 3,
+      "tags": [
+        "rollback",
+        "ownership"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "In the fixture, `checkout` is at revision 3 and `checkout-canary` selects the same `app=checkout` labels. If `owned_replica_sets()` keeps every ReplicaSet the label selector returns, what does an approved `rollback_deployment(\"checkout\")` report?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "`applied: true`, revision 3 to 2, with the canary's image `registry.example.com/canary:9.9.9` restored.",
+          "correct": true,
+          "feedback": "Correct. The canary's revision-2 ReplicaSet is first in the listing, so it is the first revision below 3, and the call succeeds at the wrong thing."
+        },
+        {
+          "key": "b",
+          "text": "A refusal, because two ReplicaSets claim revision 2 and the tool cannot choose between them.",
+          "correct": false,
+          "feedback": "Nothing in the tool checks for duplicate revisions; it sorts and takes the first revision below the current one."
+        },
+        {
+          "key": "c",
+          "text": "A rollback to the canary's revision 9, because it is the highest revision in the listing.",
+          "correct": false,
+          "feedback": "Revision 9 is above the current revision 3, and the default target is the newest revision below the current one."
+        },
+        {
+          "key": "d",
+          "text": "A correct rollback to `checkout`'s own revision 2, because sorting by revision puts its ReplicaSet first.",
+          "correct": false,
+          "feedback": "The sort is stable and both have revision 2; the canary's ReplicaSet comes first in the listing, so it wins."
+        }
+      ],
+      "explanation": "Section 7: the selector returns the canary's ReplicaSets too. With the filter replaced by a pass-through, `rollback.py` prints `applied=true from_revision=3 to_revision=2 restored_images=['registry.example.com/canary:9.9.9']`, and four tests of the suite fail.",
+      "hints": [
+        "List the ReplicaSets the selector returns with their revisions, in order.",
+        "The default target is the first one below the current revision after a stable sort."
+      ]
+    },
+    {
+      "id": "mcp-016-q06",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "8",
+      "est_minutes": 2,
+      "tags": [
+        "guards",
+        "resolver"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Two versions of `scale_deployment` both refuse a scale to 500 with the same `guard_replicas`. In one the guard runs in the resolver; in the other it runs in the tool body after the approval arrives. For a user who always approves, what is the observable difference?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "With the guard in the body the user is shown one question before the refusal; with the guard in the resolver the user is shown none.",
+          "correct": true,
+          "feedback": "Correct. `guards.py` prints `questions shown: 1` for the body placement and `questions shown: 0` for the resolver, with the same refusal text in both."
+        },
+        {
+          "key": "b",
+          "text": "With the guard in the body the deployment is scaled to 500 before the refusal is returned.",
+          "correct": false,
+          "feedback": "The body raises before any patch is sent, so nothing reaches the cluster in either version; the difference is who was asked."
+        },
+        {
+          "key": "c",
+          "text": "With the guard in the resolver the model reads no message, only a `-32021` protocol error.",
+          "correct": false,
+          "feedback": "A `ToolError` raised in a resolver comes back as an `isError` result with its message; `-32021` is the missing-capability error."
+        },
+        {
+          "key": "d",
+          "text": "There is none: the SDK runs every guard before rendering any question, wherever in the tool it is written, so the user is never asked in either version.",
+          "correct": false,
+          "feedback": "The SDK runs the resolver before the question and the tool body after the answer; a check in the body runs after the person has said yes."
+        }
+      ],
+      "explanation": "Section 8: the resolver runs before the question is rendered, so a guard that raises there ends the call with nobody asked. The same guard in the tool body runs after the answer, so a person approves a change the server was never going to make.",
+      "hints": [
+        "When does the SDK run the resolver, and when does it run the tool body?"
+      ]
+    },
+    {
+      "id": "mcp-016-q07",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "8",
+      "est_minutes": 3,
+      "tags": [
+        "tool-error",
+        "policy"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Suppose `PolicyError` were declared as a plain `Exception` subclass instead of a `ClusterError`. Under `mcp==2.3.0`, what would the model read when it asks `scale_deployment` for 500 replicas?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "An `isError` result whose text is only `Error executing tool scale_deployment`, without the reason or the variable to set.",
+          "correct": true,
+          "feedback": "Correct. Only a `ToolError` passes its message through; any other exception is treated as a crash, and the model reads the bare sentence."
+        },
+        {
+          "key": "b",
+          "text": "The full refusal with its reason and the variable to set, because any exception raised in a resolver is reported with its message.",
+          "correct": false,
+          "feedback": "A resolver gets the same contract as a tool body: a plain exception raised in a resolver also comes back as only `Error executing tool <name>`."
+        },
+        {
+          "key": "c",
+          "text": "A question asking the user to approve 500 replicas, because the guard no longer counts as a refusal.",
+          "correct": false,
+          "feedback": "The exception still ends the resolver before it returns `Elicit`, so no question is rendered; only the message is lost."
+        },
+        {
+          "key": "d",
+          "text": "A `-32602` protocol error, because the argument failed validation.",
+          "correct": false,
+          "feedback": "500 is a valid integer for the schema; the refusal is the server's own policy, raised as an exception, not a schema failure."
+        }
+      ],
+      "explanation": "Section 8 prints the class chain `PolicyError -> ClusterError -> ToolError`. Under 2.3.0 a `ToolError` reaches the model with its message, while any other exception, in a body or a resolver, reaches it only as `Error executing tool <name>`, which post 15 printed for `ClusterError`.",
+      "hints": [
+        "Which base class lets an exception's message reach the model?",
+        "Post 15 printed what a plain exception subclass looks like to the model."
+      ]
+    },
+    {
+      "id": "mcp-016-q08",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 1,
+      "tags": [
+        "mrtr",
+        "request-state"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "In the retry that carries the user's answer, the client sends one field back to the server byte for byte, exactly as it received it in the `input_required` result. Name that field.",
+      "answer": {
+        "model": "`requestState`, the sealed token the server issued with the question.",
+        "accept": [
+          "^(?:(?![\\s\\S]*\\binput[_ ]?responses\\b)|(?=[\\s\\S]*\\b(?:not|never|rather than|instead of|unlike|other than)\\b[^.\\n]{0,40}\\binput[_ ]?responses\\b)|(?=[\\s\\S]*\\b(?:builds?|built|constructs?|creates?|fills?)\\s+(?:in\\s+)?(?:the\\s+)?[`\\\"']?input[_ ]?responses\\b))(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|never|isn't|is not|doesn't|does not|don't|do not|instead of|rather than)\\s+(?:the\\s+)?(?:(?:echo|echoes|echoed|echoing|send|sends|sent|sending|return|returns|returned|returning)\\s+)?(?:back\\s+)?[`\\\"']?request[_ ]?state)(?![\\s\\S]*\\brequest[_ ]?state\\b[`\\\"']?\\s*(?:\\bor\\b|/|\\band\\b(?!\\s+(?:not|never|does|is|it|which|keeps?|removes?|strips?|drops?|echo\\w*|sends?|returns?)\\b))\\s*[`\\\"']?\\w)(?![\\s\\S]*\\b\\w+[`\\\"']?\\s*(?:\\bor\\b|/|\\band\\b)\\s*[`\\\"']?request[_ ]?state\\b)(?![\\s\\S]*\\brequest[_ ]?state\\b[`\\\"']?\\s+(?:is not|isn't|is never|need not|does not)\\b)[\\s\\S]*\\brequest[_ ]?state\\b[\\s\\S]*$"
+        ]
+      },
+      "explanation": "Section 2: the client retries with a new id, the same arguments, the answer under `inputResponses`, and the `requestState` from the first result echoed unchanged. The client builds `inputResponses` itself; it only echoes `requestState`.",
+      "hints": [
+        "It begins with `v1.` in the transcript and is shortened there because it differs on every run."
+      ]
+    },
+    {
+      "id": "mcp-016-q09",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 1,
+      "tags": [
+        "rollback",
+        "labels"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Before sending the old ReplicaSet's pod template back to the Deployment, the tool removes one label from it, because the Deployment controller computes that label to identify a ReplicaSet. Name the label.",
+      "answer": {
+        "model": "`pod-template-hash`",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|never|isn't|is not|keep|keeps|keeping|instead of|rather than)\\s+(?:the\\s+)?[`\\\"']?pod[-_ ]template[-_ ]hash)(?![\\s\\S]*\\bpod[-_ ]template[-_ ]hash\\b[`\\\"']?(?:\\s+label)?\\s*(?:\\bor\\b|/|\\band\\b(?!\\s+(?:not|never|does|is|it|which|keeps?|removes?|strips?|drops?|echo\\w*|sends?|returns?)\\b))\\s*[`\\\"']?\\w)(?![\\s\\S]*\\b\\w+[`\\\"']?\\s*(?:\\bor\\b|/|\\band\\b)\\s*[`\\\"']?pod[-_ ]template[-_ ]hash\\b)[\\s\\S]*\\bpod[-_ ]template[-_ ]hash\\b[\\s\\S]*$"
+        ]
+      },
+      "explanation": "Section 6: `pod-template-hash` is applied by the Deployment controller and identifies the ReplicaSet a template belongs to, so `template_as_dict` drops it before the template goes into the JSON Patch; the printed patch carries only `app: checkout`.",
+      "hints": [
+        "Compare the labels in the printed patch with the labels the fixture's ReplicaSets carry."
+      ]
+    },
+    {
+      "id": "mcp-016-q10",
+      "type": "short",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 2,
+      "tags": [
+        "mrtr",
+        "resolver"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "For `scale_deployment` the `input_required` result carries its question under the key `k8s_responder.remediate:confirm_scale`. The resolver of `rollback_deployment` is the function `confirm_rollback`, defined at module level in the same module. What key does the first leg of a `rollback_deployment` call carry in `inputRequests`?",
+      "answer": {
+        "model": "`k8s_responder.remediate:confirm_rollback`, the resolver's `module:qualname`.",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|never|isn't|is not)\\s+[`\\\"']?k8s_responder\\.remediate:confirm_rollback)(?![\\s\\S]*confirm_rollback\\b[`\\\"']?\\s*(?:\\bor\\b|/)\\s*[`\\\"']?\\w)(?![\\s\\S]*\\w[`\\\"']?\\s*(?:\\bor\\b|/)\\s*[`\\\"']?k8s_responder\\.remediate:confirm_rollback)[\\s\\S]*(?<![\\w.])k8s_responder\\.remediate:confirm_rollback\\b(?!\\.\\w)[\\s\\S]*$"
+        ]
+      },
+      "explanation": "Section 2: the key is derived from the resolver's `module:qualname`, not from the tool's name, which is what keeps it stable across worker processes. The resolver is `confirm_rollback` in `k8s_responder.remediate`, so the key is `k8s_responder.remediate:confirm_rollback`.",
+      "hints": [
+        "The key names the function that asked, not the tool that was called.",
+        "Keep the module path, then a colon, then the function's qualified name."
+      ]
+    },
+    {
+      "id": "mcp-016-q11",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "3",
+      "est_minutes": 2,
+      "tags": [
+        "resolver",
+        "rounds"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A tool's resolver builds its question from the arguments alone. A client whose user always approves makes one call to it. How many times does the resolver run, and how many questions does the user see?",
+      "answer": {
+        "parts": [
+          {
+            "label": "resolver runs",
+            "value": 2,
+            "tolerance": 0,
+            "unit": "runs"
+          },
+          {
+            "label": "questions shown",
+            "value": 1,
+            "tolerance": 0,
+            "unit": "questions"
+          }
+        ]
+      },
+      "explanation": "Section 3: the first round renders the question and asks; the retry runs the resolver again, renders the same question, finds that its digest matches the answer, and lets the tool body run. Two resolver runs, one question.",
+      "hints": [
+        "The SDK re-runs the resolver on every round of the exchange.",
+        "Count the rounds of a call whose first answer is accepted."
+      ],
+      "precision_note": "snippets/preview_answers.py prints `stable  resolver runs=2 questions shown=1 distinct=1`. Counting one run per question, the nearest wrong method, gives 1 and 1."
+    },
+    {
+      "id": "mcp-016-q12",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "8",
+      "est_minutes": 4,
+      "tags": [
+        "guards",
+        "limits"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "With the default limits (at most 20 replicas, `kube-system`, `kube-public` and `kube-node-lease` protected) and the fixture's `checkout` at 3 replicas in `default`, a model makes these five calls through a client whose user approves every question: scale `checkout` to 25; restart a pod in `kube-public`; scale `checkout` to 0; roll `checkout` back; scale `checkout` to -3. How many questions does the user see, and how many calls end with `isError: true`?",
+      "answer": {
+        "parts": [
+          {
+            "label": "questions shown",
+            "value": 2,
+            "tolerance": 0,
+            "unit": "questions"
+          },
+          {
+            "label": "calls with isError",
+            "value": 3,
+            "tolerance": 0,
+            "unit": "calls"
+          }
+        ]
+      },
+      "explanation": "Section 8: the resolvers guard before asking. 25 is above the maximum, `kube-public` is protected, and -3 is negative, so those three end as `isError` results with no question. Scaling to 0 is allowed and differs from the current 3, and the rollback is in `default`, so those two are asked and approved.",
+      "hints": [
+        "Run each call through the guards before thinking about the human.",
+        "Zero is a legal replica count here, and it is not the current one."
+      ],
+      "precision_note": "Reproduced by calling the five tools over an in-memory client against the project's fixture: 2 questions shown, 3 isError results. Treating scale to 0 as refused, the nearest wrong reading, gives 1 and 4."
+    },
+    {
+      "id": "mcp-016-q13",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "7",
+      "est_minutes": 12,
+      "tags": [
+        "ownership",
+        "replicasets"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`owned_replica_sets(replica_sets, deployment)` receives everything the label selector returned and must keep only the ReplicaSets the deployment controls. An object's owners are in `rs.metadata.owner_references`, a list (or `None`) of references with `kind`, `name`, `uid` and `controller`; the deployment has `metadata.name` and `metadata.uid`. Keep a ReplicaSet when one of its references has `controller` true and `kind` `\"Deployment\"` and matches the deployment by uid when both sides have a uid, or by name when either side lacks one. Keep the input order.",
+      "kind": "implement",
+      "language": "python",
+      "starter": "from types import SimpleNamespace as NS\n\n\ndef owned_replica_sets(replica_sets, deployment):\n    \"\"\"Keep only the ReplicaSets this Deployment controls.\"\"\"\n    return list(replica_sets)\n",
+      "solution": "from types import SimpleNamespace as NS\n\n\ndef owned_replica_sets(replica_sets, deployment):\n    \"\"\"Keep only the ReplicaSets this Deployment controls.\"\"\"\n    uid = getattr(deployment.metadata, \"uid\", None)\n    name = deployment.metadata.name\n    owned = []\n    for rs in replica_sets:\n        for ref in (rs.metadata.owner_references or []):\n            if not getattr(ref, \"controller\", False) or ref.kind != \"Deployment\":\n                continue\n            if uid and getattr(ref, \"uid\", None):\n                if ref.uid == uid:\n                    owned.append(rs)\n                    break\n            elif ref.name == name:\n                owned.append(rs)\n                break\n    return owned\n",
+      "tests": "\n\ndef ref(kind=\"Deployment\", name=\"checkout\", uid=\"uid-checkout\", controller=True):\n    return NS(kind=kind, name=name, uid=uid, controller=controller)\n\n\ndef rs(name, *refs):\n    return NS(name=name, metadata=NS(name=name, owner_references=list(refs) or None))\n\n\ncheckout = NS(metadata=NS(name=\"checkout\", uid=\"uid-checkout\"))\nlisting = [\n    rs(\"canary-2x\", ref(name=\"checkout-canary\", uid=\"uid-canary\")),\n    rs(\"checkout-1a\", ref()),\n    rs(\"stale-from-a-deleted-checkout\", ref(uid=\"uid-old-checkout\")),\n    rs(\"related-not-controller\", ref(controller=False)),\n    rs(\"statefulset-owned\", ref(kind=\"StatefulSet\")),\n    rs(\"no-owner\"),\n    rs(\"ref-without-uid\", ref(uid=None)),\n    rs(\"checkout-2b\", ref(name=\"checkout-canary\", uid=\"uid-canary\"), ref()),\n]\n\nnames = [r.name for r in owned_replica_sets(listing, checkout)]\nassert \"canary-2x\" not in names, \"a ReplicaSet owned by another deployment was kept\"\nassert \"stale-from-a-deleted-checkout\" not in names, \"a matching name with another uid was kept\"\nassert \"related-not-controller\" not in names, \"a reference without controller: true was kept\"\nassert \"statefulset-owned\" not in names, \"a controller that is not a Deployment was kept\"\nassert \"no-owner\" not in names, \"a ReplicaSet with no owner references was kept\"\nassert names == [\"checkout-1a\", \"ref-without-uid\", \"checkout-2b\"], names\n\nno_uid = NS(metadata=NS(name=\"checkout\", uid=None))\nnames = [r.name for r in owned_replica_sets(listing, no_uid)]\nassert names == [\"checkout-1a\", \"stale-from-a-deleted-checkout\", \"ref-without-uid\", \"checkout-2b\"], names\nprint(\"all ownership tests passed\")\n",
+      "explanation": "Section 7: a label selector is not an ownership test, so the filter reads the controller owner reference. The uid comparison rejects a ReplicaSet left behind by an earlier deployment of the same name, the `controller` flag rejects a merely related owner, and the kind check rejects other controllers; the name fallback covers objects without a uid.",
+      "hints": [
+        "Skip any reference that is not a controlling Deployment reference before comparing anything.",
+        "Compare uids only when both are present; otherwise compare names, and stop at the first matching reference."
+      ]
+    },
+    {
+      "id": "mcp-016-q14",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "3",
+      "est_minutes": 10,
+      "tags": [
+        "preview",
+        "determinism"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`render_question()` builds the approval question for a scale, but it shows a timestamp and the live replica count, so two rounds of the same call render different text and the answer never matches. Fix it: the question must depend only on `deployment_name`, `replicas` and `namespace`, must not read the cluster, must still name the target as `deployment/<name>` and the namespace, and must describe the change as `set spec.replicas to <replicas>`. Keep the signature.",
+      "kind": "fix",
+      "language": "python",
+      "starter": "from datetime import datetime, timezone\n\n\ndef render_question(deployment_name, replicas, namespace, cluster):\n    \"\"\"The approval question for scaling a deployment.\"\"\"\n    current = cluster.read_replicas(deployment_name, namespace)\n    return \"\\n\".join([\n        \"Approve this change to the cluster?\",\n        f\"  asked at:     {datetime.now(timezone.utc).isoformat()}\",\n        f\"  target:       deployment/{deployment_name}\",\n        f\"  namespace:    {namespace}\",\n        f\"  change:       scale from {current} to {replicas}\",\n    ])\n",
+      "solution": "from datetime import datetime, timezone\n\n\ndef render_question(deployment_name, replicas, namespace, cluster):\n    \"\"\"The approval question for scaling a deployment.\"\"\"\n    return \"\\n\".join([\n        \"Approve this change to the cluster?\",\n        f\"  target:       deployment/{deployment_name}\",\n        f\"  namespace:    {namespace}\",\n        f\"  change:       set spec.replicas to {replicas}\",\n    ])\n",
+      "tests": "\nimport time\n\n\nclass MovingCluster:\n    \"\"\"A cluster whose replica count moves every time it is read, as an autoscaler's does.\"\"\"\n\n    def __init__(self):\n        self.replicas = 3\n        self.reads = 0\n\n    def read_replicas(self, name, namespace):\n        self.reads += 1\n        self.replicas += 1\n        return self.replicas\n\n\nfrom datetime import datetime as _real_datetime, timedelta as _timedelta\n\n\nclass TickingClock:\n    \"\"\"Stands in for datetime: every reading is a different day.\"\"\"\n\n    readings = 0\n\n    @classmethod\n    def now(cls, tz=None):\n        cls.readings += 1\n        return _real_datetime(2026, 1, 1, tzinfo=tz) + _timedelta(days=cls.readings)\n\n\ndatetime = TickingClock\ncluster = MovingCluster()\nfirst = render_question(\"checkout\", 5, \"default\", cluster)\ntime.sleep(0.05)\nsecond = render_question(\"checkout\", 5, \"default\", cluster)\nassert first == second, \"the same arguments rendered two different questions\"\nassert cluster.reads == 0, \"the question read the cluster\"\nassert TickingClock.readings == 0, \"the question read the clock\"\nfor part in (\"deployment/checkout\", \"default\", \"set spec.replicas to 5\"):\n    assert part in first, f\"the question no longer names {part!r}\"\nassert render_question(\"checkout\", 6, \"default\", cluster) != first, \"the question ignores replicas\"\nassert render_question(\"payments\", 5, \"default\", cluster) != first, \"the question ignores the target\"\nassert render_question(\"checkout\", 5, \"staging\", cluster) != first, \"the question ignores the namespace\"\nprint(\"all question tests passed\")\n",
+      "explanation": "Section 3: the SDK matches an answer to a digest of the rendered question and re-renders it every round, so the question must be a pure function of the arguments. Removing the timestamp alone still leaves a reading that moves; removing the read alone still leaves a clock; both have to go, and the observed counts belong in the result instead.",
+      "hints": [
+        "List every input of the starter's string that is not one of the three arguments.",
+        "The intended change, not the observed state, is what the arguments determine."
+      ]
+    },
+    {
+      "id": "mcp-016-q15",
+      "type": "order",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o1",
+        "o4"
+      ],
+      "section": "2",
+      "est_minutes": 3,
+      "tags": [
+        "mrtr",
+        "sequence"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Put the steps of one approved `scale_deployment` call in order, from the model's request to the result it reads.",
+      "items": [
+        {
+          "key": "a",
+          "text": "The client sends `tools/call` with the model's arguments."
+        },
+        {
+          "key": "b",
+          "text": "The resolver runs `guard_namespace` and `guard_replicas`, and both pass."
+        },
+        {
+          "key": "c",
+          "text": "The server returns `input_required` with the rendered question and a sealed `requestState`."
+        },
+        {
+          "key": "d",
+          "text": "The client shows the question and the user approves."
+        },
+        {
+          "key": "e",
+          "text": "The client retries with a new id, `inputResponses`, and the echoed `requestState`."
+        },
+        {
+          "key": "f",
+          "text": "The resolver runs again and the rendered question matches the recorded answer."
+        },
+        {
+          "key": "g",
+          "text": "The tool body patches the scale subresource and reads the deployment back."
+        }
+      ],
+      "answer": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "g"
+      ],
+      "explanation": "Section 2 and section 8: the guards are in the resolver, which runs before the question is rendered; the first request ends with `input_required`; the retry carries the answer; the resolver runs again on that round and the digest matches; only then does the body touch the cluster and read it back.",
+      "hints": [
+        "Nothing touches the cluster until the last step.",
+        "The resolver runs twice: once before the question exists and once on the retry."
+      ]
+    },
+    {
+      "id": "mcp-016-q16",
+      "type": "match",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o2",
+        "o3"
+      ],
+      "section": "12",
+      "est_minutes": 4,
+      "tags": [
+        "symptoms",
+        "diagnosis"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Match each symptom to its cause.",
+      "left": [
+        {
+          "key": "a",
+          "text": "A rollback reports `applied: true`, but `restored_images` names another deployment's image."
+        },
+        {
+          "key": "b",
+          "text": "After a rollback the pods run the old image with the bad deploy's environment variable."
+        },
+        {
+          "key": "c",
+          "text": "The user sees ten approval dialogs, approves each one, and nothing changes."
+        },
+        {
+          "key": "d",
+          "text": "The call fails with `-32021` before any question is shown."
+        },
+        {
+          "key": "e",
+          "text": "A scale result reports `observed_replicas` 3 after a request for 6."
+        }
+      ],
+      "right": [
+        {
+          "key": "p",
+          "text": "ReplicaSets chosen by label selector without an ownership check."
+        },
+        {
+          "key": "q",
+          "text": "An image-only patch merged into the template by container name."
+        },
+        {
+          "key": "r",
+          "text": "A live reading in the approval question."
+        },
+        {
+          "key": "s",
+          "text": "The client declared no elicitation capability."
+        },
+        {
+          "key": "t",
+          "text": "An autoscaler or admission webhook resetting the count."
+        },
+        {
+          "key": "u",
+          "text": "An `approved` parameter in the published schema."
+        }
+      ],
+      "answer": {
+        "a": "p",
+        "b": "q",
+        "c": "r",
+        "d": "s",
+        "e": "t"
+      },
+      "explanation": "Sections 5, 6, 7 and 12 print each symptom: the label-only rollback restores `canary:9.9.9`, the merged image-only patch keeps `FEATURE_NEW_CART`, the moving question ends in `InputRequiredRoundsExceededError` after ten questions, a client without `elicitation_callback` gets `-32021`, and a cluster that keeps the old count produces the read-back warning. An `approved` parameter causes none of these; its failure is that the model sets it.",
+      "hints": [
+        "Two of the symptoms report success; ask what was actually chosen or kept.",
+        "The leftover cause fails differently: the model fills it in."
+      ]
+    },
+    {
+      "id": "mcp-016-q17",
+      "type": "long",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 12,
+      "tags": [
+        "rollback",
+        "change-cause"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The project's rollback adds a `kubernetes.io/change-cause` annotation to the restored pod template's metadata. Critique that choice: say what it changes about the restored template and the new pods, explain what `kubectl rollout history` shows for the rollback and why, and propose a change to the patch that records the reason where the history reads it.",
+      "kind": "critique",
+      "answer_length": "half a page",
+      "solution": "The annotation is written into `spec.template.metadata.annotations`, so it is part of the pod template. Two things follow. The restored template is no longer byte-identical to revision 2's: it carries one extra annotation, so it is revision 2's template plus a field, not revision 2's template. And every pod the rollout creates carries the annotation, because template metadata is copied onto the pods.\n\n`kubectl rollout history` does not show the reason. The Kubernetes Deployment page says the change cause is copied from the Deployment's own `kubernetes.io/change-cause` annotation to its revisions when they are created, not from the template inside them. This patch replaces `/spec/template` and leaves the Deployment's `/metadata/annotations` alone, so the reason the operator typed is not what the history shows; it survives only on the pods and in the server's log line.\n\nThe fix is to restore the template exactly and record the reason on the Deployment: drop the annotation from the template value, and add a second JSON Patch operation that sets `/metadata/annotations/kubernetes.io~1change-cause` (the `/` in the key escaped as `~1`) on the Deployment, in the same request so both apply together. The test that checks the cause would then read the Deployment's annotation instead of the template's.",
+      "rubric": [
+        {
+          "criterion": "States that the annotation lands in the pod template, so the restored template differs from the target revision's and every new pod carries it.",
+          "points": 3
+        },
+        {
+          "criterion": "Explains that rollout history reads the change cause copied from the Deployment's own annotation, which this patch does not set.",
+          "points": 3
+        },
+        {
+          "criterion": "Proposes recording the reason on the Deployment's metadata, for example a second JSON Patch operation, while restoring the template unchanged.",
+          "points": 3
+        },
+        {
+          "criterion": "Notes the consequence for the operator: the typed reason is not where the history shows it.",
+          "points": 1
+        }
+      ],
+      "explanation": "Section 6 prints the patch, with the annotation inside `/spec/template`, and cites the Deployment page's rule that the history's change cause comes from the Deployment's annotation. A cause recorded in the template is therefore on the pods and in the log, not in the history.",
+      "hints": [
+        "Find the annotation's path in the printed patch.",
+        "Ask which object's annotations the Deployment page says the history's change cause is copied from."
+      ]
+    },
+    {
+      "id": "mcp-016-q18",
+      "type": "long",
+      "track": "connect",
+      "difficulty": 4,
+      "outcomes": [
+        "o1",
+        "o2"
+      ],
+      "section": "2",
+      "est_minutes": 12,
+      "tags": [
+        "approval",
+        "database-writes"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Post 14 gates database writes behind an approval through MRTR, and this post gates cluster changes the same way. Compare the two designs: name what is the same in how each hides the approval from the model and builds its question, and name two ways the cluster tools differ in what they do after the approval because a cluster is not a transactional database.",
+      "kind": "compare",
+      "answer_length": "half a page",
+      "solution": "The same: both declare the approval as a resolved parameter, `Annotated[..., Resolve(...)]`, so `tools/list` publishes only the operational arguments and the model has no field in which to approve itself; both build the question from the tool's arguments alone (the exact statement in post 14, the seven-field preview here), so the rendered question is stable across rounds and its digest matches; and both report a declined or cancelled answer as a complete result rather than an error.\n\nThe differences come from what follows the approval. A database write runs inside a transaction with its audit row, so the change and its record commit or fail together, and a dry run can show the exact normalized statement before anyone is asked. A cluster has no transaction across calls: an accepted patch is not a finished change, so the tools read the object back and report `observed_replicas` next to `requested_replicas`, and a restart reports whether the pod is gone, terminating or unverifiable. A rollback cannot be undone by aborting; it is reversed by rolling forward, and its scope is stated in `not_restored`. And this server keeps no audit trail of its own beyond a log line, where post 14 writes an audit row inside the mutation's transaction.",
+      "rubric": [
+        {
+          "criterion": "Identifies the resolved parameter hidden from the published schema in both designs.",
+          "points": 2
+        },
+        {
+          "criterion": "Identifies the question built from arguments alone in both, and why that matters for the digest.",
+          "points": 2
+        },
+        {
+          "criterion": "Names the read-back of observed state as the cluster's substitute for a transaction's guarantee.",
+          "points": 3
+        },
+        {
+          "criterion": "Names a second difference: no atomic audit record, rollback by rolling forward, or scope stated in the result.",
+          "points": 3
+        }
+      ],
+      "explanation": "Section 2 builds the hidden approval and section 3 the pure preview, the same two moves post 14 makes for writes. The cluster differs after the approval: there is no transaction, so sections 4 to 6 read back and state scope, and the server's only record is its log line.",
+      "hints": [
+        "Line up the tool signatures and the questions of the two posts first.",
+        "Then ask what a transaction gives post 14 that a Kubernetes patch does not give this one."
+      ],
+      "connects": [
+        "mcp-014",
+        "mcp-008"
+      ]
+    }
+  ]
+}
