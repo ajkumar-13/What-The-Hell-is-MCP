@@ -1,99 +1,119 @@
-# 12 · Testing and debugging MCP
+# 12 - Testing and debugging MCP
 
-> **TL;DR.** A Model Context Protocol (MCP) server is an ordinary library with a protocol in front of it, and `Client(server_object)` puts a real client on the other end of that protocol with no subprocess, no socket, and no host. This post builds three levels of test around that fact, then covers the two async failures that will cost you an afternoon, driving the multi-round trip with no human in the loop, reading a wire trace, the Inspector, and the conformance suite. Every result line quoted here came from running the suites in [code/](../../code/), and it closes with the five failures that account for most bug reports.
+> **TL;DR.** A Model Context Protocol (MCP) server is an ordinary library with a protocol in front of it, and `Client(server_object)` puts a real client on the other end of that protocol with no subprocess, no socket, and no host. This post builds three levels of test around that fact, then covers the two async rules that keep such tests working, driving the multi-round trip with no human in the loop, reading a wire trace, the Inspector, and the conformance suite. Every transcript below is printed by a script in `snippets/` or by a project's own test suite against `mcp==2.3.0`, and the post closes with five failures worth knowing by their symptoms.
 >
-> **After reading this you will be able to:**
-> - Write in-memory protocol tests that drive a real client against your server object.
-> - Assert on the published schema, not just the returned value, so a silent `outputSchema: null` fails a test.
-> - Drive the elicitation round trip through accept, decline, and cancel without a human.
-> - Read a wire trace and find the two places a failure hides.
+> **Prerequisites:** [Post 10](../10-mcp-client/index.md).
+> **Safe to skip?** Skip it if the reader can already test a server in memory with the Python software development kit's (SDK's) `Client`, assert on what `tools/list` publishes, answer an elicitation from a test with each of its outcomes, and tell an `isError` result from a JSON-RPC error in a captured trace.
+>
+> **After reading, you will be able to:**
+>
+> - Write in-memory protocol tests that drive a real client against a server object, with no subprocess, socket, or host.
+> - Assert on the published schema so that a tool publishing no output schema fails a test.
+> - Drive an elicitation round trip through accept, decline, and cancel with no human in the loop.
+> - Read a wire trace and find the two places a failed tool call hides.
 
-![Three stacked panels. The top panel is unit tests calling your own functions directly with no protocol involved. The middle panel is in-memory protocol tests, where a real client object talks to a real server object through the full protocol path with no process boundary between them. The bottom panel is a live host running the server as a separate process over standard input and output. Each panel lists what that level catches, what it cannot see, and roughly what it costs to run.](diagrams/01-three-levels-of-test.svg) *Each level catches what the level above it structurally cannot, and each one costs more to run.*
+![Three stacked panels. The top panel is unit tests calling the server author's own functions directly with no protocol involved. The middle panel is in-memory protocol tests, where a real client object talks to a real server object through the full protocol path with no process boundary between them. The bottom panel is a live host running the server as a separate process over standard input and output. Each panel lists what that level catches, what it cannot see, and roughly what it costs to run.](diagrams/01-three-levels-of-test.svg)
+
+*Each level catches what the level above it structurally cannot, and each one costs more to run.*
 
 ---
 
-## 1. The server works and the host says it does not
+## 1. The question: the server works and the host says it does not
 
-Here is the report you will get, and it will not include a stack trace.
+The report a server author gets often comes without a stack trace.
 
-"Your server is broken." Sometimes: "the model keeps saying it can't find the tool." Sometimes nothing at all, just a user who tried it once and moved on. Meanwhile the server runs fine on your machine, and the function the tool wraps has unit tests, and they pass.
+"The server is broken." Sometimes: "the model keeps saying it can't find the tool." Sometimes nothing at all, just a user who tried it once and moved on. Meanwhile the server runs fine on the author's machine, the function the tool wraps has unit tests, and they pass.
 
-The gap is the protocol. A tool is a Python function plus a published schema plus a result shape, and only the function is in your test suite. The schema is generated for you, the result shape is assembled for you, and both are capable of being wrong in ways that raise nothing. [Post 06](../06-tools-in-depth/index.md) showed the sharpest example: a return annotation without class-body annotations publishes `outputSchema: null`, and the tool then ships the object's memory address to the model as a successful answer.
+The gap is the protocol. A tool is a Python function plus a published schema plus a result shape, and only the function is in the test suite. The schema is generated by the SDK, the result shape is assembled by the SDK, and both can be wrong in ways that raise nothing. [Post 06](../06-tools-in-depth/index.md) showed the sharpest example: a return class whose attributes are assigned only in `__init__` publishes `outputSchema: null`, and the tool then ships the object's memory address to the model as a successful answer.
 
-The reason so few MCP servers have protocol tests is not laziness. It is that the obvious way to write one looks expensive. Spawn the server as a child process over standard input and output (stdio), speak JavaScript Object Notation Remote Procedure Call (JSON-RPC) at it, wait for frames, tear it down. That is slow, it is awkward on Windows, and it turns a unit test suite into an integration suite. So people test the functions, skip the protocol, and ship.
+A server can end up with no protocol tests for a simple reason: the obvious way to write one looks expensive. Spawn the server as a child process over standard input and output (stdio), speak JavaScript Object Notation Remote Procedure Call (JSON-RPC) at it, wait for frames, tear it down. That is slow, it is awkward on Windows, and it turns a unit test suite into an integration suite. So people test the functions, skip the protocol, and ship.
 
-There is a third option, and the whole post rests on it:
+There is a third option, and the whole post rests on it. From `tests/test_server.py` in [code/05-first-server/](../../code/05-first-server/):
 
 ```python
-async with Client(mcp) as c:
-    tools = (await c.list_tools()).tools
+    async with Client(mcp) as c:
+        tools = (await c.list_tools()).tools
 ```
 
-`Client(mcp)` connects a real client straight to the server object. No subprocess, no socket, no port. The request still travels the genuine protocol path, so schema generation, argument validation, result assembly, and the elicitation round trip all really happen. Both suites this post quotes are built on that one line.
+`Client(mcp)` connects a real client straight to the server object. No subprocess, no socket, no port. The request still travels the server's genuine request path, so schema generation, argument validation, result assembly, and the elicitation round trip all really happen. Every suite this post quotes is built on that one line. The question for the post is: **how can an MCP server be tested like any other library, with a real client on the other end and no subprocess, socket, or host?**
 
 ## 2. Three levels, and what each one catches
 
-Three levels, and the useful question about each is not "is this a unit test" but "what can this level structurally not see".
+There are three levels, and the useful question about each is not "is this a unit test" but "what can this level structurally not see".
 
 | Level | What it drives | Catches | Cannot see |
 |---|---|---|---|
-| **1. Unit** | your own functions, no MCP imports | ranking, parsing, clamping, validation, every branch of your logic | the schema, the result shape, the protocol, anything the SDK generates |
-| **2. In-memory protocol** | `Client(server_object)` | published schemas, annotations, `isError`, structured content, resource Uniform Resource Identifier (URI) matching, the multi-round trip, capability errors | the transport, stdout corruption, packaging, host configuration |
-| **3. Live host** | the real server process in a real host | stdout corruption, the launch command, the config file, packaging, what a model actually does with your descriptions | nothing much, but it is manual, slow, and not deterministic |
+| **1. Unit** | the author's own functions, no MCP imports | ranking, parsing, clamping, validation, every branch of the logic | the schema, the result shape, the protocol, anything the SDK generates |
+| **2. In-memory protocol** | `Client(server_object)` | published schemas, annotations, `isError`, structured content, resource Uniform Resource Identifier (URI) matching, the multi-round trip, capability errors | the transport, stray writes to standard output, packaging, host configuration |
+| **3. Live host** | the real server process in a real host | stray writes to standard output, the launch command, the configuration file, packaging, what a model actually does with the descriptions | little, but it is manual, slow, and not deterministic |
 
-Level 2 is the one that is usually missing, and it is also cheaper than almost anyone expects. Here are two runs of the same project, split by level. The knowledge-base project in [code/23-knowledge-base/](../../code/23-knowledge-base/) keeps its retrieval layer free of any SDK import, so `test_index.py` is pure level 1 and `test_server.py` is pure level 2:
+Level 2 is the easiest to skip, and it is also cheaper than it looks. The knowledge-base project in [code/23-knowledge-base/](../../code/23-knowledge-base/) keeps its retrieval layer free of any SDK import, so `test_index.py` is pure level 1 and `test_server.py` is pure level 2. Run inside that directory, the two files print:
 
 ```
-$ pytest tests/test_index.py -q
-23 passed in 1.48s
+$ uv run --extra dev pytest tests/test_index.py -q
+23 passed in 1.35s
 
-$ pytest tests/test_server.py -q
-28 passed in 1.47s
+$ uv run --extra dev pytest tests/test_server.py -q
+28 passed in 1.53s
 ```
 
-Twenty-eight protocol tests cost the same as twenty-three plain function tests. There is no process to start and nothing to wait for, so the protocol layer adds almost nothing to the clock. Whatever you assumed testing MCP would cost, this is the real number.
+Twenty-eight protocol tests cost about what twenty-three plain function tests cost. The seconds vary from run to run and machine to machine, but the comparison holds: there is no process to start and nothing to wait for, so the protocol layer adds almost nothing to the clock.
 
-Level 3 does not disappear. It catches a specific and nasty class of bug that levels 1 and 2 cannot reach by construction, because both of them run inside one process and the bug is *about* the process boundary. A `print()` in a tool body is invisible in memory and fatal over stdio. Keep level 3, run it by hand before you publish, and do not try to make it your regression suite.
+Level 3 does not disappear. It catches a specific and nasty class of bug that levels 1 and 2 cannot reach by construction, because both of them run inside one process and the bug is *about* the process boundary. A `print()` that runs at import time, before the stdio transport starts, is invisible in memory and lands in the frame stream over stdio. Keep level 3, run it by hand before publishing, and do not try to make it the regression suite.
 
-## 3. In-memory, without a subprocess
+## 3. In memory, with `Client(server_object)`
 
-Wire format first, since that is the order that lets you debug.
+Wire format first, since that is the order that makes debugging possible.
 
-A `tools/call` is one JSON-RPC request with a `name`, an `arguments` object, and a mandatory `_meta` block. Revision 2026-07-28 has no `initialize` handshake and no session, so every request carries its own protocol version and its own declared capabilities. This is the shape:
+A `tools/call` is one JSON-RPC request with a `name`, an `arguments` object, and a `_meta` block. Revision 2026-07-28 has no `initialize` handshake and no session, so every request carries its own protocol revision and its own declared capabilities. `snippets/wire_trace.py` starts the first server over Streamable Hypertext Transfer Protocol (HTTP) on a loopback port and records what the SDK's own `Client` sends. This is the body of one call:
 
 ```json
 {
   "jsonrpc": "2.0",
-  "id": 3,
+  "id": 2,
   "method": "tools/call",
   "params": {
-    "name": "get_system_info",
-    "arguments": {},
+    "name": "find_process",
+    "arguments": {
+      "name": "zzz-no-such-process",
+      "limit": 1
+    },
     "_meta": {
       "io.modelcontextprotocol/protocolVersion": "2026-07-28",
-      "io.modelcontextprotocol/clientInfo": { "name": "ExampleClient", "version": "1.0.0" },
-      "io.modelcontextprotocol/clientCapabilities": { "elicitation": { "form": {} } }
+      "io.modelcontextprotocol/clientInfo": {
+        "name": "mcp",
+        "version": "0.1.0"
+      },
+      "io.modelcontextprotocol/clientCapabilities": {}
     }
   }
 }
 ```
 
-`Client(server_object)` builds exactly that request and hands it to the server's request handler. What it skips is the serialization and the pipe. The software development kit (SDK) dispatches on the shape of the argument you pass: an `MCPServer` or a low-level `Server` becomes an in-process pair of direct dispatchers, a string becomes a Streamable Hypertext Transfer Protocol (HTTP) client, and anything else is treated as a transport. The negotiated revision in the in-process case is `2026-07-28`.
+The `id` is `2` because the client's one earlier request was `server/discover`, with `id` `1`; the script prints every POST in order, and the client's `tools/list` follows this call as `id` `3`. `clientCapabilities` is empty because this client was built without an elicitation callback; section 6 shows why that matters.
 
-So the same client class covers all three of these, and only the argument changes:
+`Client(server_object)` builds the same request objects and hands them to the server's request handler through a pair of direct dispatchers. What it skips is the serialization, the JSON-RPC framing, and the pipe. The SDK dispatches on the type of the argument it is given: an `MCPServer` or a low-level `Server` is connected in-process, a `StdioServerParameters` is launched as a subprocess, a string is a Streamable HTTP endpoint, and anything else is treated as a transport. `snippets/targets.py` connects one client class to the first server all three ways, and only the argument changes:
 
 ```python
-from mcp import Client, StdioServerParameters
-from mcp.client.stdio import stdio_client
-
-Client(mcp)                                          # in memory, level 2
-Client(stdio_client(StdioServerParameters(...)))     # a real subprocess, level 3
-Client("http://127.0.0.1:8000/mcp")                  # a running HTTP server
+    targets = [
+        ("in memory", Client(mcp)),                                     # the server object, level 2
+        ("stdio", Client(StdioServerParameters(                         # a subprocess, level 3
+            command=sys.executable, args=["-m", "system_info"], cwd=str(SRC), env=QUIET))),
+        ("HTTP", Client(url)),                                          # a running HTTP server
+    ]
 ```
 
-There is no `Client("stdio://...")` form. A plain string always means an HTTP Uniform Resource Locator.
+It prints the same server through each door:
 
-The test file needs one piece of configuration and no fixtures. Both projects put this in `pyproject.toml`:
+```
+in memory  server='system-info' revision=2026-07-28 tools=['find_process', 'get_system_info', 'terminate_process', 'watch_cpu']
+stdio      server='system-info' revision=2026-07-28 tools=['find_process', 'get_system_info', 'terminate_process', 'watch_cpu']
+HTTP       server='system-info' revision=2026-07-28 tools=['find_process', 'get_system_info', 'terminate_process', 'watch_cpu']
+```
+
+There is no `Client("stdio://...")` form. A plain string always means an HTTP Uniform Resource Locator (URL).
+
+The test files need one piece of configuration and no fixtures. Both projects put this in `pyproject.toml`:
 
 ```toml
 [tool.pytest.ini_options]
@@ -101,7 +121,7 @@ asyncio_mode = "auto"
 testpaths = ["tests"]
 ```
 
-`asyncio_mode = "auto"` is what lets a bare `async def test_...` run without a decorator on every function. With that in place a complete protocol test is a handful of lines:
+`asyncio_mode = "auto"` is the `pytest-asyncio` setting that lets a bare `async def test_...` run without a decorator on every function. With that in place a complete protocol test is a handful of lines. From the same `tests/test_server.py`:
 
 ```python
 async def test_system_snapshot_is_structured():
@@ -110,41 +130,45 @@ async def test_system_snapshot_is_structured():
         assert result.result_type == "complete"
         data = result.structured_content
         assert 0 <= data["cpu_percent"] <= 100
+        assert 0 <= data["memory_percent"] <= 100
+        assert data["memory_total_gb"] > 0
 ```
 
-That is from [tests/test_server.py](../../code/05-first-server/tests/test_server.py), and it asserts on three things a unit test could not have reached: that the call completed rather than asking for input, that the result carried structured content at all, and that the structured content has the keys the output schema promises.
+It asserts on three things a unit test could not have reached: that the call completed rather than asking for input, that the result carried structured content at all, and that the structured content has the keys the output schema promises.
 
-**Running the suites.** These are the two commands, run on Windows, where `PYTHONPATH` separates with a semicolon:
+**Running the suites.** Each project is its own `uv` project, and the command is the same in both directories:
 
 ```bash
-cd code/05-first-server && PYTHONPATH=src pytest tests -q
+cd code/05-first-server && uv run --extra dev pytest -q
 ```
 ```
 ...................                                                      [100%]
-19 passed in 6.24s
+19 passed in 5.37s
 ```
 
 ```bash
-cd code/10-mcp-client && PYTHONPATH="src;../05-first-server/src" pytest tests -q
+cd code/10-mcp-client && uv run --extra dev pytest -q
 ```
 ```
 ....................................................................     [100%]
-68 passed in 6.58s
+68 passed in 7.08s
 ```
 
-The sixty-eight are the client and host project in [code/10-mcp-client/](../../code/10-mcp-client/), and most of them drive the real system-information server in memory. Note the second `PYTHONPATH` entry: the client suite imports the server package directly, because the honest way to test a client is against a server you did not write for the occasion.
+The sixty-eight are the client and host project in [code/10-mcp-client/](../../code/10-mcp-client/), and the tests among them that open a connection do it in memory, with the real system-information server on the other end. That project depends on `code/05-first-server` as a path dependency and imports its server package directly, because the honest way to test a client is against a server that was not written for the occasion.
 
-The nineteen take six seconds, which looks slow next to the knowledge-base numbers above until you notice `watch_cpu`, a tool that samples the processor once a second for two seconds. That is the tool's own work, not the protocol's. Time in an in-memory suite is always your own code.
+The nineteen take about five seconds, which looks slow next to the knowledge-base numbers until the time is broken down. `uv run --extra dev pytest --durations=3` lists `test_watch_cpu_returns_one_sample_per_second` first, at about two seconds: `watch_cpu` samples the processor once a second, and `get_system_info` samples it for half a second. That is the tools' own work, not the protocol's. Time in an in-memory suite is the server's own code.
 
 ## 4. Two rules that make async tests work
 
-These two will cost you more time than anything else in this post. Neither is documented anywhere you would look, and both produce error messages that point at the wrong thing. They are also the same bug twice: the client owns an `anyio` task group, and everything below follows from that one fact.
+These two cost more time than anything else in this post, and both produce error messages that point at the wrong thing. They are also the same fact twice: the client owns an `anyio` task group.
 
-![Two panels side by side over a shared picture of two lanes, one for the pytest fixture task and one for the test task. In the left panel a yield fixture enters the client context on the fixture lane, hands it down to the test body on the test lane, and exits it back up on the fixture lane, so the group is entered in one task and exited in another and teardown raises. In the right panel the fixture lane is empty and the enter marker, the test body, and the exit marker all sit in one row on the test lane. Below them, a raised exception is drawn as three nested boxes, an ExceptionGroup inside an ExceptionGroup inside the original error, which is why one level of unwrapping is not enough.](diagrams/03-one-task-group.svg) *Both failures are the same task group: who exits it, and what it does to whatever escapes it.*
+![Two panels side by side over a shared picture of two lanes, one for the pytest fixture task and one for the test task. In the left panel a yield fixture enters the client context on the fixture lane, hands it down to the test body on the test lane, and exits it back up on the fixture lane, so the group is entered in one task and exited in another and teardown raises. In the right panel the fixture lane is empty and the enter marker, the test body, and the exit marker all sit in one row on the test lane. Below them, a raised exception is drawn as three nested boxes, the original error inside an ExceptionGroup inside another ExceptionGroup, which is why one level of unwrapping is not enough.](diagrams/03-one-task-group.svg)
+
+*Both failures are the same task group: who exits it, and what it does to whatever escapes it.*
 
 ### Do not hand the client over from a yield fixture
 
-The reflex is right and the result is wrong:
+The reflex is right and the result is wrong. `snippets/yield_fixture.py` writes a test file whose fixture does this:
 
 ```python
 @pytest.fixture
@@ -153,91 +177,100 @@ async def client():
         yield c          # every test in the file now errors
 ```
 
-Run two ordinary tests against that fixture and this is what comes back, verbatim:
+It runs pytest on two ordinary tests against that fixture, and this is what comes back:
 
 ```
-.E.E                                                                     [100%]
-=========================== short test summary info ===========================
 ERROR test_yield_fixture.py::test_list_tools - RuntimeError: Attempted to exi...
 ERROR test_yield_fixture.py::test_call_a_tool - RuntimeError: Attempted to ex...
-2 passed, 2 errors in 1.65s
+2 passed, 2 errors
+first teardown error: RuntimeError: Attempted to exit cancel scope in a different task than it was entered in
 ```
 
-Read the counts. **The tests passed.** The errors are in teardown, which is why the first thing you will do is stare at test bodies that are not the problem. The full message is:
+Read the counts. **The tests passed.** The errors are in teardown, which is why the first instinct is to stare at test bodies that are not the problem.
 
-```
-RuntimeError: Attempted to exit cancel scope in a different task than it was entered in
-```
+A task group must be exited by the same task that entered it. A yield fixture enters the client's context in the fixture's task and exits it later, after the test function has run, in a different one. Nothing about the test is wrong; the lifetime is.
 
-The client owns an `anyio` task group, and a task group must be exited by the same task that entered it. A yield fixture enters the context in the fixture's task and exits it later, after the test function has run, in a different one. Nothing about your test is wrong; the lifetime is.
-
-The fix is to open the client inside the test body, every time:
+The fix is to open the client inside the test body, every time. The same script runs the same two tests written that way and prints `2 passed`. In the project the shape looks like this, from `tests/test_server.py`:
 
 ```python
 async def test_every_tool_declares_annotations():
     async with Client(mcp) as c:
         for tool in (await c.list_tools()).tools:
             assert tool.annotations is not None, f"{tool.name} has no annotations"
+            assert tool.annotations.read_only_hint is not None
 ```
 
-It looks repetitive and it is worth it. Every test file in [code/](../../code/) is written this way, and each one says so in its module docstring, because the failure is so unhelpful that a future reader deserves the warning.
+It looks repetitive and it is worth it. Every test file in the projects that opens a client is written this way, and the three protocol suites quoted here say so in their module docstrings, because the failure is so unhelpful that a future reader deserves the warning.
 
-What you *can* share through a fixture is anything that is not an async context: a loaded corpus, a temporary directory, a fake API. The knowledge-base project does exactly that, with a module-scoped `corpus` fixture feeding the level 1 tests and no fixture at all in the level 2 file.
+What a fixture *can* share is anything that is not an async context: a loaded corpus, a temporary directory, a fake application programming interface (API). The knowledge-base project does exactly that, with a module-scoped `corpus` fixture feeding the level 1 tests and no fixture at all in the level 2 file.
 
 ### An exception escaping the client arrives wrapped
 
-The second rule follows from the same task group. When an exception leaves an `async with Client(...)` block, the task group re-raises it wrapped:
+The second rule follows from the same task group. When an exception leaves an `async with Client(...)` block, the task group re-raises it wrapped. `snippets/exception_group.py` raises inside the block:
 
 ```python
-try:
-    async with Client(mcp) as c:
-        await c.list_tools()
-        raise ZeroDivisionError("boom")
-except ZeroDivisionError:
-    print("A: caught as ZeroDivisionError")
-except BaseException as exc:
-    print(f"A: caught as {type(exc).__name__}: {exc}")
-    print(f"A: .exceptions -> {getattr(exc, 'exceptions', None)}")
+    try:
+        async with Client(mcp) as c:
+            await c.list_tools()
+            raise ZeroDivisionError("boom")
+    except ZeroDivisionError:
+        print("A: caught as ZeroDivisionError")
+    except BaseException as exc:
+        print(f"A: caught as {type(exc).__name__}: {exc}")
+        print(f"A: .exceptions -> {getattr(exc, 'exceptions', None)}")
 ```
 
-prints:
+and prints:
 
 ```
 A: caught as ExceptionGroup: unhandled errors in a TaskGroup (1 sub-exception)
 A: .exceptions -> (ExceptionGroup('unhandled errors in a TaskGroup', [ZeroDivisionError('boom')]),)
+B: group layers above the error: 2
 ```
 
-The first `except` clause never fires. `pytest.raises(ZeroDivisionError)` does not match either. And note the nesting: it is a group inside a group, so one level of unwrapping is not enough. The client project ships the helper that handles it, in [tests/test_client.py](../../code/10-mcp-client/tests/test_client.py):
+The first `except` clause never fires, and `pytest.raises(ZeroDivisionError)` does not match either. Note the nesting: it is a group inside a group, so one level of unwrapping is not enough. The client project ships the helper that handles it, in `tests/test_client.py` of [code/10-mcp-client/](../../code/10-mcp-client/):
 
 ```python
 def flatten(exc: BaseException) -> list[BaseException]:
-    """Unwrap nested ExceptionGroups."""
+    """Unwrap nested ExceptionGroups.
+
+    An exception raised inside `async with Client(...)` escapes through an
+    anyio task group, which re-raises it wrapped in an `ExceptionGroup`. So
+    `pytest.raises(ZeroDivisionError)` does not match, and neither does a
+    plain `except ZeroDivisionError` in host code. Worth knowing before you
+    spend an afternoon on it.
+    """
     nested = getattr(exc, "exceptions", None)
     if nested is None:
         return [exc]
     return [inner for e in nested for inner in flatten(e)]
 ```
 
-used as:
+used in the same file as:
 
 ```python
-with pytest.raises(BaseException) as excinfo:
-    async with open_connection(spec()) as conn:
-        await conn.list_tools()
-        raise ZeroDivisionError("boom")
+    with pytest.raises(BaseException) as excinfo:
+        async with open_connection(spec()) as conn:
+            captured = conn
+            await conn.list_tools()
+            raise ZeroDivisionError("boom")
 
-assert any(isinstance(e, ZeroDivisionError) for e in flatten(excinfo.value))
+    assert any(isinstance(e, ZeroDivisionError) for e in flatten(excinfo.value))
 ```
 
-This is not only a testing concern. Host code that wraps a client call in `except ConnectionError` has the same hole, and the symptom in production is an exception handler that silently never runs.
+The script's last line shows the other way out: on Python 3.11 and later, `except* ZeroDivisionError` matches inside the group and prints `D: except* ZeroDivisionError matched; leaves: [ZeroDivisionError('boom')]`. The projects still support Python 3.10, which has no `except*`, so their tests flatten.
+
+The same wrapping applies to an `assert` that fails inside the block, and there it is harmless. The script's third test file asserts that a tool named `reboot` is published, and pytest still reports the real failure, `FAILED test_failing.py::test_a_tool_that_is_not_there - AssertionError("reboo...`, with the traceback printed as an exception group. A failed assertion reads correctly; only code that catches a specific type has to unwrap.
+
+This is not only a testing concern. Host code that wraps a whole client block in `except ConnectionError` has the same hole, and the symptom in production is an exception handler that silently never runs.
 
 ## 5. Assert on the schema, not just the result
 
 A test that calls a tool and checks the answer proves the function works. It does not prove the model can find the tool, fill it in, or read what comes back. Those live in the published surface, and the published surface deserves its own tests.
 
-Four of them earn their place in every server. The first three are from the system-information server's [tests/test_server.py](../../code/05-first-server/tests/test_server.py), and the fourth is from the knowledge-base project.
+Four of them earn their place in every server. The first three are from the system-information server's `tests/test_server.py`, and the fourth is from the knowledge-base project.
 
-**Every tool publishes an output schema.** This one exists because of the silent failure in [Post 06](../06-tools-in-depth/index.md): a return class with no class-body annotations yields `outputSchema: null`, with no exception, no warning, and no log line.
+**Every tool publishes an output schema.** This one exists because of the silent failure in [post 06](../06-tools-in-depth/index.md): a return class with no class-body annotations yields `outputSchema: null`, with no exception, no warning, and no log line.
 
 ```python
 async def test_every_tool_publishes_an_output_schema():
@@ -249,9 +282,18 @@ async def test_every_tool_publishes_an_output_schema():
             assert tool.output_schema is not None, f"{tool.name} has no output schema"
 ```
 
-The `assert tools` line is not padding. A server that registered nothing at all would pass a `for` loop over an empty list, and "my tools do not appear" is a real and common bug.
+`snippets/schema_assertions.py` runs that same assertion against the project and against three small servers it builds, one that registers nothing, one whose return class assigns its attribute only in `__init__`, and one whose tool returns a content block:
 
-**Every tool declares annotations, and the destructive one says so.** Annotations are hints and never enforcement, so this test is not a security control. It catches your own omission, which is what a host reads when it decides whether to prompt the user.
+```
+code/05-first-server (system-info)   passed
+a server that registered nothing     FAILED  AssertionError: server registered no tools  (2 group layers)
+a return class with no annotations   FAILED  AssertionError: snapshot has no output schema  (2 group layers)
+a tool returning a content block     FAILED  AssertionError: summary has no output schema  (2 group layers)
+```
+
+The `assert tools` line is not padding. A server that registered nothing at all would pass a `for` loop over an empty list, and "my tools do not appear" is a bug the troubleshooting tree of post 05 exists for. The third row is the bug the test exists for. The fourth is a deliberate choice rather than a bug: since SDK release 2.1.0 a tool annotated to return a content block publishes no output schema unless it passes `structured_output=True`, so a server with a tool that returns prose on purpose needs that tool named in an exception list, not a weaker test.
+
+**Every tool declares annotations, and the destructive one says so.** Annotations are hints, and the Tools page says a client must treat them as untrusted unless they come from a trusted server, so this test is not a security control. It catches the author's own omission, which is what a host reads when it decides whether to prompt the user.
 
 ```python
 async def test_destructive_tool_is_marked_destructive():
@@ -262,27 +304,39 @@ async def test_destructive_tool_is_marked_destructive():
         assert ann.read_only_hint is False
 ```
 
-**A parameter resolved by elicitation stays out of the published schema.** This is the security test, and it is the one worth copying into any server that confirms anything. `terminate_process` takes an `approval` parameter that the server fills in by asking the user. If that parameter reached `inputSchema`, a model could supply its own approval and the confirmation step would be decorative.
+**A parameter resolved by elicitation stays out of the published schema.** This is the security test, and it is the one worth copying into any server that confirms anything. `terminate_process` takes an `approval` parameter that the server fills in by asking the user, as [post 08](../08-elicitation-and-mrtr/index.md) builds it. If that parameter reached `inputSchema`, a model could supply its own approval and the confirmation step would be decorative.
 
 ```python
 async def test_resolved_parameter_is_hidden_from_the_model():
+    """The approval parameter must not appear in the published schema.
+
+    If it did, a model could supply its own approval and the confirmation step
+    would be decorative.
+    """
     async with Client(mcp) as c:
         tools = {t.name: t for t in (await c.list_tools()).tools}
         props = tools["terminate_process"].input_schema["properties"]
         assert set(props) == {"pid"}
 ```
 
-The equality is deliberate. `assert "approval" not in props` would pass forever while a second resolved parameter you add next year quietly leaks.
+The script prints `published properties: ['pid']` and `set(props) == {'pid'}: True`. The equality is deliberate. `assert "approval" not in props` would pass forever while a second resolved parameter added next year quietly leaks.
 
-**Every capability is reachable through the primitive the poorest client supports.** The knowledge-base project claims one server works on every client, and the honest form of that claim is that a tools-only client loses presentation and never capability. So the claim is a test rather than a sentence, in [tests/test_server.py](../../code/23-knowledge-base/tests/test_server.py):
+**Every capability is reachable through the primitive the poorest client supports.** The knowledge-base project claims one server works on every client, and the honest form of that claim is that a tools-only client loses presentation and never capability. So the claim is a test rather than a sentence, in that project's `tests/test_server.py`:
 
 ```python
-async def test_every_resource_is_reachable_through_a_tool():
     async with Client(mcp) as c:
         for resource in (await c.list_resources()).resources:
             uri = str(resource.uri)
             via_resource = (await c.read_resource(uri)).contents[0].text
-            ...
+
+            if uri == "knowledge://index":
+                # Covered by list_topics, which returns the same facts as data
+                # rather than as Markdown, so compare on content not on bytes.
+                topics = (await c.call_tool("list_topics", {})).structured_content
+                for topic in topics["topics"]:
+                    assert f"knowledge://doc/{topic['slug']}" in via_resource
+                continue
+
             slug = uri.rsplit("/", 1)[-1]
             via_tool = (
                 await c.call_tool("get_doc", {"slug": slug})
@@ -292,20 +346,28 @@ async def test_every_resource_is_reachable_through_a_tool():
 
 Add a resource without adding a tool path to it and the suite fails. That is a design rule enforced by the build rather than by review.
 
-One more, from the same project, that is not about the protocol at all and is the single highest-value test in the file:
+One more, from the same project's `tests/test_index.py`, is not about the protocol at all and is the single highest-value test in the file:
 
 ```python
 def test_the_corpus_is_actually_committed(corpus):
+    """The corpus is part of the deliverable, not a thing the reader supplies.
+
+    A server that starts cleanly and answers every search with nothing looks
+    exactly like a ranking bug and is usually a missing directory. This test is
+    here so that failure mode can never reach a reader.
+    """
     assert len(corpus) >= 5, "knowledge/ should contain the committed handbook"
+    slugs = {d.slug for d in corpus}
+    assert {"onboarding", "runbooks", "architecture", "faq", "snippets"} <= slugs
 ```
 
-A server whose data directory is missing starts cleanly, answers every search with nothing, and looks exactly like a ranking bug. Asserting that your fixtures exist turns twenty minutes of confusion into one red line.
+A server whose data directory is missing starts cleanly, answers every search with nothing, and looks exactly like a ranking bug. Asserting that the fixtures exist turns twenty minutes of confusion into one red line.
 
 ## 6. Testing the multi-round trip without a human
 
-Under revision 2026-07-28 there is no server-to-client request channel. A server that needs an answer from the user does not call into the client and block; it returns an `InputRequiredResult` carrying the questions and an opaque `requestState`, and the client calls the same tool again with the answers attached. That mechanism is Multi Round-Trip Requests (MRTR), and [Post 08](../08-elicitation-and-mrtr/index.md) covers it in full.
+Under revision 2026-07-28 there is no server-to-client request channel. A server that needs an answer from the user does not call into the client and block; it returns a result whose `resultType` is `"input_required"`, carrying the questions and, from this SDK, an opaque `requestState`, and the client calls the same tool again with the answers attached. That mechanism is Multi Round-Trip Requests (MRTR), and [post 08](../08-elicitation-and-mrtr/index.md) covers it in full.
 
-Its testing story is unusually good, because the human is already an injectable callback. Pass an `elicitation_callback` to `Client` and the SDK drives the whole loop for you:
+Its testing story is unusually good, because the human is already an injectable callback. Pass an `elicitation_callback` to `Client` and the SDK drives the whole loop. The first server's `tests/test_server.py` wraps that in one helper:
 
 ```python
 def answering(action: str, content: dict | None = None, seen: list | None = None):
@@ -319,7 +381,7 @@ def answering(action: str, content: dict | None = None, seen: list | None = None
     return Client(mcp, elicitation_callback=callback)
 ```
 
-Four tests then cover the four outcomes, each only a few lines long:
+Four tests then cover the four answers, each only a few lines long. Three of them sit together in the file:
 
 ```python
 async def test_declining_does_not_terminate():
@@ -328,35 +390,63 @@ async def test_declining_does_not_terminate():
         assert "declined" in result.content[0].text.lower()
 
 
+async def test_cancelling_does_not_terminate():
+    async with answering("cancel") as c:
+        result = await c.call_tool("terminate_process", {"pid": 999999})
+        assert "dismissed" in result.content[0].text.lower()
+
+
 async def test_answering_no_does_not_terminate():
     async with answering("accept", {"confirm": False}) as c:
         result = await c.call_tool("terminate_process", {"pid": 999999})
         assert "answered no" in result.content[0].text.lower()
 ```
 
-with `cancel` and `accept {"confirm": True}` alongside them. Three of those four are the paths a manual test would never bother with, and they are precisely the paths where a server either terminates something it should not or crashes on a `None` content field.
-
-**Passing a callback is also what declares the capability.** This catches people out because the callback is not invoked on the manual path, so it looks optional. It is not. A client with no `elicitation_callback` declares no elicitation capability, and the server refuses before it ever asks:
+and `accept` with `{"confirm": True}` follows them. The process id `999999` does not exist, so the accepted path reaches the process lookup and stops there. `snippets/mrtr_without_human.py` makes the same four calls and prints what each returned:
 
 ```
-MCPError: Client did not declare the form elicitation capability required by resolver
-'system_info.interactive:_confirm_terminate'
+accept {"confirm": true}   complete  isError=false  No process with pid 999999 is running.
+accept {"confirm": false}  complete  isError=false  Not terminated. The user answered no for process 999999.
+decline                    complete  isError=false  Not terminated. The user declined to confirm ending process 999999.
+cancel                     complete  isError=false  Not terminated. The confirmation was dismissed for process 999999.
 ```
 
-with code `-32021` (`MissingRequiredClientCapability`). Worth a test of its own, because the failure is otherwise reported as "the tool is broken":
+Three of those four are paths a manual test would never bother with, and they are precisely the paths where a server either terminates something it should not or crashes on an absent `content` field. The second row is the one to pin hardest: `accept` means the form came back, not that the user said yes.
+
+**Passing a callback is also what declares the capability.** This catches people out because the callback is never invoked on a path that asks nothing, so it looks optional. It is not. A client with no `elicitation_callback` declares no elicitation capability, which is the empty `clientCapabilities` of section 3's trace, and the server refuses before it ever asks. The same script calls the tool from such a client:
+
+```
+arrived inside 2 ExceptionGroup layer(s)
+MCPError: Client did not declare the form elicitation capability required by resolver 'system_info.interactive:_confirm_terminate'
+code -32021, data {"requiredCapabilities": {"elicitation": {"form": {}}}}
+```
+
+The code is `-32021` (`MissingRequiredClientCapability`), the error the Base protocol page defines for a request that needs a capability the client did not declare, and the `data` names what was missing. The first line is section 4 again: raised inside the block, the error left it wrapped. This deserves a test of its own, because the failure is otherwise reported as "the tool is broken". The client project's version goes through its connection wrapper, which turns the error into a failed outcome, in `tests/test_client.py`:
 
 ```python
 async def test_without_an_elicitation_callback_the_call_fails_cleanly():
+    """Passing a callback is what declares the capability.
+
+    Connect without one and the server refuses before it ever asks, with
+    -32021. That surfaces here as a raised MCPError, which the connection
+    wrapper turns into a failed outcome rather than a crash.
+    """
     async with open_connection(spec()) as conn:
         outcome = await conn.call_tool("terminate_process", {"pid": 999999})
+
         assert outcome.ok is False
         assert "elicitation" in outcome.for_model().lower()
 ```
 
-**And test that the question converges.** This is the MRTR bug you will not see coming. The SDK matches a recorded answer against a digest of the question the server asked. If the question text varies between rounds, because it contains a timestamp or a live reading or a random identifier, the answer never matches, the server asks again, and the call spins until it hits `input_required_max_rounds` and raises. The test is to count the questions:
+**And test that the question converges.** This is the MRTR bug nobody sees coming. The SDK matches a recorded answer against a digest of the question the server asked. If the question text varies between rounds, because it contains a timestamp or a live reading or a random identifier, the answer never matches, the server asks again, and the call spins until the client's round cap. The script prints that cap as `input_required_max_rounds: 10`, and [post 08](../08-elicitation-and-mrtr/index.md) runs a drifting question into it. The test is to count the questions, from the first server's `tests/test_server.py`:
 
 ```python
 async def test_the_question_is_asked_once_and_names_the_process():
+    """The elicitation message must be derived only from the arguments.
+
+    A question that varied between rounds would never match its recorded
+    answer, and the call would never converge.
+    """
     seen: list[str] = []
     async with answering("decline", seen=seen) as c:
         await c.call_tool("terminate_process", {"pid": 4242})
@@ -365,71 +455,105 @@ async def test_the_question_is_asked_once_and_names_the_process():
     assert "4242" in seen[0]
 ```
 
-One question means the digest matched. The recorded text is `Terminate process 4242 (unknown)? This cannot be undone.`, which is derived from the arguments and nothing else. That is the property the test is really pinning.
+One question means the digest matched. The script records the question for one call on process `999999` and prints `questions: 1` and `text: Terminate process 999999 (unknown)? This cannot be undone.`, which is derived from the arguments and a lookup keyed by them. That is the property the test is really pinning.
 
 ## 7. Reading a wire trace
 
-At some point the tests pass and the host still misbehaves, and you need to look at the messages. Two things make that quicker: knowing which fields to read in order, and knowing that a failure can hide in a response that looks entirely successful.
+At some point the tests pass and the host still misbehaves, and the messages themselves have to be read. Two things make that quicker: knowing which fields to read in order, and knowing that a failure can hide in a response that looks entirely successful.
 
-![A client box on the left sends one tools/call request to a server box on the right. The full request is printed below with its mirrored headers and its params and metadata fields, and four numbered annotations name the checks to make, in order. Below that, three possible responses sit side by side: a successful result carrying isError false, a successful result carrying isError true which is a tool that ran and failed and which nothing raises on, and a JSON-RPC error object with a numeric code and no result member. The second and third are the two places a failure hides.](diagrams/02-annotated-wire-trace.svg) *One request, three responses. Two of them are failures and only one of them looks like one.*
+![A client box on the left sends one tools/call request to a server box on the right. The full request is printed below with its mirrored headers and its params and metadata fields, and four numbered annotations name the checks to make, in order. Below that, three possible responses sit side by side: a successful result carrying isError false, a successful result carrying isError true which is a tool that ran and failed and which nothing raises on, and a JSON-RPC error object with a numeric code and no result member. The second and third are the two places a failure hides.](diagrams/02-annotated-wire-trace.svg)
 
-**On the request, read these four in this order.** The example is the specification's own annotated trace for a `tools/call`.
+*One request, three responses. Two of them are failures and only one of them looks like one. The figure uses the specification's example tool; the trace below is the first server's.*
+
+**On the request, read these four in this order.** `snippets/wire_trace.py` prints the headers the SDK sent with section 3's call:
 
 ```http
-POST /mcp HTTP/1.1
-MCP-Protocol-Version: 2026-07-28
-Mcp-Method: tools/call
-Mcp-Name: create_weather_gist
-Mcp-Param-Region: us-west1
+accept: application/json, text/event-stream
+content-type: application/json
+mcp-protocol-version: 2026-07-28
+mcp-method: tools/call
+mcp-name: find_process
 ```
 
-1. `MCP-Protocol-Version` against `_meta["io.modelcontextprotocol/protocolVersion"]`. They must be identical or the server answers `-32020` (`HeaderMismatch`) with HTTP `400`. A mismatch here is the most common cause of a server that rejects every request.
-2. `_meta["io.modelcontextprotocol/clientCapabilities"]`. It is re-sent on every request, because servers must not infer capabilities from earlier ones. A missing `elicitation` key is why a tool that asks questions fails with `-32021`.
-3. `params.name` against `Mcp-Name`, and each `Mcp-Param-*` header against the property it mirrors. The headers exist so a load balancer can route without parsing the body, and the server must verify every one of them.
-4. `params.arguments`. Compare it against `inputSchema`, not against your function signature. They are not the same object, and the schema is the one the model saw.
+Header names are case-insensitive, and the SDK writes them in lower case. The script then posts five requests by hand, each wrong in one way, and every answer is HTTP `400` or `404` with no `result` member.
 
-**On the response, read `resultType` first, then `isError`.** A `resultType` of `"input_required"` means the request is complete and closed and the server is holding nothing for you; the answer goes back as a fresh request, with a new `id`, carrying `inputResponses` and the echoed `requestState`. A `resultType` of `"complete"` means the call is finished, and it says nothing at all about whether the tool succeeded.
+1. `MCP-Protocol-Version` against `_meta["io.modelcontextprotocol/protocolVersion"]`. The Streamable HTTP transport page says they must match and that a server must answer a mismatch with `400 Bad Request` and a `HeaderMismatch` error. With `2026-07-28` in the header and `2025-11-25` in `_meta`, the server answers exactly that: `{"code": -32020, "message": "mcp-protocol-version header does not match the request envelope's protocol version"}`.
+2. `_meta["io.modelcontextprotocol/clientCapabilities"]`. It is re-sent on every request, because servers must not infer capabilities from earlier ones. A missing `elicitation` key is why a tool that asks questions fails with `-32021`, as section 6 printed.
+3. `params.name` against `Mcp-Name`. The headers exist so that a load balancer can route without parsing the body, and the server must verify them. A request whose header names `get_system_info` while its body calls `find_process` gets `{"code": -32020, "message": "mcp-name header does not match the request body's 'name' parameter"}`. A tool whose input schema marks a property with `x-mcp-header` also makes the client mirror that property in an `Mcp-Param-{Name}` header, checked the same way; the first server declares none, so its trace has none.
+4. `params.arguments`. Compare it against `inputSchema`, not against the function signature. They are not the same object, and the schema is the one the model saw.
 
-Here is the successful shape, from the same trace:
+Two more of the hand-written requests are worth knowing by their answers. A request with no `_meta` at all gets `-32602` (`Invalid params`), with the message `params._meta must be an object carrying the required 'io.modelcontextprotocol/protocolVersion' and 'io.modelcontextprotocol/clientCapabilities' envelope keys`, and a method the server does not have gets HTTP `404` and `{"code": -32601, "message": "Method not found", "data": "tools/run"}`.
+
+> **A note on the SDK.** One mismatch does not come back as `-32020`. When the header names the older revision `2025-11-25` and `_meta` says `2026-07-28`, `mcp==2.3.0` routes the request by its header to the server's support for older clients, which expects a session, and answers HTTP `400` with `{"code": -32600, "message": "Bad Request: Missing session ID"}`. The transport page's rule reads as if every mismatch were a `HeaderMismatch`; a server that also serves older clients has to decide which field it believes first, and this SDK believes the header.
+
+**On the response, read `resultType` first, then `isError`.** A `resultType` of `"input_required"` means the request is complete and closed and the server is holding nothing for the client; the answer goes back as a fresh request, with a new `id`, carrying `inputResponses` and the echoed `requestState`. A `resultType` of `"complete"` means the call is finished, and it says nothing at all about whether the tool succeeded.
+
+Here is the successful shape, the response to section 3's call, HTTP `200`:
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 2,
+  "result": {
+    "content": [
+      {
+        "text": "{\n  \"query\": \"zzz-no-such-process\",\n  \"total_matches\": 0,\n  \"returned\": 0,\n  \"processes\": []\n}",
+        "type": "text"
+      }
+    ],
+    "isError": false,
+    "resultType": "complete",
+    "structuredContent": {
+      "query": "zzz-no-such-process",
+      "total_matches": 0,
+      "returned": 0,
+      "processes": []
+    },
+    "_meta": {
+      "io.modelcontextprotocol/serverInfo": {
+        "name": "system-info",
+        "version": ""
+      }
+    }
+  }
+}
+```
+
+The text block carries the same JSON as `structuredContent`, for clients that do not read the structured field, and `serverInfo` rides in the result's `_meta` with an empty `version` because the project never sets one.
+
+**The two places a failure hides.** The first is the obvious one: a JSON-RPC `error` object, which has a numeric `code` and **no `result` member at all**. Unknown method, malformed request, header mismatch, missing capability: each lands here, and so did the five hand-written requests above. The SDK client raises on these, so they get found.
+
+The second is not obvious, and it is the one a client can misread. A tool that ran and failed returns a **successful response** carrying `isError: true`, and the Tools page says that is correct, so the model can read the reason and self-correct. The SDK's second call in the trace passes a string where `find_process` takes an integer, and the server answers HTTP `200`:
 
 ```json
 {
   "jsonrpc": "2.0",
   "id": 4,
   "result": {
+    "content": [
+      {
+        "text": "Error executing tool find_process: 1 validation error for find_processArguments\nlimit\n  Input should be a valid integer, unable to parse string as an integer [type=int_parsing, input_value='not-a-number', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.14/v/int_parsing",
+        "type": "text"
+      }
+    ],
+    "isError": true,
     "resultType": "complete",
-    "content": [ { "type": "text", "text": "{\"url\":\"https://gist.github.com/octocat/a1b2c3\", ...}" } ],
-    "structuredContent": {
-      "url": "https://gist.github.com/octocat/a1b2c3",
-      "owner": "octocat",
-      "temperatureF": 54.1
-    },
-    "isError": false
+    "_meta": {
+      "io.modelcontextprotocol/serverInfo": {
+        "name": "system-info",
+        "version": ""
+      }
+    }
   }
 }
 ```
 
-**The two places a failure hides.** The first is the obvious one: a JSON-RPC `error` object, which has a numeric `code` and **no `result` member at all**. Unknown method, malformed request, header mismatch, missing capability. Your client raises on these, so you find them.
-
-The second is not obvious, and it is the defect this series fixed most often. A tool that ran and failed returns a **successful response** carrying `isError: true`, and the specification is explicit that this is correct, so the model can read the reason and self-correct. Here is a real one, captured from the system-information server by calling `find_process` with a string where an integer belongs:
-
-```json
-{
-  "content": [
-    {
-      "type": "text",
-      "text": "Error executing tool find_process: 2 validation errors for find_processArguments\nname\n  Field required ...\nlimit\n  Input should be a valid integer, unable to parse string as an integer ..."
-    }
-  ],
-  "isError": true,
-  "resultType": "complete"
-}
-```
-
-Nothing raised. `resultType` is `"complete"`. A client that only wraps the call in `try`/`except` hands that text to the model as the answer to its question. The client project has a test whose entire job is to make that visible:
+Nothing raised. `resultType` is `"complete"`. A client that only wraps the call in `try`/`except` hands that text to the model as the answer to its question. The client project has a test whose entire job is to make that visible, in `tests/test_client.py`:
 
 ```python
 async def test_the_raw_result_would_have_looked_successful():
+    """Same call, one level lower, to show what `read_result` is protecting
+    against: the response is a perfectly ordinary CallToolResult."""
     async with Client(system_info_server) as client:
         raw = await client.call_tool("find_process", {"limit": "not-a-number"})
 
@@ -438,43 +562,45 @@ async def test_the_raw_result_would_have_looked_successful():
         assert read_result("find_process", raw).ok is False
 ```
 
-Two details worth pinning while you are here. `is_error` is a plain `bool` defaulting to `False`, not `bool | None`, so passing `None` raises a pydantic `ValidationError`; absent and `false` mean the same thing and your client must treat them that way. And an unknown tool name comes back the same way from this SDK, as `isError: true` with the text `Unknown tool: no_such_tool`, even though the specification lists unknown tool as a protocol error. That is an SDK behavior rather than a protocol one, and it is worth re-checking when stable 2.0 ships.
+Two details are worth pinning while here, and `snippets/result_flags.py` prints both. `is_error` is a plain `bool` defaulting to `False`, not `bool | None`: the script prints `field annotation: <class 'bool'>`, passing `None` raises a Pydantic `ValidationError` (`Input should be a valid boolean`), and a result parsed from JSON with no `isError` key reads `is_error=False`. Absent and `false` mean the same thing, since the specification treats a missing `isError` as `false`, and a client must treat them that way. And an unknown tool name comes back the same way as a bad argument, `no_such_tool: raised nothing; result_type='complete' is_error=True` with the text `Unknown tool: no_such_tool`, although the Tools page lists an unknown tool among the protocol errors and prints its example with `-32602`. That is the SDK's choice, which [post 06](../06-tools-in-depth/index.md) also notes, and a test that expects the specification's form fails against this SDK.
 
 ## 8. The Inspector
 
-The Inspector is the official interactive client: a local web interface that lists your tools, resources, and prompts, calls them with arguments you type, and shows the messages.
+The Inspector is the MCP project's interactive client: a local web interface that lists a server's tools, resources, and prompts, calls them with typed arguments, and shows the messages. It runs on Node.js through `npx`:
 
 ```bash
 npx @modelcontextprotocol/inspector
 ```
 
-The Python SDK also wires it up for you against a single file:
+The Python SDK's command-line tool also wires it up against a single-file server. `uv run mcp --help` describes its `dev` command as "Run an MCP server with the MCP Inspector.", and the command launches the same `npx @modelcontextprotocol/inspector` package with the server's own command:
 
 ```bash
 uv run mcp dev server.py
 ```
 
-Use it for the things a test suite is bad at. Reading a tool description the way a model would. Noticing that your `enum` has a typo in it. Watching an elicitation form render. Level 3 work, done by hand, once.
+Neither command was run for this post, because both need Node.js, which nothing else in the series installs.
+
+The Inspector is for the things a test suite is bad at. Reading a tool description the way a model would. Noticing that an `enum` has a typo in it. Watching an elicitation form render. Level 3 work, done by hand, once.
 
 **Two honest cautions.**
 
-The first is that this tool is moving. Version 1 of the Inspector is being replaced by a different version 2 codebase alongside this protocol revision, so exact commands, flags, and screenshots age quickly. Nothing in this post depends on a particular Inspector build, and that is deliberate. Check the repository before you follow any tutorial's flags, including this one's.
+The first is that this tool moves faster than this post. Exact commands, flags, and screenshots age quickly, and nothing here depends on a particular Inspector build, which is deliberate. Check the repository before following any tutorial's flags, including these.
 
-The second is security. CVE-2025-49596 (Common Vulnerabilities and Exposures) is an unauthenticated remote code execution flaw in the Inspector before version 0.14.1, rated 9.4 critical, reachable from a web page the developer merely visits. Keep it current, keep it bound to localhost, and never expose it on a network. It is a development tool that runs your code on request, which is the whole point of it and also the whole problem.
+The second is security. CVE-2025-49596, a Common Vulnerabilities and Exposures entry, is an unauthenticated remote code execution flaw in the Inspector before version 0.14.1, rated 9.4 critical. Keep it current, keep it bound to localhost, and never expose it on a network. It is a development tool that runs code on request, which is the whole point of it and also the whole problem.
 
 ## 9. The conformance suite
 
-Your own tests check that your server does what you meant. They cannot check that what you meant matches the specification, because you wrote both.
+A server's own tests check that it does what its author meant. They cannot check that what the author meant matches the specification, because the author wrote both.
 
-The conformance suite at <https://github.com/modelcontextprotocol/conformance> is the independent half. It is maintained alongside the specification and drives an implementation through the behaviors the specification requires, which is the only way to find out that you have quietly invented a dialect. If you are writing a client or a host, it matters more than anything in this post. A server has to be right about its own primitives; a client has to be right about everything every server it meets might do.
+The conformance suite at <https://github.com/modelcontextprotocol/conformance> is the independent half. It is maintained by the MCP project and drives an implementation through behavior the specification requires, which is the way to find out that an implementation has quietly invented a dialect. For a client or a host it matters more than anything in this post. A server has to be right about its own primitives; a client has to be right about everything every server it meets might do.
 
-Treat it as a release gate rather than a per-commit check. It moves with the specification, and a revision bump will change what it expects.
+Treat it as a release gate rather than a per-commit check. It moves with the specification, and a revision bump changes what it expects.
 
 ## 10. Continuous integration, and ground truth
 
 Two habits, both cheap.
 
-**Run the suites on every push.** Level 1 and level 2 need no services, no containers, and no network, which is the practical payoff of the in-memory pattern. A workflow for a repository laid out like this one is the commands from section 3 with a matrix around them:
+**Run the suites on every push.** Level 1 and level 2 need no services, no containers, and no network, which is the practical payoff of the in-memory pattern. A continuous integration (CI) workflow for a repository laid out like this one is section 3's command with a matrix around it. This one is a sketch; the series ships no workflow and this file has not been run:
 
 ```yaml
 # .github/workflows/test.yml
@@ -487,89 +613,118 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
         python: ["3.10", "3.13"]
-        project: [05-first-server, 23-knowledge-base]
+        project: [05-first-server, 10-mcp-client]
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: uv sync --extra dev --python ${{ matrix.python }}
-        working-directory: code/${{ matrix.project }}
-      - run: uv run pytest -q
+      - run: uv run --extra dev --python ${{ matrix.python }} pytest -q
         working-directory: code/${{ matrix.project }}
 ```
 
-`uv sync` installs each project into its own environment, so `uv run pytest` needs no `PYTHONPATH` at all; the explicit variable in section 3 is only there because those runs used a shared interpreter.
+`uv run` creates and syncs each project's own environment before it runs, so the step needs no separate install and no `PYTHONPATH`. The two Python versions are the ends of the range the projects declare, `requires-python = ">=3.10"`, up to a current release.
 
-Include Windows in the matrix even if you do not use it. Path separators, console encodings, and process teardown all differ there, and a server that only ever ran on Linux will meet a Windows user eventually. A tool description containing a character your console cannot encode is a `UnicodeEncodeError` that takes the whole host down, and it is the sort of thing only a second operating system tells you about.
+Include Windows in the matrix even when nobody on the team uses it. Path separators, console encodings, line endings, and process teardown all differ there, and a server that only ever ran on Linux will meet a Windows user eventually; the `\r` at the end of the garbage line in [post 04](../04-transports/index.md)'s stdout transcript is one such difference.
 
-**Regenerate the numbers you quote.** Anything a document claims about your server should be produced by a script rather than typed by a person. The one behind this series opens an in-memory client, walks the published surface, drives the four elicitation outcomes, runs the test suite, and prints Markdown:
+**Regenerate the numbers a document quotes.** Anything a document claims about a server should be produced by a script rather than typed by a person. `snippets/capture.py` opens an in-memory client, walks the published surface, and prints Markdown. Its core:
 
 ```python
-async with Client(mcp) as c:
-    for t in (await c.list_tools()).tools:
-        props = ", ".join((t.input_schema or {}).get("properties", {})) or "none"
-        out = "yes" if t.output_schema else "**null**"
-        print(f"| `{t.name}` | {props} | {out} | ... |")
+    async with Client(mcp) as c:
+        for t in (await c.list_tools()).tools:
+            props = ", ".join((t.input_schema or {}).get("properties", {})) or "none"
+            out = "yes" if t.output_schema else "**null**"
+            ann = t.annotations
+            read_only = hint(ann.read_only_hint if ann else None)
+            destructive = hint(ann.destructive_hint if ann else None)
+            print(f"| `{t.name}` | {props} | {out} | {read_only} | {destructive} |")
 ```
+
+Run against the first server, it prints:
+
+```
+| Tool | Input properties | Output schema | readOnlyHint | destructiveHint |
+|---|---|---|---|---|
+| `get_system_info` | none | yes | true | false |
+| `find_process` | name, limit | yes | true | false |
+| `terminate_process` | pid | yes | false | true |
+| `watch_cpu` | seconds | yes | true | false |
+
+Resources: `system://processes/top`
+Resource templates: `system://disk/{disk}`
+Prompts: `diagnose_performance`
+```
+
+Nothing in it depends on the machine's live state, so the output can be committed and diffed like any other file:
 
 ```bash
-PYTHONPATH=path/to/your/src python capture.py > RESULTS.md
+uv run python posts/12-testing-and-debugging/snippets/capture.py > surface.md
 ```
 
-The committed output is diffed like any other file. If a change makes an output schema disappear, the word `**null**` shows up in a pull request in a place a reviewer is already looking. The rule is one line: if a document and the generated file disagree, the document is wrong.
+If a change makes an output schema disappear, the word `**null**` shows up in a pull request in a place a reviewer is already looking, and if `approval` ever leaked into `terminate_process`, the `pid` cell would change. The rule is one line: if a document and the generated file disagree, the document is wrong.
 
-## 11. The five failures that account for most bug reports
+## 11. Make it run: the suites and the scripts behind this post
 
-Every one of these is a defect this series actually shipped and fixed. They follow the order of the post: the transport, the schema, the result, the round trip, and finally your own test suite.
+The suites are the post's subject. From inside each project directory:
 
-**1. A `print()` under stdio.** Standard output is the protocol channel, and the server must not write anything to it that is not a valid MCP message. One `print()` in a tool body puts a bare word into the frame stream. The error the client reports names neither `print` nor your tool:
-
-```
-Failed to parse JSONRPC message from server
-pydantic_core._pydantic_core.ValidationError: 1 validation error for
-  union[JSONRPCRequest,JSONRPCNotification,JSONRPCResponse,JSONRPCError]
-  Invalid JSON: expected value at line 1 column 1
-  [type=json_invalid, input_value='whoami called\r', input_type=str]
+```bash
+cd code/05-first-server && uv run --extra dev pytest     # 19 passed
+cd code/10-mcp-client && uv run --extra dev pytest       # 68 passed
+cd code/23-knowledge-base && uv run --extra dev pytest   # 51 passed: 23 in test_index.py, 28 in test_server.py
 ```
 
-Worse, it is intermittent, because a short write can sit in the pipe buffer until the process exits and corrupt nothing. It is also frequently not your `print`: a dependency's banner, a progress bar, a stray `breakpoint()`, or a `subprocess.run(...)` with no `stdout=` argument, since a child inherits your standard output. Configure logging to standard error on line one of your first module. [Post 04](../04-transports/index.md) has the full anatomy. **Caught by:** level 3, and only level 3.
+Eight scripts under `snippets/` print every other transcript above. Each runs from the series root with no arguments, in under twenty seconds, through the root environment that pins `mcp[cli]==2.3.0`, `psutil`, `httpx<1`, and, as the `dev` extra, `pytest` and `pytest-asyncio`. Six import the project under `code/05-first-server/` in memory, and `targets.py` also starts it as a subprocess; `wire_trace.py` only starts it as a subprocess, `yield_fixture.py` runs pytest on it in a child process, and every script stops whatever it started before it exits. None needs a host or any network beyond 127.0.0.1, and none terminates a real process.
 
-**2. A missing output schema from a class with no class-body annotations.** The SDK builds an output schema by calling `get_type_hints()` on your return type. A class whose attributes are assigned only inside `__init__` has none, so the model is `None`, `outputSchema` is `null`, no exception is raised, and the tool ships the object's `repr` to the model. Annotations on the `__init__` parameters do not help; they are annotations on a function. Use a dataclass, a `TypedDict`, or a Pydantic model, pass `structured_output=True` so the failure moves to registration time, and keep `test_every_tool_publishes_an_output_schema`. **Caught by:** level 2.
+```bash
+uv run python posts/12-testing-and-debugging/snippets/targets.py             # section 3: one Client, three targets
+uv run python posts/12-testing-and-debugging/snippets/yield_fixture.py       # section 4: the yield fixture, the fix, a failing assert
+uv run python posts/12-testing-and-debugging/snippets/exception_group.py     # section 4: what escapes the client block
+uv run python posts/12-testing-and-debugging/snippets/schema_assertions.py   # section 5: the schema assertion, one good server, three bad
+uv run python posts/12-testing-and-debugging/snippets/mrtr_without_human.py  # section 6: four answers, no callback, one question
+uv run python posts/12-testing-and-debugging/snippets/wire_trace.py          # sections 3 and 7: the trace, five wrong requests
+uv run python posts/12-testing-and-debugging/snippets/result_flags.py        # section 7: failures that raise nothing, is_error
+uv run python posts/12-testing-and-debugging/snippets/capture.py             # section 10: the published surface as Markdown
+```
 
-**3. Treating `isError` as a transport exception.** The call returns normally and carries a failure, so a client built on `try`/`except` reports a validation error to the model as the tool's answer. Every call site has to check `is_error`, and the cleanest way to guarantee it is to funnel raised exceptions and `isError` results into one outcome type, so there is only one shape to handle. That is what `read_result` does in [code/10-mcp-client/](../../code/10-mcp-client/), and `test_the_raw_result_would_have_looked_successful` is the test that keeps it honest. **Caught by:** level 2.
+`yield_fixture.py` writes its test files into a temporary directory and runs pytest on them in a child process, so the reader's own test configuration is never involved.
 
-**4. A non-deterministic elicitation question.** The server asks "Terminate process 4242, started at 14:32:07?" and the timestamp changes between rounds. The recorded answer no longer matches the digest of the question, so the server asks again, and the loop runs to `input_required_max_rounds` and raises `InputRequiredRoundsExceededError`. From the outside it looks like the user's answer was ignored. Derive the question text from the tool arguments and nothing else, and count the questions in a test. **Caught by:** level 2, and essentially never by hand.
+One exercise fits in those files: run the two suites, add a tool whose return class has no class-body annotations to a copy of the first server and watch `test_every_tool_publishes_an_output_schema` fail as `schema_assertions.py` shows, then change the `action` passed to `answering` to drive `terminate_process` through accept, decline, and cancel.
 
-**5. A yield-fixture cancel-scope error in the test suite itself.** Not a bug in your server at all, which is what makes it expensive: you go looking in the wrong file. The tests pass and the teardown errors, with a message about cancel scopes and tasks that mentions neither MCP nor your code. Open the client with `async with` inside the test body. Section 4 has the transcript. **Caught by:** running your tests once and reading the summary line carefully.
+## 12. What can go wrong?
 
----
+Five failures are worth knowing by their symptoms, because each reaches its author as a vague report rather than a stack trace. They follow the order of the post: the transport, the schema, the result, the round trip, and finally the test suite itself.
+
+**1. A stray write to standard output under stdio.** Standard output is the protocol channel, and the stdio transport page says the server must not write anything to it that is not a valid MCP message. The SDK points the process's standard output at standard error while it serves, so a flushed `print()` in a tool body lands in the server's log, but two writes escape that diversion: text left in Python's buffer and flushed at exit, and anything written before `mcp.run()` starts, such as a dependency's banner at import time. Either reaches the client as a line that is not JSON, and [post 04](../04-transports/index.md)'s `stdout_trap.py` prints the client's whole complaint, which begins `Failed to parse JSONRPC message from server` and names neither `print` nor the tool. **Caught by:** level 3, and only level 3, because the in-memory client never reads a pipe.
+
+**2. A missing output schema from a class with no class-body annotations.** The SDK builds an output schema from the return type's annotations. A class whose attributes are assigned only inside `__init__` has none at class level, so `outputSchema` is `null`, no exception is raised, and the tool ships the object's `repr` to the model. Annotations on the `__init__` parameters do not help; they are annotations on a function. Use a dataclass, a `TypedDict`, or a Pydantic model, pass `structured_output=True` so that the failure moves to registration time, and keep `test_every_tool_publishes_an_output_schema`. **Caught by:** level 2.
+
+**3. Treating `isError` as a transport exception.** The call returns normally and carries a failure, so a client built on `try`/`except` reports a validation error to the model as the tool's answer. Every call site has to check `is_error`, and the cleanest way to guarantee that is to funnel raised exceptions and `isError` results into one outcome type, so there is only one shape to handle. That is what `read_result` does in [code/10-mcp-client/](../../code/10-mcp-client/), and `test_the_raw_result_would_have_looked_successful` is the test that keeps it honest. **Caught by:** level 2.
+
+**4. A non-deterministic elicitation question.** The server asks "Terminate process 4242, started at 14:32:07?" and the timestamp changes between rounds. The recorded answer no longer matches the digest of the question, so the server asks again, and the loop runs to the client's cap of ten rounds and raises `InputRequiredRoundsExceededError`, as [post 08](../08-elicitation-and-mrtr/index.md) prints. From the outside it looks as if the user's answer was ignored. Derive the question text from the tool arguments and nothing else, and count the questions in a test. **Caught by:** level 2, and essentially never by hand.
+
+**5. A yield-fixture cancel-scope error in the test suite itself.** Not a bug in the server at all, which is what makes it expensive: the search starts in the wrong file. The tests pass and the teardown errors, with a message about cancel scopes and tasks that mentions neither MCP nor the server's code. Open the client with `async with` inside the test body; section 4 has the transcript. **Caught by:** running the tests once and reading the summary line carefully.
 
 ## Common pitfalls
 
-- **Testing only the function and not the published surface.** A tool is a function plus a schema plus a result shape, and the SDK generates two of those three. `list_tools()` in a test is how you find out what the model will actually see, and it costs milliseconds.
-- **Handing the client to tests through a yield fixture.** The client owns an `anyio` task group, a task group must be exited by the task that entered it, and a yield fixture exits it somewhere else. Every test errors in teardown with a cancel-scope `RuntimeError` that names nothing you wrote. Use `async with` in the test body.
-- **Writing `pytest.raises(SomeError)` around a client block.** The task group re-raises, wrapped, and sometimes doubly wrapped. Catch `BaseException`, flatten the group recursively, and assert on the members. The same hole exists in any host code that catches a specific exception type around a client call.
-- **Assuming an `elicitation_callback` is optional because the manual path never calls it.** Passing one is what declares the capability. Without it a server that needs an answer returns `-32021` before it ever asks, and the report you get is "your tool is broken".
-- **Writing `assert "approval" not in props` instead of asserting the whole property set.** The negative test passes forever while the next resolved parameter you add leaks into the published schema. Assert equality against the exact set you intend to publish.
-- **Treating the Inspector as your test suite.** It is a level 3 tool: manual, stateful, and moving between major versions right now. It is also a development server with a critical remote code execution history, so keep it current and keep it on localhost.
-- **Quoting a number in your documentation that no script can regenerate.** Schemas, counts, and result strings drift. Generate them into a committed file and let the diff do the review.
-
----
+1. **Testing only the function and not the published surface.** The SDK generates two of a tool's three parts, the schema and the result shape, and `list_tools()` in a test is how to see what the model will see, in milliseconds.
+2. **Writing `pytest.raises(SomeError)` around a client block.** The task group re-raises the error inside two `ExceptionGroup` layers; catch `BaseException` and flatten it recursively, or use `except*` on Python 3.11 and later.
+3. **Assuming an `elicitation_callback` is optional because the calls at hand never invoke it.** Passing one is what declares the capability, and without it a tool that asks returns `-32021` before it ever asks.
+4. **Writing `assert "approval" not in props` instead of asserting the whole property set.** The negative test passes forever while the next resolved parameter leaks into the published schema; assert equality against the exact set intended for publication.
+5. **Treating the Inspector as the test suite, or exposing it.** It is a manual level 3 tool with a critical remote code execution history, so keep it current and bound to localhost.
+6. **Quoting a number in documentation that no script can regenerate.** Schemas, counts, and result strings drift; generate them into a committed file and let the diff do the review.
 
 ## Further reading
 
-- Specification, *"Tools"*, revision 2026-07-28. The `isError` rule, and why an execution failure is a successful response. <https://modelcontextprotocol.io/specification/draft/server/tools>
-- Specification, *"Base protocol"* § Error codes, revision 2026-07-28. `-32020`, `-32021`, and `-32022`, their required `data` payloads, and the retirement of `-32002`.
-- MCP Inspector. <https://github.com/modelcontextprotocol/inspector>. Check the repository for the current major version before following any command line, including this post's.
+- Specification, *"Tools"*, revision 2026-07-28. The `isError` rule, why an execution failure is a successful response, the untrusted-annotations rule, and the protocol errors it lists, including an unknown tool. <https://modelcontextprotocol.io/specification/draft/server/tools>
+- Specification, *"Base protocol"*, revision 2026-07-28, the error codes. `-32020`, `-32021`, and `-32022`, the `data` payloads of the last two, and `-32602` replacing `-32002` for a missing resource. <https://modelcontextprotocol.io/specification/draft/basic>
+- Specification, *"Transports: Streamable HTTP"*, revision 2026-07-28. The `MCP-Protocol-Version`, `Mcp-Method`, `Mcp-Name`, and `Mcp-Param-{Name}` headers, and the rule that a mismatch is `400 Bad Request` with `HeaderMismatch`. <https://modelcontextprotocol.io/specification/draft/basic/transports/streamable-http>
+- MCP Inspector. <https://github.com/modelcontextprotocol/inspector>. Check the repository for the current release before following any command line, including this post's.
 - CVE-2025-49596, *"MCP Inspector unauthenticated remote code execution before 0.14.1"*, 9.4 critical. <https://nvd.nist.gov/vuln/detail/CVE-2025-49596>
-- Conformance suite. <https://github.com/modelcontextprotocol/conformance>. The independent check that your implementation matches the specification rather than your reading of it.
-- MCP Python SDK, `mcp==2.0.0b2`. Every transcript in this post came from this version, driving [code/05-first-server/](../../code/05-first-server/), [code/10-mcp-client/](../../code/10-mcp-client/), and [code/23-knowledge-base/](../../code/23-knowledge-base/).
+- Conformance suite. <https://github.com/modelcontextprotocol/conformance>. The independent check that an implementation matches the specification rather than its author's reading of it.
+- MCP Python SDK, release 2.3.0. `Client` with a server object, a `StdioServerParameters`, or a URL, `elicitation_callback`, `input_required_max_rounds`, and `mcp dev`. <https://github.com/modelcontextprotocol/python-sdk>
+- [code/05-first-server/](../../code/05-first-server/), [code/10-mcp-client/](../../code/10-mcp-client/), and [code/23-knowledge-base/](../../code/23-knowledge-base/). The three suites this post quotes.
 
-Full citations in [REFERENCES.md](../../REFERENCES.md).
-
----
+Full citations are in [REFERENCES.md](../../REFERENCES.md).
 
 ## What to read next
 
-- **[Post 13 — Project 1 · A secure database analyst](../13-database-analyst/index.md)**: the first project, where the tests in this post become the security tests that decide whether a model may touch a production database.
-- **[Post 11 — Building a host: the tool loop, many servers, and permissions](../11-building-a-host/index.md)**: the host whose suite supplies the `flatten` helper and the `open_connection` wrapper this post leans on, and the permission gate those sixty-eight tests exercise.
-- **[Post 06 — Tools in depth: schemas, structured output, and annotations](../06-tools-in-depth/index.md)**: the silent `outputSchema: null` failure that motivates half the assertions here.
+- **[Post 13 - Project 1: A secure database analyst](../13-database-analyst/index.md):** the first project, where the in-memory tests of this post become the security tests that decide whether a model may touch a production database.
+- **[Post 15 - Project 2: A DevOps first responder](../15-devops-responder/index.md):** the same pattern against a fake cluster, where the refusals a model must never get past are pinned by tests that need no Kubernetes at all.

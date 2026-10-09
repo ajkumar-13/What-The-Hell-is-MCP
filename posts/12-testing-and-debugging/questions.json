@@ -1,0 +1,777 @@
+{
+  "standard": "2.1.0",
+  "post": "mcp-012",
+  "next_ordinal": 18,
+  "questions": [
+    {
+      "id": "mcp-012-q01",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "3",
+      "est_minutes": 1,
+      "tags": [
+        "in-memory",
+        "client"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A test does `async with Client(mcp) as c:` where `mcp` is an `MCPServer` object, and calls `c.list_tools()`. What does the SDK's `Client` do with that argument?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "It launches the server as a subprocess and speaks JSON-RPC to it over standard input and output.",
+          "correct": false,
+          "feedback": "That is what a `StdioServerParameters` argument gets. A server object is never launched; it is already in the test's process."
+        },
+        {
+          "key": "b",
+          "text": "It connects to the object in-process through direct dispatchers, with no subprocess, socket, or JSON-RPC framing.",
+          "correct": true,
+          "feedback": "An `MCPServer` or a low-level `Server` is connected in-process, so requests reach the real handlers without serialization or a pipe."
+        },
+        {
+          "key": "c",
+          "text": "It starts the server on a free loopback port and connects to it over Streamable HTTP.",
+          "correct": false,
+          "feedback": "Only a string argument means Streamable HTTP, and then the server must already be running at that URL."
+        },
+        {
+          "key": "d",
+          "text": "It skips the protocol and calls the decorated Python functions directly, so schemas are not generated.",
+          "correct": false,
+          "feedback": "The request still travels the server's request path: schema generation, argument validation and result assembly all happen, which is why level 2 tests catch schema bugs."
+        }
+      ],
+      "explanation": "`Client` dispatches on the type of its argument. A server object is connected in-process through a pair of direct dispatchers, so the test exercises the genuine request handling with no subprocess, socket, or framing. `snippets/targets.py` prints the same server and the same revision through all three kinds of argument.",
+      "hints": [
+        "The SDK chooses a connection from the type of the object it is handed."
+      ]
+    },
+    {
+      "id": "mcp-012-q02",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "4",
+      "est_minutes": 2,
+      "tags": [
+        "pytest",
+        "task-group"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A test file opens `Client(mcp)` inside an async yield fixture and yields it to two tests. pytest's summary reads `2 passed, 2 errors`, and both errors are `RuntimeError: Attempted to exit cancel scope in a different task than it was entered in`. What is wrong?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Both test bodies contain an assertion that fails only after the tool call returns.",
+          "correct": false,
+          "feedback": "The summary says both tests passed. The errors are raised in teardown, after the bodies ran."
+        },
+        {
+          "key": "b",
+          "text": "The client's task group is entered in the fixture's task and exited in another task, which a task group forbids.",
+          "correct": true,
+          "feedback": "A yield fixture enters the context in one task and exits it later in a different one; the fix is to open the client inside each test body."
+        },
+        {
+          "key": "c",
+          "text": "The server raised during shutdown because the tests did not pass an elicitation callback.",
+          "correct": false,
+          "feedback": "Neither test asks for input, and a missing callback produces `-32021` on a call that needs it, not a cancel-scope error in teardown."
+        },
+        {
+          "key": "d",
+          "text": "`asyncio_mode = \"auto\"` is missing, so pytest ran the async tests without an event loop.",
+          "correct": false,
+          "feedback": "Without an async mode the async tests would not pass at all. Here they passed and only teardown failed."
+        }
+      ],
+      "explanation": "The client owns an `anyio` task group, and a task group must be exited by the task that entered it. A yield fixture exits the context in a different task after the test has run, so every test passes and then errors in teardown. `snippets/yield_fixture.py` reproduces the summary and shows `2 passed` once the client is opened inside each test body.",
+      "hints": [
+        "Look at which phase of each test reported the error.",
+        "Ask which task enters the `async with` and which task leaves it."
+      ]
+    },
+    {
+      "id": "mcp-012-q03",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "4",
+      "est_minutes": 3,
+      "tags": [
+        "exception-group",
+        "host-code"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Host code reads:\n\n```python\ntry:\n    async with Client(mcp) as c:\n        await c.list_tools()\n        raise ValueError(\"bad config\")\nexcept ValueError:\n    recover()\n```\n\nRun on Python 3.12 with `mcp==2.3.0`, what happens?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "`recover()` runs, because the `ValueError` propagates out of the block unchanged.",
+          "correct": false,
+          "feedback": "The client's task group re-raises what escapes it wrapped in an `ExceptionGroup`, so the `ValueError` clause does not match."
+        },
+        {
+          "key": "b",
+          "text": "An `ExceptionGroup` escapes and `recover()` never runs, because the error arrives inside two group layers.",
+          "correct": true,
+          "feedback": "`snippets/exception_group.py` shows the same shape with `ZeroDivisionError`: an `ExceptionGroup` inside an `ExceptionGroup` around the original error."
+        },
+        {
+          "key": "c",
+          "text": "The client swallows the error while closing the connection, so nothing is raised and `recover()` never runs.",
+          "correct": false,
+          "feedback": "Nothing is swallowed. The error escapes, just not as itself."
+        },
+        {
+          "key": "d",
+          "text": "The `ValueError` is replaced by `RuntimeError: Attempted to exit cancel scope in a different task`.",
+          "correct": false,
+          "feedback": "That error comes from exiting a task group in another task, as a yield fixture does. Here one task enters and exits the block."
+        }
+      ],
+      "explanation": "An exception leaving `async with Client(...)` passes through the client's task groups and arrives wrapped twice. A plain `except ValueError` never fires; the code must catch the group and flatten it, or use `except* ValueError` on Python 3.11 and later.",
+      "hints": [
+        "The client owns a task group, and task groups re-raise what escapes them in a particular container.",
+        "Count how many containers `snippets/exception_group.py` reports above the original error."
+      ]
+    },
+    {
+      "id": "mcp-012-q04",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "7",
+      "est_minutes": 2,
+      "tags": [
+        "is-error",
+        "wire-trace"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A captured trace holds four responses to `tools/call` requests. Which of them report that the call failed? Select every one that does.",
+      "select": "multiple",
+      "options": [
+        {
+          "key": "a",
+          "text": "A `result` with `\"resultType\": \"complete\"` and `\"isError\": true`, at HTTP 200.",
+          "correct": true,
+          "feedback": "A tool that ran and failed returns a successful JSON-RPC response carrying `isError: true`; nothing raises on it."
+        },
+        {
+          "key": "b",
+          "text": "An `error` object with `\"code\": -32602` and no `result` member, at HTTP 400.",
+          "correct": true,
+          "feedback": "A JSON-RPC error object means the server could not act on the request at all; the SDK client raises on it."
+        },
+        {
+          "key": "c",
+          "text": "A `result` with `\"resultType\": \"input_required\"`, an `inputRequests` map and a `requestState`.",
+          "correct": false,
+          "feedback": "That is a request answered with a question, not a failure. The client retries with the answers and a new `id`."
+        },
+        {
+          "key": "d",
+          "text": "A `result` with `\"resultType\": \"complete\"`, a `content` array and no `isError` key at all.",
+          "correct": false,
+          "feedback": "An absent `isError` means `false`; the SDK parses it as `is_error=False`. This is a success."
+        }
+      ],
+      "explanation": "There are two places a failed call hides: a JSON-RPC `error` object with a numeric code and no `result`, and a successful result whose `isError` is true. Read `resultType` first: `input_required` asks for input and fails nothing, and `complete` says only that the call finished. Then read `isError`, treating its absence as `false`.",
+      "hints": [
+        "Read `resultType` first, then `isError`.",
+        "A failed call does not always arrive with an HTTP error status."
+      ]
+    },
+    {
+      "id": "mcp-012-q05",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 3,
+      "tags": [
+        "output-schema",
+        "content-blocks"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A server adds a tool annotated `-> TextContent` that deliberately returns a sentence for the model. Under `mcp==2.3.0`, `test_every_tool_publishes_an_output_schema` now fails with `summary has no output schema`. What is the right change?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Delete the test, since a server with any prose tool can no longer satisfy it.",
+          "correct": false,
+          "feedback": "The test still catches the silent `outputSchema: null` of a class with no class-body annotations on every other tool. Removing it gives that protection up."
+        },
+        {
+          "key": "b",
+          "text": "Pass `structured_output=False` on the new tool so that the test passes.",
+          "correct": false,
+          "feedback": "`structured_output=False` publishes no schema whatever the annotation, so the assertion still fails for that tool."
+        },
+        {
+          "key": "c",
+          "text": "Name the new tool in an exception list that the test skips, and keep asserting on every other tool.",
+          "correct": true,
+          "feedback": "A content-block tool publishes no output schema by design since SDK release 2.1.0, so the honest test exempts it by name and stays strict elsewhere."
+        },
+        {
+          "key": "d",
+          "text": "Wrap the assertion in `try`/`except AssertionError` so that a missing schema is logged instead of failing.",
+          "correct": false,
+          "feedback": "That turns the test back into the silence it exists to break: a missing schema would again raise nothing anyone sees."
+        }
+      ],
+      "explanation": "Since SDK release 2.1.0 a tool annotated to return a content block publishes no `outputSchema` unless it passes `structured_output=True`. That is a choice, not the silent bug the test exists for, so the tool belongs on a named exemption list while the assertion keeps failing on any other tool without a schema, as `snippets/schema_assertions.py` shows for a return class with no annotations.",
+      "hints": [
+        "Ask whether the missing schema here is a bug or a design decision.",
+        "Keep the test strict for the case it was written for."
+      ]
+    },
+    {
+      "id": "mcp-012-q06",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 1,
+      "tags": [
+        "elicitation",
+        "capabilities"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Besides supplying the answers, what does passing an `elicitation_callback` to `Client` declare to the server on every request?",
+      "answer": {
+        "model": "The elicitation capability: the client's `clientCapabilities` in `_meta` then include `elicitation` (form mode), so a server may ask it questions.",
+        "accept": [
+          "^(?![\\s\\S]*(?:\\b(?:not|never|no|without|nothing)\\b|n't)(?:\\W+\\w+){0,3}?\\W+(?:declar\\w*|support\\w*|elicit\\w*))(?![\\s\\S]*\\bno\\s+capabilit)(?![\\s\\S]*\\b(?:sampling|roots|tools|logging)\\s+capabilit)(?![\\s\\S]*\\bserver(?:'s)?\\s+(?:own\\s+)?(?:elicitation\\s+)?capabilit)(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)(?=[\\s\\S]*\\belicit\\w*)(?=[\\s\\S]*\\b(?:capabilit\\w*|supports?|can\\s+(?:handle|answer|render|do)|able\\s+to)\\b|\\W*(?:the\\s+)?elicitation\\W*$)[\\s\\S]*$"
+        ]
+      },
+      "explanation": "Passing a callback is what declares the elicitation capability. A client without one sends an empty `clientCapabilities`, and a tool that needs to ask refuses before asking, with `-32021` and `data` naming `{\"elicitation\": {\"form\": {}}}`, as `snippets/mrtr_without_human.py` prints.",
+      "hints": [
+        "Look at the `clientCapabilities` key in a trace from a client built without a callback."
+      ]
+    },
+    {
+      "id": "mcp-012-q07",
+      "type": "numeric",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "7",
+      "est_minutes": 2,
+      "tags": [
+        "headers",
+        "error-codes"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A request is POSTed to a 2026-07-28 Streamable HTTP server with the header `MCP-Protocol-Version: 2026-07-28`, while its body's `_meta` carries `\"io.modelcontextprotocol/protocolVersion\": \"2025-11-25\"`. Give the JSON-RPC error code and the HTTP status the first server answers with under `mcp==2.3.0`.",
+      "answer": {
+        "parts": [
+          {
+            "label": "JSON-RPC error code",
+            "value": -32020,
+            "tolerance": 0,
+            "unit": ""
+          },
+          {
+            "label": "HTTP status",
+            "value": 400,
+            "tolerance": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "precision_note": "snippets/wire_trace.py prints '--- _meta revision differs from the header: HTTP 400' and {\"code\": -32020, ...}; the Streamable HTTP page requires 400 Bad Request with HeaderMismatch (-32020) for a mismatch.",
+      "explanation": "The transport page says the header must match the revision in `_meta` and that a mismatch is `400 Bad Request` with a `HeaderMismatch` error, code `-32020`. The first server answers exactly that. The reverse case, an older revision in the header, is routed by this SDK to its support for older clients and answers `-32600` instead.",
+      "hints": [
+        "The header and the body disagree about one value.",
+        "The error comes from the range of codes the specification reserves for MCP itself, and the transport page names the HTTP status."
+      ]
+    },
+    {
+      "id": "mcp-012-q08",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "7",
+      "est_minutes": 3,
+      "tags": [
+        "wire-trace",
+        "is-error"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Six responses to `tools/call` requests were captured:\n\n1. `result` with `resultType` `complete` and `isError` `false`\n2. `result` with `resultType` `complete` and `isError` `true`\n3. `error` with `code` `-32602`\n4. `result` with `resultType` `input_required` and a `requestState`\n5. `result` with `resultType` `complete` and no `isError` key\n6. `error` with `code` `-32021`\n\nHow many of the six report a failed call?",
+      "answer": {
+        "value": 3,
+        "tolerance": 0,
+        "unit": "responses"
+      },
+      "precision_note": "Closed form from section 7: failures are the error objects (3 and 6) and the result with isError true (2); input_required (4) asks for input and an absent isError (5) means false. snippets/result_flags.py prints is_error=False for a result parsed with no isError key.",
+      "explanation": "A failure hides in one of two places: a JSON-RPC `error` object (responses 3 and 6) or a successful result with `isError: true` (response 2). Response 4 is a question to be answered by a retry, and responses 1 and 5 are successes, because a missing `isError` means `false`.",
+      "hints": [
+        "Sort the six into error objects and results first.",
+        "Among the results, `resultType` and then `isError` decide; an absent flag has a default."
+      ]
+    },
+    {
+      "id": "mcp-012-q09",
+      "type": "numeric",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 3,
+      "tags": [
+        "elicitation",
+        "outcomes"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A loop calls `terminate_process` with `{\"pid\": 999999}` four times on the first server, each through `answering(...)` with a different answer: accept with `{\"confirm\": true}`, accept with `{\"confirm\": false}`, decline, and cancel. How many of the four results have text that starts with `Not terminated.`?",
+      "answer": {
+        "value": 3,
+        "tolerance": 0,
+        "unit": "results"
+      },
+      "precision_note": "snippets/mrtr_without_human.py prints the four rows: accept with confirm true gives 'No process with pid 999999 is running.'; the other three start 'Not terminated.'.",
+      "explanation": "Only an accept whose `confirm` is true lets the tool reach the process lookup, which reports that process `999999` is not running. Accept with `confirm` false, decline, and cancel each return a `Not terminated.` sentence, all as `complete` results with `isError` false.",
+      "hints": [
+        "An accept means the form came back, not that the user agreed.",
+        "Process 999999 does not exist, so even the approved path does not terminate anything."
+      ]
+    },
+    {
+      "id": "mcp-012-q10",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 12,
+      "tags": [
+        "output-schema",
+        "input-schema",
+        "testing"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`surface_problems` checks a `tools/list` result, given as JSON dicts, the way section 5's tests check a server: it should report a server that registered nothing, every tool whose `outputSchema` is missing or `null` unless that tool is exempt, a tool in `published_props` that is not published, and any tool whose input properties differ from the exact expected set. The starter misses several of these. Fix it, using only the standard library.",
+      "kind": "fix",
+      "language": "python",
+      "starter": "def surface_problems(tools, published_props, exempt=()):\n    \"\"\"Return a list of problems found in a tools/list result.\n\n    tools: the \"tools\" list of a tools/list result, as JSON dicts (camelCase keys).\n    published_props: maps a tool name to the exact set of input properties it\n        must publish, for example {\"terminate_process\": {\"pid\"}}.\n    exempt: names of tools allowed to publish no output schema.\n    An empty list means no problems.\n    \"\"\"\n    problems = []\n    for tool in tools:\n        if \"outputSchema\" not in tool:\n            problems.append(f\"{tool['name']}: no output schema\")\n    by_name = {t[\"name\"]: t for t in tools}\n    for name in published_props:\n        props = by_name[name][\"inputSchema\"].get(\"properties\", {})\n        if \"approval\" in props:\n            problems.append(f\"{name}: publishes approval\")\n    return problems\n",
+      "solution": "def surface_problems(tools, published_props, exempt=()):\n    \"\"\"Return a list of problems found in a tools/list result.\n\n    tools: the \"tools\" list of a tools/list result, as JSON dicts (camelCase keys).\n    published_props: maps a tool name to the exact set of input properties it\n        must publish, for example {\"terminate_process\": {\"pid\"}}.\n    exempt: names of tools allowed to publish no output schema.\n    An empty list means no problems.\n    \"\"\"\n    if not tools:\n        return [\"server registered no tools\"]\n    problems = []\n    for tool in tools:\n        if tool.get(\"outputSchema\") is None and tool[\"name\"] not in exempt:\n            problems.append(f\"{tool['name']}: no output schema\")\n    by_name = {t[\"name\"]: t for t in tools}\n    for name, expected in published_props.items():\n        if name not in by_name:\n            problems.append(f\"{name}: not published\")\n            continue\n        props = set(by_name[name].get(\"inputSchema\", {}).get(\"properties\", {}))\n        if props != set(expected):\n            problems.append(f\"{name}: publishes {sorted(props)}, expected {sorted(expected)}\")\n    return problems\n",
+      "tests": "\ndef tool(name, props, output=True):\n    t = {\"name\": name, \"inputSchema\": {\"type\": \"object\", \"properties\": {p: {\"type\": \"integer\"} for p in props}}}\n    t[\"outputSchema\"] = {\"type\": \"object\"} if output else None\n    return t\n\n\ngood = [tool(\"get_system_info\", []), tool(\"terminate_process\", [\"pid\"]), tool(\"watch_cpu\", [\"seconds\"])]\nwant = {\"terminate_process\": {\"pid\"}}\n\nassert surface_problems(good, want) == [], \"a conforming surface reports no problems\"\n\n# outputSchema present on the wire as null is the silent failure\nsilent = good + [tool(\"snapshot\", [], output=False)]\np = surface_problems(silent, want)\nassert len(p) == 1 and \"snapshot\" in p[0], p\n\n# a deliberate prose tool may be exempted by name, and only that tool\nprose = good + [tool(\"summary\", [], output=False)]\nassert surface_problems(prose, want, exempt=(\"summary\",)) == []\nassert len(surface_problems(prose + [tool(\"snapshot\", [], output=False)], want, exempt=(\"summary\",))) == 1\n\n# nothing registered must fail, not pass vacuously, even with nothing expected\nassert len(surface_problems([], {})) >= 1\n\n# a second resolved parameter leaking must be caught, whatever its name\nleaky = [tool(\"get_system_info\", []), tool(\"terminate_process\", [\"pid\", \"reason\"])]\np = surface_problems(leaky, want)\nassert len(p) == 1 and \"terminate_process\" in p[0], p\n\n# a required property that vanished is a problem too\ngone = [tool(\"get_system_info\", []), tool(\"terminate_process\", [])]\nassert len(surface_problems(gone, want)) == 1\n\n# a tool that is expected but not published is a problem, not a KeyError\nassert len(surface_problems([tool(\"get_system_info\", [])], want)) == 1\nprint(\"all surface checks passed\")\n",
+      "explanation": "The starter has three bugs from section 5. It tests for the key rather than for `null`, so a schema published as `null` passes. It looks for `approval` by name instead of comparing the whole property set, so any other leaked parameter, or a vanished one, passes. And it neither fails on an empty list nor survives an expected tool that is absent, where it raises `KeyError`. The fix compares `set(props)` with the expected set, treats `None` as missing, honors the exemption list, and reports an empty registration.",
+      "hints": [
+        "On the wire a missing schema can be a `null` value, not only an absent key.",
+        "Compare the whole set of published properties with the expected set, as `assert set(props) == {\"pid\"}` does.",
+        "A loop over an empty list finds nothing to complain about."
+      ]
+    },
+    {
+      "id": "mcp-012-q11",
+      "type": "order",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 2,
+      "tags": [
+        "mrtr",
+        "sequence"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A test calls `terminate_process` through `answering(\"decline\")`, so `Client` has an elicitation callback. Put what happens in order.",
+      "answer": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e"
+      ],
+      "items": [
+        {
+          "key": "a",
+          "text": "The client sends `tools/call` with the arguments and `_meta` declaring form elicitation."
+        },
+        {
+          "key": "b",
+          "text": "The server answers with `resultType: \"input_required\"`, an `inputRequests` map and a `requestState`."
+        },
+        {
+          "key": "c",
+          "text": "The SDK calls the test's callback with the question, and it returns `ElicitResult(action=\"decline\")`."
+        },
+        {
+          "key": "d",
+          "text": "The client sends a new `tools/call` with a new `id`, the same arguments, `inputResponses` and the echoed `requestState`."
+        },
+        {
+          "key": "e",
+          "text": "The server runs the tool body and returns a `complete` result whose text says the user declined."
+        }
+      ],
+      "partial_credit": true,
+      "explanation": "The callback stands in for the human. The first request is answered and closed by the `input_required` result, the SDK asks the callback, and the retry is a new request carrying the answer and the state; only then does the tool body run to a `complete` result. The test never sees the loop, which is why it needs no human.",
+      "hints": [
+        "The server never calls the client; it answers, and the client comes back.",
+        "The callback can only answer a question that has already arrived."
+      ]
+    },
+    {
+      "id": "mcp-012-q12",
+      "type": "match",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "7",
+      "est_minutes": 3,
+      "tags": [
+        "error-codes",
+        "wire-trace"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Match each request the first server rejects to the JSON-RPC error code it answers with under `mcp==2.3.0`.",
+      "answer": {
+        "a": "q",
+        "b": "r",
+        "c": "u",
+        "d": "s"
+      },
+      "left": [
+        {
+          "key": "a",
+          "text": "`Mcp-Name: get_system_info` on a body that calls `find_process`"
+        },
+        {
+          "key": "b",
+          "text": "`terminate_process` called from a client that declared no elicitation capability"
+        },
+        {
+          "key": "c",
+          "text": "`tools/list` whose `params` carry no `_meta` at all"
+        },
+        {
+          "key": "d",
+          "text": "a request for the method `tools/run`, which the server does not have"
+        }
+      ],
+      "right": [
+        {
+          "key": "p",
+          "text": "`-32002`"
+        },
+        {
+          "key": "q",
+          "text": "`-32020`"
+        },
+        {
+          "key": "r",
+          "text": "`-32021`"
+        },
+        {
+          "key": "s",
+          "text": "`-32601`"
+        },
+        {
+          "key": "t",
+          "text": "`-32603`"
+        },
+        {
+          "key": "u",
+          "text": "`-32602`"
+        }
+      ],
+      "explanation": "A header that contradicts the body is `-32020` (`HeaderMismatch`); a needed capability the client did not declare is `-32021` (`MissingRequiredClientCapability`); a missing `_meta` is `-32602` (`Invalid params`); an unknown method is `-32601` (`Method not found`), at HTTP 404. `-32002` is the older resource-not-found code that `-32602` replaced, and `-32603` is an internal error. `snippets/wire_trace.py` and `snippets/mrtr_without_human.py` print all four.",
+      "hints": [
+        "Two of the codes come from the range the specification reserves for MCP itself.",
+        "The other two are standard JSON-RPC 2.0 codes; one of them is about parameters."
+      ]
+    },
+    {
+      "id": "mcp-012-q13",
+      "type": "long",
+      "track": "connect",
+      "difficulty": 4,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 12,
+      "tags": [
+        "stdio",
+        "levels"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A server's tools module starts with `print(\"tools loaded\")` at import time. Its in-memory suite, built on `Client(mcp)`, passes. In a desktop host the server seems to start, but the host's log shows a parse error. Explain why levels 1 and 2 cannot catch this, what reaches the client and when, and what change and which kind of check would catch it before a user does. Draw on the stdio rules from post 04.",
+      "kind": "connect",
+      "solution": "The in-memory client never reads a pipe. `Client(mcp)` hands request objects to the server's handlers through direct dispatchers in the same process, so the `print()` writes to the test process's own standard output and nothing parses it; a unit test never involves the protocol at all. Over stdio, standard output is the protocol channel, and the stdio transport page says the server must not write anything there that is not a valid MCP message. The SDK points the process's standard output at standard error only once `mcp.run()` starts the transport, and an import-time print runs before that, so the line `tools loaded` is the first thing the client reads. It is not JSON, so the client logs `Failed to parse JSONRPC message from server`, which names neither `print` nor the tool (post 04 prints this). The fix is to log through `logging` configured to standard error, never to print, and to check the module for anything else that writes to standard output at import. The check that catches it is level 3: run the server as a subprocess over stdio, with a real host or the SDK's stdio client, and read the client's log; a test that connects with `StdioServerParameters` reaches the pipe but still has to assert that nothing was logged, because the SDK client skips the bad line and carries on.",
+      "rubric": [
+        {
+          "criterion": "Explains that the in-memory client has no pipe, so a print in the same process is never parsed",
+          "points": 2
+        },
+        {
+          "criterion": "States that over stdio standard output is the protocol channel and the server must not write non-MCP text to it",
+          "points": 2
+        },
+        {
+          "criterion": "Explains why the SDK's diversion does not help: the print runs before mcp.run() starts the transport",
+          "points": 2
+        },
+        {
+          "criterion": "Names the symptom, a parse failure on the client that names neither print nor the tool",
+          "points": 1
+        },
+        {
+          "criterion": "Prescribes logging to standard error and a level 3 run over stdio, noting that the client recovers so a test must look at the log",
+          "points": 2
+        }
+      ],
+      "answer_length": "one or two paragraphs",
+      "explanation": "Levels 1 and 2 run in one process, and this bug is about the process boundary. Post 04 shows that the SDK diverts handler writes to standard error while it serves, but an import-time write lands on the pipe before the diversion begins. Only a stdio run reaches it.",
+      "hints": [
+        "Ask whether `Client(mcp)` reads anything from a pipe.",
+        "Ask when the SDK starts diverting standard output, and when the import-time print runs."
+      ],
+      "connects": [
+        "mcp-004",
+        "mcp-005"
+      ]
+    },
+    {
+      "id": "mcp-012-q14",
+      "type": "long",
+      "track": "workout",
+      "difficulty": 4,
+      "outcomes": [
+        "o2",
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 15,
+      "tags": [
+        "test-design",
+        "elicitation"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A server adds `delete_snapshot(snapshot_id: str, approval: Annotated[ElicitationResult[Confirm], Resolve(_confirm_delete)])`, annotated destructive, whose question is built from `snapshot_id`. Design the in-memory protocol tests that should ship with it. For each, say what it asserts and which failure it guards against.",
+      "kind": "design",
+      "solution": "All tests open `Client(mcp)` inside the test body, never in a yield fixture.\n\n1. **Published input schema is exact.** List the tools and assert `set(input_schema[\"properties\"]) == {\"snapshot_id\"}`. Guards against the approval parameter, or a later one, leaking into the schema the model sees, which would let a model forge consent; equality, not `\"approval\" not in props`.\n2. **Output schema published.** The suite-wide `test_every_tool_publishes_an_output_schema` covers it; guards against a silent `outputSchema: null`.\n3. **Annotations.** Assert `destructive_hint is True` and `read_only_hint is False`; guards against the host never prompting because the hint was omitted.\n4. **Four answers.** Through an `answering(...)` helper: decline, cancel, and accept with confirm false must each leave the snapshot in place and say why; accept with confirm true reaches the deletion, against a snapshot id that does not exist or a fake store, so the test deletes nothing real. Guards against treating accept as approval and against crashing on absent content.\n5. **No callback.** A plain `Client(mcp)` gets `-32021` with `requiredCapabilities` naming form elicitation, caught by flattening the exception group or through a wrapper; guards against the failure being reported as a broken tool.\n6. **The question converges.** Record the questions for one call and assert exactly one, naming the snapshot id; guards against a question with live data that never matches its digest and runs to the client's ten-round cap.",
+      "rubric": [
+        {
+          "criterion": "Asserts the exact published property set, and explains why equality beats a negative check",
+          "points": 2
+        },
+        {
+          "criterion": "Covers the output schema and the destructive and read-only annotations",
+          "points": 1
+        },
+        {
+          "criterion": "Covers decline, cancel, accept with confirm false and accept with confirm true as separate tests, without deleting anything real",
+          "points": 2
+        },
+        {
+          "criterion": "Includes the no-callback case and its -32021 error",
+          "points": 1
+        },
+        {
+          "criterion": "Includes a test that the question is asked exactly once and names the snapshot",
+          "points": 2
+        },
+        {
+          "criterion": "Opens the client inside each test body rather than in a yield fixture",
+          "points": 1
+        }
+      ],
+      "answer_length": "a numbered list",
+      "explanation": "Sections 5 and 6 give the template: the published surface (exact input properties, output schema, annotations), the four answers driven by a callback, the missing-capability refusal, and the question count. Each guards a failure that raises nothing on its own.",
+      "hints": [
+        "Split the tests into what is published and what happens when the tool is called.",
+        "The human is a callback; each of its answers is a test.",
+        "One of the failures shows up only as a loop that never ends."
+      ]
+    },
+    {
+      "id": "mcp-012-q15",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "7",
+      "est_minutes": 3,
+      "tags": [
+        "unknown-tool",
+        "sdk"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Following the Tools page, which lists an unknown tool among the protocol errors with an example code of `-32602`, a test asserts that `await c.call_tool(\"no_such_tool\", {})` on an in-memory `Client(mcp)` raises `MCPError`. Under `mcp==2.3.0`, what happens to the test?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "It passes: the client raises `MCPError` with code `-32602`.",
+          "correct": false,
+          "feedback": "That is the specification's form, but this SDK's tool manager reports an unknown name as a tool failure rather than a protocol error."
+        },
+        {
+          "key": "b",
+          "text": "It fails: the call returns a `complete` result with `is_error` true and the text `Unknown tool: no_such_tool`.",
+          "correct": true,
+          "feedback": "`snippets/result_flags.py` prints `no_such_tool: raised nothing; result_type='complete' is_error=True`. The test must assert on `is_error`."
+        },
+        {
+          "key": "c",
+          "text": "It fails: the client raises `MCPError` with `-32601`, because an unknown tool is an unknown method.",
+          "correct": false,
+          "feedback": "`-32601` is for a JSON-RPC method the server lacks, such as `tools/run`. `tools/call` exists; only the tool name is unknown."
+        },
+        {
+          "key": "d",
+          "text": "It errors before sending: `Client` checks names against its cached `tools/list` and raises `KeyError`.",
+          "correct": false,
+          "feedback": "The client sends the call as given. The check happens on the server, which answers with a result."
+        }
+      ],
+      "explanation": "The Tools page puts an unknown tool on the protocol-error side, but `mcp==2.3.0` raises `ToolError` for a missing name and so answers with an `isError: true` result, exactly like a schema-failing argument. A test written from the specification alone fails against this SDK, which is why the post's tests assert on `is_error` and on `read_result`.",
+      "hints": [
+        "The SDK treats an unknown name the way it treats arguments that fail the schema.",
+        "Check whether anything raised in `snippets/result_flags.py`."
+      ]
+    },
+    {
+      "id": "mcp-012-q16",
+      "type": "short",
+      "track": "run",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "4",
+      "est_minutes": 2,
+      "tags": [
+        "exception-group",
+        "flatten"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Using the `flatten` helper from the client project's `tests/test_client.py`, what does this print?",
+      "stimulus": {
+        "kind": "code",
+        "language": "python",
+        "content": "group = ExceptionGroup(\"outer\", [\n    ExceptionGroup(\"inner\", [ZeroDivisionError(\"boom\")]),\n    KeyError(\"k\"),\n])\nprint([type(e).__name__ for e in flatten(group)])"
+      },
+      "answer": {
+        "model": "['ZeroDivisionError', 'KeyError']",
+        "accept": [
+          "^(?![\\s\\S]*['\\\"]ExceptionGroup['\\\"])(?![\\s\\S]*\\[\\s*ExceptionGroup)(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)(?!(?:(?!ZeroDivision)[\\s\\S])*KeyError)(?![\\s\\S]*ZeroDivision\\w*['\\\"]?\\s*,\\s*['\\\"]?ZeroDivision)(?![\\s\\S]*KeyError['\\\"]?\\s*,\\s*['\\\"]?\\w+(?:Error|Exception|Group))[\\s\\S]*ZeroDivision(?:Error)?[\\s\\S]*KeyError[\\s\\S]*$"
+        ]
+      },
+      "explanation": "`flatten` returns a plain exception as a one-item list and recurses into anything with an `exceptions` attribute, in order. The inner group yields `ZeroDivisionError`, then the outer group's second member yields `KeyError`; no group appears in the result.",
+      "hints": [
+        "`flatten` keeps only the exceptions that have no `exceptions` attribute.",
+        "It walks the members in order, depth first."
+      ]
+    },
+    {
+      "id": "mcp-012-q17",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 1,
+      "tags": [
+        "output-schema",
+        "testing"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`test_every_tool_publishes_an_output_schema` begins with `assert tools, \"server registered no tools\"` before looping over the tools. What does that line add?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "It fails a server that registered nothing, which the loop alone would pass because it never runs.",
+          "correct": true,
+          "feedback": "A `for` loop over an empty list asserts nothing; `snippets/schema_assertions.py` shows the empty server failing on exactly this line."
+        },
+        {
+          "key": "b",
+          "text": "It checks that `tools/list` answered within the test's timeout before any tool is inspected.",
+          "correct": false,
+          "feedback": "The line checks the list's contents, not timing; a slow call would raise or hang before reaching it."
+        },
+        {
+          "key": "c",
+          "text": "It makes the client fetch the next page of tools before the loop starts reading them.",
+          "correct": false,
+          "feedback": "An assertion has no side effects on the client; it only tests the value already returned."
+        },
+        {
+          "key": "d",
+          "text": "pytest requires it, so that an async test reports at least one assertion before its loop runs.",
+          "correct": false,
+          "feedback": "pytest has no such rule; a test with no assertion simply passes."
+        }
+      ],
+      "explanation": "A server that registered no tools would pass the loop vacuously, and \"the tools do not appear\" is a real bug. The first assertion turns that case into a failure.",
+      "hints": [
+        "Ask what the loop asserts when the list is empty."
+      ]
+    }
+  ]
+}

@@ -1,8 +1,24 @@
 id: mcp-012
 slug: 12-testing-and-debugging
-title: "12 · Testing and debugging MCP"
+title: "12 - Testing and debugging MCP"
+summary: "Tests an MCP server like any other library, with a real client in memory and no subprocess or host, asserts on its published schema, drives elicitation with no human, and reads a wire trace for the two places a failure hides."
 date: 2026-07-24
-tags: [model-context-protocol, mcp, testing, debugging, inspector, ci]
-hero: diagrams/01-three-levels-of-test.svg
-reading_time: 27
+updated: 2026-10-09
+status: complete
 part: "Part III - Clients, hosts, and testing"
+level: intermediate
+reading_time: 38
+tags: [mcp, testing, debugging, pytest, inspector, python-sdk]
+hero: diagrams/01-three-levels-of-test.svg
+prerequisites: [mcp-010]
+code: included
+outcomes:
+  - id: o1
+    text: "Write in-memory protocol tests that drive a real client against a server object, with no subprocess, socket, or host."
+  - id: o2
+    text: "Assert on the published schema so that a tool publishing no output schema fails a test."
+  - id: o3
+    text: "Drive an elicitation round trip through accept, decline, and cancel with no human in the loop."
+  - id: o4
+    text: "Read a wire trace and find the two places a failed tool call hides."
+recommended: [mcp-006]
