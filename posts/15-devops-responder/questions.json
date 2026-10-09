@@ -1,0 +1,789 @@
+{
+  "standard": "2.1.0",
+  "post": "mcp-015",
+  "next_ordinal": 19,
+  "questions": [
+    {
+      "id": "mcp-015-q01",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "4",
+      "est_minutes": 2,
+      "tags": [
+        "annotations",
+        "read-only"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Every read tool of the first responder is registered with `read_only_hint=True`, so `tools/list` shows `\"readOnlyHint\": true` for each. What does that published hint guarantee about the tool?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Nothing about its behavior: clients must treat it as untrusted unless the server is a trusted one.",
+          "correct": true,
+          "feedback": "Correct. The `ToolAnnotations` note says the hints are not guaranteed to describe the tool faithfully; what keeps these tools from writing is that their modules contain no writing code."
+        },
+        {
+          "key": "b",
+          "text": "The SDK refuses to register a tool with that hint if its module contains a delete or patch call.",
+          "correct": false,
+          "feedback": "The SDK publishes the hint as given and checks nothing about the function body; the project's own test searches the module source, which is why the test exists."
+        },
+        {
+          "key": "c",
+          "text": "A conforming host skips its confirmation prompt whenever the model calls that tool.",
+          "correct": false,
+          "feedback": "A hint cannot exempt a tool from the host's own policy, and the Tools page tells clients not to base tool use decisions on annotations from untrusted servers."
+        },
+        {
+          "key": "d",
+          "text": "The service account the server runs under is limited to the get and list verbs.",
+          "correct": false,
+          "feedback": "Annotations travel in `tools/list` and never reach the cluster; the service account's permissions come from its RBAC role, the real control."
+        }
+      ],
+      "explanation": "Section 4 quotes the `ToolAnnotations` note: all properties are hints, not guaranteed to be faithful, and clients must treat them as untrusted unless the server is trusted. Read-only in this project comes from the absence of writing code in `inspect.py` and `diagnose.py`, and in the cluster from RBAC.",
+      "hints": [
+        "Ask who checks the hint, and against what."
+      ]
+    },
+    {
+      "id": "mcp-015-q02",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 2,
+      "tags": [
+        "crash-loop",
+        "kubernetes"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`list_pods` shows a pod with phase `Running`, ready `0/1`, 7 restarts and reason `CrashLoopBackOff`. Which one field is the first that says anything about why its container keeps failing?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "`status.phase`",
+          "correct": false,
+          "feedback": "`Running` is the honest answer to whether the pod is alive: it is scheduled and its container keeps being started. It says nothing about the failure."
+        },
+        {
+          "key": "b",
+          "text": "`status.containerStatuses[].state.waiting.reason`",
+          "correct": false,
+          "feedback": "`CrashLoopBackOff` restates the symptom: the kubelet is waiting before it tries again. It does not say why the previous start failed."
+        },
+        {
+          "key": "c",
+          "text": "`status.containerStatuses[].lastState.terminated.exitCode`",
+          "correct": true,
+          "feedback": "Correct. The previous instance's terminated record carries the exit code, the one field about the cause, which is why `get_logs` has a `previous` parameter."
+        },
+        {
+          "key": "d",
+          "text": "The events recorded against the pod, such as a `BackOff` warning seen 42 times",
+          "correct": false,
+          "feedback": "The events narrate how the kubelet got here, the back-off sequence, but a `BackOff` event is not a cause either."
+        }
+      ],
+      "explanation": "Section 5 reads one failing pod from three sources. The phase says alive, the waiting reason says looping, and only the previous container state's exit code points at the cause; the events give the sequence.",
+      "hints": [
+        "Two of the four fields describe the container that exists now; the cause belongs to one that is gone."
+      ]
+    },
+    {
+      "id": "mcp-015-q03",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "3",
+      "est_minutes": 3,
+      "tags": [
+        "tool-error",
+        "errors"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A contributor adds `class QuotaError(Exception)` to the project and raises `QuotaError(\"Namespace quota exceeded; ask for 2 replicas or fewer.\")` from inside a tool. A model calls that tool against a cluster where the quota is full. Under `mcp==2.3.0`, what does the model read?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "A result with `isError: true` whose text is `Error executing tool <name>: Namespace quota exceeded; ask for 2 replicas or fewer.`",
+          "correct": false,
+          "feedback": "That is what a `ToolError` produces, which is why `ClusterError` subclasses it. A plain `Exception` subclass is treated as a crash, and its message is kept off the wire."
+        },
+        {
+          "key": "b",
+          "text": "A result with `isError: true` whose text is only `Error executing tool <name>`, while the server logs the traceback at ERROR.",
+          "correct": true,
+          "feedback": "Correct. Any exception that is not a `ToolError` (or `ResourceError` or `MCPError`) is a crash under 2.3.0: the model sees the bare sentence, and the detail goes to the server's log."
+        },
+        {
+          "key": "c",
+          "text": "A JSON-RPC error object with code `-32603` instead of a result.",
+          "correct": false,
+          "feedback": "The SDK turns a tool body's exception into a result with `isError: true`; a JSON-RPC error is kept for requests the server cannot act on, such as a malformed `_meta`."
+        },
+        {
+          "key": "d",
+          "text": "Nothing: the client times out because the server's handler died.",
+          "correct": false,
+          "feedback": "The server catches the exception and answers; `snippets/refusals.py` shows the reply arriving at once."
+        }
+      ],
+      "explanation": "Section 3 and section 10 show the contract: a `ToolError` raised in a tool reaches the model as an `isError` result carrying its message, and anything else is a crash whose message the model never sees. `snippets/refusals.py` raises the same refusal both ways and prints both results.",
+      "hints": [
+        "Look at which base class `ClusterError` has, and why the post says it chose it.",
+        "Compare the last two blocks `snippets/refusals.py` prints."
+      ]
+    },
+    {
+      "id": "mcp-015-q04",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 2,
+      "tags": [
+        "logs",
+        "limit-bytes"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Why does `get_logs` cut the bytes locally instead of passing the API's own `limitBytes` together with `tailLines`?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "It counts forward from the start of the selected tail, so it drops the newest lines and may end mid-line.",
+          "correct": true,
+          "feedback": "Correct. The newest lines are the ones that explain a crash, and a half line reads like a different error."
+        },
+        {
+          "key": "b",
+          "text": "`limitBytes` counts characters rather than bytes, so a log with multi-byte text overshoots its ceiling.",
+          "correct": false,
+          "feedback": "The documentation quoted in section 6 describes it as a number of bytes; the problem is which end it keeps, not its unit."
+        },
+        {
+          "key": "c",
+          "text": "The Kubernetes Python client does not expose `limitBytes`, so the tool has no way to send it.",
+          "correct": false,
+          "feedback": "It does: the quoted description comes from the client's own documentation of that parameter."
+        },
+        {
+          "key": "d",
+          "text": "`limitBytes` is ignored by the API server whenever `tailLines` is set on the same request.",
+          "correct": false,
+          "feedback": "Nothing in the description says that; read against `tailLines`, it applies to the selection the tail produced, starting from its beginning."
+        }
+      ],
+      "explanation": "Section 6 reads the documented `limitBytes` against `tailLines`: the tail is selected, then bytes are read forward from its start until the limit, so the bytes lost are the newest ones and the last line may be partial. `_tail_bytes` keeps the newest end and snaps the cut to a newline instead.",
+      "hints": [
+        "Ask which end of the selection a forward read stops at."
+      ]
+    },
+    {
+      "id": "mcp-015-q05",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "7",
+      "est_minutes": 3,
+      "tags": [
+        "diagnosis",
+        "oom"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A pod's container is waiting with reason `CrashLoopBackOff` after 6 restarts, and its previous instance terminated with reason `OOMKilled` and exit code 137. Which verdict does `analyze()` return?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "`crash_loop`, at high confidence, because the waiting reason is `CrashLoopBackOff`.",
+          "correct": false,
+          "feedback": "The pod does report a crash loop, but `_check_crash_loop` runs after `_check_oom`, and the first match wins."
+        },
+        {
+          "key": "b",
+          "text": "`oom_killed`, at high confidence.",
+          "correct": true,
+          "feedback": "Correct. The order is specificity, not severity: the memory kill is the actionable reading, so it is checked first; `snippets/diagnosis.py` prints `oom_killed (high)` for this pod."
+        },
+        {
+          "key": "c",
+          "text": "`restarting`, at medium confidence, because the restart count is above the threshold of 3.",
+          "correct": false,
+          "feedback": "`_check_restarting` needs a container that is ready now, and it comes late in the order; this container is not ready."
+        },
+        {
+          "key": "d",
+          "text": "`unknown`, because two signatures conflict.",
+          "correct": false,
+          "feedback": "`analyze()` never weighs signatures against each other; it runs the checks in a fixed order and returns on the first one that matches."
+        }
+      ],
+      "explanation": "Section 7: the ten checks run in order of specificity and the first match is returned. A pod killed for memory in a loop reports both signatures, and `_check_oom` precedes `_check_crash_loop` so the reader is sent to `resources.limits.memory` rather than the application logs.",
+      "hints": [
+        "The function returns on the first check that matches.",
+        "Find where `_check_oom` sits relative to `_check_crash_loop`."
+      ]
+    },
+    {
+      "id": "mcp-015-q06",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "3",
+      "est_minutes": 1,
+      "tags": [
+        "asyncio",
+        "threads"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`cluster.call()` is the only way the package reaches the Kubernetes API. Which standard-library function does it await to run each blocking client call on a worker thread? Give the full dotted name.",
+      "answer": {
+        "model": "`asyncio.to_thread`",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|never|isn't|doesn't|does not|don't|do not|instead of|rather than|avoid|avoids)\\s+(?:the\\s+)?(?:use\\s+|using\\s+|call\\s+|await\\s+)?`?(?:asyncio\\.)?to[_ ]thread)(?![\\s\\S]*\\bto[_ ]thread\\b`?(?:\\(\\))?\\s*(?:\\bor\\b|/|\\band\\b)\\s*`?(?:asyncio\\.|loop\\.)?(?:get_event_loop\\(\\)\\.)?run_in_executor)(?![\\s\\S]*\\brun_in_executor\\b`?(?:\\(\\))?\\s*(?:\\bor\\b|/|\\band\\b)\\s*`?(?:asyncio\\.)?to[_ ]thread)(?![\\s\\S]*\\bto[_ ]thread\\b`?(?:\\(\\))?\\s+(?:is not|isn't|is never|was not|wasn't)\\b)(?![\\s\\S]*\\b(?!asyncio\\b)\\w+\\s*\\.\\s*to_thread\\b)[\\s\\S]*\\basyncio\\s*\\.\\s*to_thread\\b[\\s\\S]*$"
+        ]
+      },
+      "explanation": "Section 3 shows `call()`: `return await asyncio.to_thread(fn, *args, **kwargs)`. It forwards positional and keyword arguments, unlike `loop.run_in_executor`, and every test call is recorded on a thread that is not `MainThread`.",
+      "hints": [
+        "It is a function of the `asyncio` module, added in Python 3.9, that takes the function and its arguments directly."
+      ]
+    },
+    {
+      "id": "mcp-015-q07",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "7",
+      "est_minutes": 1,
+      "tags": [
+        "diagnosis",
+        "pending"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`analyze()` receives a pod in phase `Pending` together with a `Warning` event whose reason is `FailedScheduling`. What verdict string does it return?",
+      "answer": {
+        "model": "`unschedulable` (at high confidence, with the scheduler's message quoted back)",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|never|isn't|is not)\\s+(?:the\\s+)?(?:verdict\\s+)?[\\\"'`]?unschedulable)(?![\\s\\S]*\\bunschedulable[\\\"'`]?\\s*(?:\\bor\\b|/)\\s*[\\\"'`]?(?:pending|crash_loop|unknown|failed))(?![\\s\\S]*\\b(?:pending|crash_loop|unknown|failed)[\\\"'`]?\\s*(?:\\bor\\b|/)\\s*[\\\"'`]?unschedulable)(?![\\s\\S]*\\bunschedulable[\\\"'`]?\\s+(?:is not|isn't|is never|was not|wasn't)\\b)[\\s\\S]*\\bunschedulable\\b[\\s\\S]*$"
+        ]
+      },
+      "explanation": "Section 7: `Pending` on its own is a low-confidence `pending` verdict, because the pod is usually still downloading an image, but `Pending` plus a `FailedScheduling` event is a high-confidence `unschedulable` one; `_check_unschedulable` runs well before `_check_pending`.",
+      "hints": [
+        "The event, not the phase, decides it; the scheduler is saying something about nodes."
+      ]
+    },
+    {
+      "id": "mcp-015-q08",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 4,
+      "tags": [
+        "logs",
+        "truncation"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A container's log is 500 lines, each a four-digit number, a space and 60 `x` characters (65 bytes), joined by single newlines with none after the last line, 32,999 bytes in all. `get_logs` reads it with `tail_lines=500` and `max_bytes=3000`. Give `bytes_returned` and `dropped_lines`.",
+      "answer": {
+        "parts": [
+          {
+            "label": "bytes_returned",
+            "value": 2969,
+            "tolerance": 0,
+            "unit": "bytes"
+          },
+          {
+            "label": "dropped_lines",
+            "value": 455,
+            "tolerance": 0,
+            "unit": "lines"
+          }
+        ]
+      },
+      "explanation": "Section 6's `_tail_bytes` keeps the last 3,000 bytes and moves the cut forward to just after the first newline, so only whole lines survive. Each kept line costs 66 bytes with its newline and the last costs 65, so $k$ lines take $66k - 1$ bytes; the largest $k$ with $66k - 1 \\le 3000$ is 45, giving 2,969 bytes. The text has 499 newlines and the kept part 44, so 455 lines are dropped.",
+      "hints": [
+        "Only whole lines survive, because the cut is moved to a newline.",
+        "Write the bytes that $k$ whole lines from the end occupy, including the newlines between them, and find the largest $k$ that fits.",
+        "`dropped_lines` counts the newlines in the text minus the newlines in what was kept."
+      ],
+      "precision_note": "Closed form: 66k - 1 <= 3000 gives k = 45 lines, 2,969 bytes; 499 - 44 = 455 dropped lines. The project's _tail_bytes returns 2969 bytes kept and 455 lines dropped; a raw slice with no snap, the nearest wrong method, gives 3,000 bytes."
+    },
+    {
+      "id": "mcp-015-q09",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 2,
+      "tags": [
+        "logs",
+        "clamp"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "With the project's default limits (`max_tail_lines` 500, `max_log_bytes` 40,000), a model calls `get_logs` with `tail_lines=0` and `max_bytes=500`. Give the `tail_lines` value sent to the API and the byte ceiling the tool then applies.",
+      "answer": {
+        "parts": [
+          {
+            "label": "tail_lines sent to the API",
+            "value": 1,
+            "tolerance": 0,
+            "unit": "lines"
+          },
+          {
+            "label": "byte ceiling applied",
+            "value": 1000,
+            "tolerance": 0,
+            "unit": "bytes"
+          }
+        ]
+      },
+      "explanation": "Section 6 shows the two clamps: `clamp(tail_lines, 1, cfg.max_tail_lines)` and `clamp(max_bytes, 1_000, cfg.max_log_bytes)`. A request below the floor is raised to it rather than rejected, so 0 lines becomes 1 and 500 bytes becomes 1,000, and `lines_requested` in the result reports the 1.",
+      "hints": [
+        "Clamping raises a value below the lower bound to that bound.",
+        "Read the lower bound of each `clamp` call in the excerpt."
+      ],
+      "precision_note": "Closed form from the excerpt: clamp(0, 1, 500) = 1 and clamp(500, 1000, 40000) = 1000; checked with the project's clamp() under its environment."
+    },
+    {
+      "id": "mcp-015-q10",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "8",
+      "est_minutes": 3,
+      "tags": [
+        "api-calls",
+        "events"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A namespace holds 40 pods, 3 of them crash-looping. Give two counts of Kubernetes API calls: those one `find_crash_loops` call makes, and those made by one `list_pods` call followed by one `diagnose_pod` call for each of the 3 broken pods.",
+      "answer": {
+        "parts": [
+          {
+            "label": "find_crash_loops",
+            "value": 2,
+            "tolerance": 0,
+            "unit": "calls"
+          },
+          {
+            "label": "list_pods, then diagnose_pod three times",
+            "value": 7,
+            "tolerance": 0,
+            "unit": "calls"
+          }
+        ]
+      },
+      "explanation": "Section 8: `find_crash_loops` lists the pods once and the namespace's events once, then matches events to pods locally, so it costs 2 calls whatever the pod count. `diagnose_pod` reads its pod and then that pod's events, 2 calls each, so the second route costs $1 + 3 \\times 2 = 7$.",
+      "hints": [
+        "Count the API calls inside each tool, not the tool calls.",
+        "`diagnose_pod` fetches the pod and then the events whose `involvedObject` is that pod."
+      ],
+      "precision_note": "Closed form: 1 + 1 = 2 for find_crash_loops; 1 + 3 x 2 = 7 for the second route. snippets/diagnosis.py prints 'API calls: 2 (list_namespaced_pod, list_namespaced_event)'; diagnose_pod makes read_namespaced_pod and list_namespaced_event."
+    },
+    {
+      "id": "mcp-015-q11",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 15,
+      "tags": [
+        "logs",
+        "truncation",
+        "utf-8"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Write `tail_bytes(text, max_bytes)`. If `text` encoded as UTF-8 fits in `max_bytes`, return it with `0, 0`. Otherwise keep the last `max_bytes` bytes, then move the cut forward to just after the first newline in that window, unless that newline is the window's last byte, in which case keep the window as it is. Return `(kept, dropped_bytes, dropped_lines)`, where `dropped_bytes` is the encoded length minus the kept bytes and `dropped_lines` is the number of newlines in `text` minus the number in `kept`. Standard library only.",
+      "kind": "implement",
+      "language": "python",
+      "starter": "def tail_bytes(text: str, max_bytes: int) -> tuple[str, int, int]:\n    \"\"\"Keep the newest end of `text` within `max_bytes` UTF-8 bytes.\n\n    Returns (kept, dropped_bytes, dropped_lines).\n    \"\"\"\n    raise NotImplementedError\n",
+      "solution": "def tail_bytes(text: str, max_bytes: int) -> tuple[str, int, int]:\n    \"\"\"Keep the newest end of `text` within `max_bytes` UTF-8 bytes.\n\n    Returns (kept, dropped_bytes, dropped_lines).\n    \"\"\"\n    encoded = text.encode(\"utf-8\")\n    if len(encoded) <= max_bytes:\n        return text, 0, 0\n\n    window = encoded[-max_bytes:]\n    newline = window.find(b\"\\n\")\n    if newline != -1 and newline + 1 < len(window):\n        window = window[newline + 1 :]\n\n    kept = window.decode(\"utf-8\", errors=\"replace\")\n    dropped_bytes = len(encoded) - len(window)\n    dropped_lines = text.count(\"\\n\") - kept.count(\"\\n\")\n    return kept, dropped_bytes, max(dropped_lines, 0)\n",
+      "tests": "\ndef _log(n, width=60):\n    return \"\\n\".join(f\"{i:04d} \" + \"x\" * width for i in range(n))\n\n# A log that fits comes back untouched.\nassert tail_bytes(\"starting up\\nserving on :8080\", 2000) == (\"starting up\\nserving on :8080\", 0, 0)\nassert tail_bytes(\"a\" * 10, 10) == (\"a\" * 10, 0, 0)\nassert tail_bytes(\"ab\\ncd\", 5) == (\"ab\\ncd\", 0, 0), \"a log that fits exactly is returned whole\"\n\n# The suite's case: 500 lines, 32,999 bytes, a 2,000-byte ceiling.\nbig = _log(500)\nkept, dropped_bytes, dropped_lines = tail_bytes(big, 2000)\nassert len(kept.encode(\"utf-8\")) == 1979, len(kept.encode(\"utf-8\"))\nassert (dropped_bytes, dropped_lines) == (31020, 470), (dropped_bytes, dropped_lines)\nassert kept.startswith(\"0470 \"), kept[:10]\nassert kept.endswith(\"0499 \" + \"x\" * 60)\nassert len(kept.encode(\"utf-8\")) + dropped_bytes == len(big.encode(\"utf-8\"))\n\n# Multi-byte text: the byte ceiling holds and no character is split.\naccents = \"\\n\".join([\"\\u00e9\" * 30] * 20)\nkept, dropped_bytes, dropped_lines = tail_bytes(accents, 200)\nassert len(kept.encode(\"utf-8\")) <= 200, len(kept.encode(\"utf-8\"))\nassert \"\\ufffd\" not in kept\nassert kept.splitlines()[0] == \"\\u00e9\" * 30\nassert len(kept.encode(\"utf-8\")) + dropped_bytes == len(accents.encode(\"utf-8\"))\n\n# A window whose only newline is its last byte is kept as it is, not emptied.\nedge = \"A\" * 50 + \"\\n\" + \"B\" * 50 + \"\\n\"\nassert tail_bytes(edge, 30) == (\"B\" * 29 + \"\\n\", 72, 1), tail_bytes(edge, 30)\nprint(\"all tail_bytes tests passed\")\n",
+      "explanation": "The newest end is kept because that is where a failure is, the cut snaps to a newline so the first kept line is whole, and slicing bytes rather than a `str` is what makes the ceiling hold; the snap also guarantees the cut never splits a multi-byte character. The tests check the suite's 500-line case (1,979 bytes, 31,020 and 470 dropped), a multi-byte log, and the window whose only newline is its last byte.",
+      "hints": [
+        "Encode once, and do every slice on the bytes.",
+        "Slice from the end with a negative index, then search the window for the first `b\"\\n\"`.",
+        "Decode what is left, and count newlines in the text and in the kept part for `dropped_lines`."
+      ]
+    },
+    {
+      "id": "mcp-015-q12",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "3",
+      "est_minutes": 10,
+      "tags": [
+        "asyncio",
+        "tool-error"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The `call()` helper below has two bugs. It runs the blocking client function on the event loop, so a slow API server freezes every other task, and the `ClusterError` it raises is a plain exception, so under the SDK's contract the model would read only `Error executing tool <name>`. Fix both: run `fn` on a worker thread with its positional and keyword arguments, and make the error one whose message reaches the model, keeping its `status`. The stand-in classes replace the SDK and the Kubernetes client so the exercise needs only the standard library.",
+      "kind": "fix",
+      "language": "python",
+      "starter": "import asyncio\n\n\nclass ToolError(Exception):\n    \"\"\"Stand-in for the SDK's ToolError: its message is what the model reads.\"\"\"\n\n\nclass ApiError(Exception):\n    \"\"\"Stand-in for the Kubernetes client's ApiException.\"\"\"\n\n    def __init__(self, status: int, reason: str = \"\") -> None:\n        super().__init__(f\"({status}) {reason}\")\n        self.status = status\n        self.reason = reason\n\n\nclass ClusterError(Exception):\n    def __init__(self, message: str, status: int = 0) -> None:\n        super().__init__(message)\n        self.status = status\n\n\nasync def call(fn, /, *args, **kwargs):\n    \"\"\"Run one blocking client call without blocking the event loop.\"\"\"\n    try:\n        return fn(*args, **kwargs)\n    except ApiError as exc:\n        raise ClusterError(\n            f\"Kubernetes API error {exc.status} {exc.reason}\".strip(), status=exc.status\n        ) from exc\n",
+      "solution": "import asyncio\n\n\nclass ToolError(Exception):\n    \"\"\"Stand-in for the SDK's ToolError: its message is what the model reads.\"\"\"\n\n\nclass ApiError(Exception):\n    \"\"\"Stand-in for the Kubernetes client's ApiException.\"\"\"\n\n    def __init__(self, status: int, reason: str = \"\") -> None:\n        super().__init__(f\"({status}) {reason}\")\n        self.status = status\n        self.reason = reason\n\n\nclass ClusterError(ToolError):\n    def __init__(self, message: str, status: int = 0) -> None:\n        super().__init__(message)\n        self.status = status\n\n\nasync def call(fn, /, *args, **kwargs):\n    \"\"\"Run one blocking client call without blocking the event loop.\"\"\"\n    try:\n        return await asyncio.to_thread(fn, *args, **kwargs)\n    except ApiError as exc:\n        raise ClusterError(\n            f\"Kubernetes API error {exc.status} {exc.reason}\".strip(), status=exc.status\n        ) from exc\n",
+      "tests": "\nimport threading\nimport time\n\n\ndef blocking(x, *, delay=0.0, fail=0):\n    if fail:\n        raise ApiError(fail, \"Not Found\")\n    time.sleep(delay)\n    return x, threading.current_thread().name\n\n\nasync def _check():\n    value, thread = await call(blocking, 1, delay=0.0)\n    assert value == 1\n    assert thread != threading.current_thread().name, \"the call ran on the event loop's thread\"\n\n    ticks = 0\n\n    async def heartbeat():\n        nonlocal ticks\n        for _ in range(100):\n            await asyncio.sleep(0.01)\n            ticks += 1\n\n    beat = asyncio.create_task(heartbeat())\n    await call(blocking, 2, delay=0.3)\n    beat.cancel()\n    assert ticks >= 5, f\"the event loop was starved: {ticks} heartbeat(s) during a 0.3 s call\"\n\n    try:\n        await call(blocking, 3, fail=404)\n    except ToolError as err:\n        assert isinstance(err, ClusterError), type(err)\n        assert err.status == 404\n        assert \"404\" in str(err)\n    else:\n        raise AssertionError(\"a 404 from the client did not surface as a ToolError\")\n\n\nasyncio.run(_check())\nprint(\"all call tests passed\")\n",
+      "explanation": "`asyncio.to_thread(fn, *args, **kwargs)` moves the call to a worker thread and forwards keyword arguments, and subclassing `ToolError` is what lets the message reach the model in an `isError` result instead of the bare crash sentence. The tests check the thread, a heartbeat that keeps running during a 0.3-second call, and that a 404 surfaces as a `ToolError` with its status.",
+      "hints": [
+        "One bug is about where the function runs; the other is about the error's base class.",
+        "`loop.run_in_executor` would move the call too, but it does not forward keyword arguments; look for the `asyncio` function that does."
+      ]
+    },
+    {
+      "id": "mcp-015-q13",
+      "type": "order",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "7",
+      "est_minutes": 2,
+      "tags": [
+        "diagnosis",
+        "checks"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Put these five of `analyze()`'s checks in the order the function runs them.",
+      "items": [
+        {
+          "key": "a",
+          "text": "`_check_crash_loop`"
+        },
+        {
+          "key": "b",
+          "text": "`_check_oom`"
+        },
+        {
+          "key": "c",
+          "text": "`_check_pending`"
+        },
+        {
+          "key": "d",
+          "text": "`_check_terminating`"
+        },
+        {
+          "key": "e",
+          "text": "`_check_image`"
+        }
+      ],
+      "answer": [
+        "d",
+        "b",
+        "e",
+        "a",
+        "c"
+      ],
+      "partial_credit": true,
+      "explanation": "Section 7 prints the tuple: terminating, OOM, image, config, unschedulable, crash loop, probe failure, failed phase, restarting, pending. The order is specificity: a pod being deleted is not a failure, a memory kill outranks the loop it causes, and a bare `Pending` is the weakest reading, so it comes last.",
+      "hints": [
+        "The most specific signatures come first and the weakest, a pod that has simply not started, comes last.",
+        "A memory kill also produces the crash loop it causes, and only one of the two can be reported."
+      ]
+    },
+    {
+      "id": "mcp-015-q14",
+      "type": "match",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "7",
+      "est_minutes": 3,
+      "tags": [
+        "exit-codes"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Match each container exit code to what `diagnose.py`'s table says it means.",
+      "left": [
+        {
+          "key": "a",
+          "text": "0"
+        },
+        {
+          "key": "b",
+          "text": "1"
+        },
+        {
+          "key": "c",
+          "text": "127"
+        },
+        {
+          "key": "d",
+          "text": "137"
+        },
+        {
+          "key": "e",
+          "text": "139"
+        }
+      ],
+      "right": [
+        {
+          "key": "p",
+          "text": "The process finished successfully, which under `restartPolicy: Always` is still a restart"
+        },
+        {
+          "key": "q",
+          "text": "A generic application error; the log tail almost always names it"
+        },
+        {
+          "key": "r",
+          "text": "The entrypoint was not found in the image, or a library it needs is missing"
+        },
+        {
+          "key": "s",
+          "text": "SIGKILL: the out-of-memory killer, or a liveness probe that gave up waiting"
+        },
+        {
+          "key": "t",
+          "text": "SIGSEGV: a segmentation fault inside the process"
+        },
+        {
+          "key": "u",
+          "text": "The pod was evicted because its node ran short of disk"
+        }
+      ],
+      "answer": {
+        "a": "p",
+        "b": "q",
+        "c": "r",
+        "d": "s",
+        "e": "t"
+      },
+      "explanation": "Section 7 explains the table: the `128+N` codes are signal numbers in disguise (137 is $128 + 9$, SIGKILL; 139 is $128 + 11$, SIGSEGV), 127 means the entrypoint is missing, and 0 is the entry most worth explaining because a finished main process still loops. Eviction is a pod phase and reason, not a container exit code.",
+      "hints": [
+        "Subtract 128 from the large codes to get a signal number.",
+        "One description on the right is not an exit code at all."
+      ]
+    },
+    {
+      "id": "mcp-015-q15",
+      "type": "long",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "4",
+      "est_minutes": 12,
+      "tags": [
+        "read-only",
+        "design"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A colleague proposes a `--read-only` command-line flag for this server: when it is set, `restart_pod`, `scale_deployment` and `rollback_deployment` stay registered but return a refusal at runtime, and their annotations switch to `readOnlyHint: true`. Critique the proposal against the post's design, and say what the post does instead and which control matters most.",
+      "kind": "critique",
+      "answer_length": "half a page",
+      "solution": "The flag makes read-only a runtime decision inside code that can still write. The three tools stay in `tools/list`, so a model still sees and calls them, and the writing code is still in the process: a bug in the flag check, a code path that forgets it, or a helper called from elsewhere can still reach `delete_namespaced_pod` or `patch_namespaced_deployment`. The post's test that searches module source cannot help either: it checks `inspect.py` and `diagnose.py`, and `remediate.py` is meant to contain those verbs.\n\nSwitching the annotations to `readOnlyHint: true` makes it worse: the hint now advertises something the module does not guarantee, and the Tools page says annotations are untrusted hints that clients must not base decisions on unless the server is trusted, so the switch buys no safety and invites a host's interface to present writing tools as harmless.\n\nThe post does it structurally. `inspect.py` and `diagnose.py` contain no mutating call, a test asserts that against their source, and the writing tools exist only because `__init__.py` imports `remediate`; deleting that one line removes the capability from the process. Above all of this sits the real control, RBAC: a service account whose role grants only `get` and `list` cannot delete anything whatever the code does.",
+      "rubric": [
+        {
+          "criterion": "Explains that the writing code and the published tools remain in the process, so a runtime flag is a check that can be bypassed or forgotten.",
+          "points": 3
+        },
+        {
+          "criterion": "Explains that flipping readOnlyHint makes the hint false and that annotations are untrusted hints, not enforcement.",
+          "points": 2
+        },
+        {
+          "criterion": "Describes the structural alternative: no mutating calls in the read modules, the source-search test, and removing the import of remediate.",
+          "points": 3
+        },
+        {
+          "criterion": "Names RBAC on the service account as the control that matters most.",
+          "points": 2
+        }
+      ],
+      "explanation": "Section 4 argues that read-only is structural: the read modules contain no writing code, a test checks their source, and the writing tools exist only because `__init__.py` imports `remediate`, which is stronger than any switch parsed at runtime. The annotation is a hint, and RBAC is the real control.",
+      "hints": [
+        "Ask what is still in the process, and still listed, when the flag is set.",
+        "Compare a check executed at runtime with the absence of the code, and recall what the post says about the import in `__init__.py`."
+      ]
+    },
+    {
+      "id": "mcp-015-q16",
+      "type": "long",
+      "track": "connect",
+      "difficulty": 4,
+      "outcomes": [
+        "o1",
+        "o4"
+      ],
+      "section": "9",
+      "est_minutes": 12,
+      "tags": [
+        "testing",
+        "fakes"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Post 12 builds tests on the in-memory `Client(mcp)` and opens it with `async with` inside each test body. Explain how this project applies that pattern so that 78 tests run with no cluster, name two design choices in `tests/conftest.py` that make the fake trustworthy, and name two properties of the real system that this suite cannot establish.",
+      "kind": "connect",
+      "answer_length": "half a page",
+      "solution": "Every test that talks to the server opens `Client(mcp)` in its own body, which connects to the server object with no subprocess and no socket and still goes through tool registration, schema generation and result validation. The cluster is replaced at one seam: `cluster.use()` installs a `Connection` holding fake `CoreV1Api` and `AppsV1Api` objects, and because every tool reaches the API through `cluster.current()` and `cluster.call()`, the fakes see exactly the calls a real client would, including the `asyncio.to_thread` hop.\n\nTwo choices make the fake trustworthy. It returns real `kubernetes.client` model objects (`V1Pod`, `V1ContainerStatus`, `CoreV1Event`), so the nested optional attributes the code must survive are the ones it is tested against, where a dict fake would let `pod[\"status\"][\"phase\"]` pass. It raises real `ApiException`s, so the 404 and 400 branches run with the exception the client throws. It also records each call's thread, which turns the worker-thread rule into an assertion.\n\nThe suite cannot establish what only a cluster has: whether the service account's RBAC role really grants and denies what the post says, how the API server applies `limitBytes`, `tailLines` and event expiry, how long real calls take under load, and whether credentials load from a real kubeconfig or service account. Those are what the post's run against a local cluster is for.",
+      "rubric": [
+        {
+          "criterion": "Describes the in-memory client opened in the test body and the single seam, cluster.use(), through which the fakes replace the cluster.",
+          "points": 3
+        },
+        {
+          "criterion": "Names two of: real kubernetes.client model objects, real ApiException raises, the thread recorder.",
+          "points": 3
+        },
+        {
+          "criterion": "Names two real properties out of the suite's reach, such as RBAC, real API server behavior of limitBytes or event expiry, latency under load, or real credential loading.",
+          "points": 2
+        },
+        {
+          "criterion": "Connects the thread recorder or the seam to the post's claims about cluster.call().",
+          "points": 2
+        }
+      ],
+      "explanation": "Section 9 explains the fake cluster and points at post 12 for the in-memory pattern. The fake works because the package reaches the API through one seam and type-checks nothing, and it is trustworthy because it returns real model objects and raises real exceptions; what it cannot show is anything only a real API server or RBAC role decides.",
+      "hints": [
+        "Find the single function that installs the fakes, and what every tool calls to reach the API.",
+        "Ask what a dict-shaped fake would let pass, and what no fake can know about a real cluster."
+      ],
+      "connects": [
+        "mcp-012"
+      ]
+    },
+    {
+      "id": "mcp-015-q17",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "10",
+      "est_minutes": 2,
+      "tags": [
+        "rbac",
+        "events"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`describe_pod` comes back with `isError: false`, a full `containers` list, and `\"events\": []`, and the diagnosis has no finding whose `source` is `events`. What may the reader conclude?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Nothing has happened to the pod in its lifetime, so the container states are the whole story.",
+          "correct": false,
+          "feedback": "Events expire, one hour by default, so an empty list cannot speak for the pod's whole life even when it is real."
+        },
+        {
+          "key": "b",
+          "text": "Either nothing was recorded recently or the role cannot list events; check the role before trusting it.",
+          "correct": true,
+          "feedback": "Correct. A 403 on events is caught and returned as an empty list by design, so the result looks the same as a quiet hour."
+        },
+        {
+          "key": "c",
+          "text": "The server crashed while reading events, so the result is partial and should be retried.",
+          "correct": false,
+          "feedback": "A crash would come back with `isError: true` and only `Error executing tool describe_pod`; this result succeeded."
+        },
+        {
+          "key": "d",
+          "text": "The pod is healthy, because a pod with a real failure always produces warning events.",
+          "correct": false,
+          "feedback": "The container states are read separately and can still show a crash loop; an empty event list says nothing about health."
+        }
+      ],
+      "explanation": "Sections 5 and 10: the helper that reads a pod's events returns `[]` on any `ClusterError`, so losing event access degrades the diagnosis instead of failing it. `snippets/refusals.py` shows the 403 case producing `isError: false` and `events: []` with nothing in the log, which is why the empty list is ambiguous.",
+      "hints": [
+        "Events expire, and reading them needs its own permission.",
+        "Recall what the helper does when the events call raises."
+      ]
+    },
+    {
+      "id": "mcp-015-q18",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "4",
+      "est_minutes": 1,
+      "tags": [
+        "modules",
+        "read-only"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The package has five modules: `app`, `cluster`, `inspect`, `diagnose` and `remediate`. Which one is the only module whose code can change the cluster?",
+      "answer": {
+        "model": "`remediate` (`remediate.py`)",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|never|isn't|is not)\\s+(?:the\\s+)?(?:module\\s+)?[\\\"'`]?(?:k8s_responder[./])?remediate)(?![\\s\\S]*\\bremediate(?:\\.py)?[\\\"'`]?\\s*(?:,|\\bor\\b|\\band\\b|/|\\+)\\s*[\\\"'`]?(?:k8s_responder[./])?(?:inspect|diagnose|cluster|app)\\b)(?![\\s\\S]*\\b(?:inspect|diagnose|cluster|app)(?:\\.py)?[\\\"'`]?\\s*(?:,|\\bor\\b|\\band\\b|/|\\+)\\s*[\\\"'`]?(?:k8s_responder[./])?remediate)(?![\\s\\S]*\\bremediate(?:\\.py)?[\\\"'`]?\\s+(?:is not|isn't|is never|cannot|can't|does not|doesn't)\\b)[\\s\\S]*\\bremediate\\b[\\s\\S]*$"
+        ]
+      },
+      "explanation": "Section 4's table: only `remediate.py` writes (restart, scale, rollback, post 16), and `snippets/tool_surface.py` finds `delete_namespaced` and `patch_namespaced` in its source and none in `inspect.py` or `diagnose.py`. The writing tools exist only because `__init__.py` imports it.",
+      "hints": [
+        "It is the module post 16 writes."
+      ]
+    }
+  ]
+}

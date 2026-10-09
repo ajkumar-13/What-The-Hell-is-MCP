@@ -15,11 +15,10 @@ Three jobs live here.
    able to look at kube-system. Writes are.
 
 A note on `asyncio.to_thread` versus the older
-`asyncio.get_event_loop().run_in_executor(None, ...)`: `get_event_loop()` is
-deprecated inside a coroutine, returns the wrong thing when no loop is running,
-and in a threaded context can silently create a second loop. `to_thread` is the
-supported spelling and it forwards keyword arguments, so no `functools.partial`
-dance either.
+`asyncio.get_event_loop().run_in_executor(None, ...)`: inside a coroutine
+`get_event_loop()` only returns the running loop, which `get_running_loop()`
+says more plainly, and `run_in_executor` forwards positional arguments only, so
+every keyword argument needs a `functools.partial`. `to_thread` needs neither.
 """
 
 from __future__ import annotations

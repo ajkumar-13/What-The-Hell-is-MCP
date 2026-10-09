@@ -8,7 +8,7 @@ the full elicitation round trip.
 Note the shape of every test: the client is opened with `async with` inside the
 test body, not handed over by a yield fixture. The client owns an anyio task
 group, and a task group has to be exited by the same task that entered it. A
-yield fixture tears down in a different task and every test fails with
+yield fixture tears down in a different task and every test errors in teardown with
 "Attempted to exit cancel scope in a different task".
 """
 

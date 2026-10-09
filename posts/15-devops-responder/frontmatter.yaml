@@ -1,8 +1,24 @@
 id: mcp-015
 slug: 15-devops-responder
-title: "15 · Project 2 · A DevOps first responder"
+title: "15 - Project 2: A DevOps first responder"
+summary: "Builds a read-only Kubernetes first responder: a worker-thread wrapper for the synchronous client, a crash-loop diagnosis that names the field behind every finding, and log reads bounded in lines and in bytes."
 date: 2026-07-25
-tags: [model-context-protocol, mcp, project, kubernetes, observability, read-only]
-hero: diagrams/01-diagnostic-pipeline.svg
-reading_time: 23
+updated: 2026-10-09
+status: complete
 part: "Part IV - Projects"
+level: intermediate
+reading_time: 33
+tags: [mcp, project, kubernetes, observability, read-only]
+hero: diagrams/01-diagnostic-pipeline.svg
+prerequisites: [mcp-012]
+code: required
+outcomes:
+  - id: o1
+    text: "Call a synchronous client library from an async tool through one wrapper that keeps the transport free and turns its errors into messages a model can read."
+  - id: o2
+    text: "Correlate pod phase, container status, and events into one verdict a human can check."
+  - id: o3
+    text: "Bound a log read in lines and in bytes, keep the end that matters, and report what was dropped."
+  - id: o4
+    text: "Make a server's read-only claim structural instead of advisory."
+recommended: [mcp-014]

@@ -25,8 +25,8 @@ uv sync --extra dev
 
 The `mcp` dependency is **pinned exactly** to `2.3.0`, a release of the 2.x line that
 implements protocol revision 2026-07-28. Floating that pin will break the
-imports outright: the 1.x line uses `mcp.server.fastmcp` and `mcp.types`, both
-of which no longer exist.
+imports outright: the 1.x line uses `mcp.server.fastmcp`, which no longer
+exists (`mcp.types` survives in 2.x only as a mirror of `mcp_types`).
 
 ## Run
 

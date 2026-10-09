@@ -5,10 +5,11 @@ it. Keeping the instance in its own module is what lets the read-only tools and
 the writing tools live in separate files without a circular import, and that
 separation is the whole architectural point of this server.
 
-Under the stdio transport, stdout IS the protocol channel. Anything printed
-there is parsed as a JSON-RPC frame, and a stray print() will break the
-connection in a way that is genuinely hard to diagnose. Logging goes to stderr,
-which the host collects and shows you.
+Under the stdio transport, stdout IS the protocol channel. A print() before the
+server starts, or text left in the stdout buffer until exit, is parsed as a
+JSON-RPC frame and breaks the connection in a way that is hard to diagnose; the
+SDK diverts flushed prints to stderr once it is serving. Logging goes to stderr,
+which a host may capture into a log.
 """
 
 from __future__ import annotations
