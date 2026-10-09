@@ -193,6 +193,9 @@ Each host documents its own configuration file, and they disagree with each othe
 - Kubernetes Python client. https://github.com/kubernetes-client/python
 - Kubernetes, *"Debug Running Pods"*. https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/
 - Kubernetes, *"Rolling Back a Deployment"*. https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-back-a-deployment
+- Kubernetes documentation, *"Update API Objects in Place Using kubectl patch"*: the default strategic merge and the merge key on `env`. https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/
+- kubectl source, `pkg/polymorphichelpers/rollback.go`: the two-operation JSON Patch `kubectl rollout undo` sends and the annotations it keeps. https://github.com/kubernetes/kubectl/blob/master/pkg/polymorphichelpers/rollback.go
+- kubectl source, `pkg/polymorphichelpers/history.go`: how `kubectl rollout history` reads a revision's change cause. https://github.com/kubernetes/kubectl/blob/master/pkg/polymorphichelpers/history.go
 - Kubernetes, *"Owners and Dependents"*. https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/
 - Playwright for Python. https://playwright.dev/python/
 - `trafilatura`. https://trafilatura.readthedocs.io/

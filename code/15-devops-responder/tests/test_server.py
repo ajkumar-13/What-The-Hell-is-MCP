@@ -19,6 +19,7 @@ import inspect as pyinspect
 import unicodedata
 
 import pytest
+from kubernetes.client import ApiClient
 from mcp import Client
 from mcp_types import ElicitResult
 
@@ -668,9 +669,10 @@ async def test_rollback_replaces_the_whole_pod_template(fake):
 
     patch = fake.json_patch()
     assert isinstance(patch, list)
-    assert len(patch) == 1
-    assert patch[0]["op"] == "replace"
-    assert patch[0]["path"] == "/spec/template"
+    assert [(op["op"], op["path"]) for op in patch] == [
+        ("replace", "/spec/template"),
+        ("replace", "/metadata/annotations"),
+    ]
 
     sent = fake.recorder.kwargs_for("patch_namespaced_deployment")[-1]
     assert sent["_content_type"] == "application/json-patch+json"
@@ -686,6 +688,14 @@ async def test_rollback_replaces_the_whole_pod_template(fake):
     # And the memory limit goes back with it.
     assert container["resources"]["limits"]["memory"] == "512Mi"
 
+    # Nothing is added to the template, so it is revision 2's without the hash
+    # label. An annotation written into it would make the controller create a
+    # new ReplicaSet instead of reusing revision 2's.
+    target = next(rs for rs in fake.replica_sets if rs.metadata.name == "checkout-2b")
+    expected = ApiClient().sanitize_for_serialization(target.spec.template)
+    expected["metadata"]["labels"].pop("pod-template-hash")
+    assert patch[0]["value"] == expected
+
 
 async def test_rollback_strips_the_controller_owned_pod_template_hash(fake):
     """`pod-template-hash` identifies a ReplicaSet; copying it would be a lie."""
@@ -698,13 +708,19 @@ async def test_rollback_strips_the_controller_owned_pod_template_hash(fake):
 
 
 async def test_rollback_records_a_change_cause(fake):
+    """The cause goes on the Deployment, where the next ReplicaSet inherits it."""
     async with answering("accept", APPROVE) as c:
         await c.call_tool("rollback_deployment", {"deployment_name": "checkout"})
 
-    annotations = fake.json_patch()[0]["value"]["metadata"]["annotations"]
+    annotations = fake.json_patch()[1]["value"]
     cause = annotations["kubernetes.io/change-cause"]
     assert "rollback to revision 2" in cause
     assert "paged at 02:00" in cause
+
+    # The Deployment keeps its own revision counter, as kubectl's patch does.
+    assert annotations["deployment.kubernetes.io/revision"] == "3"
+    deployment = fake.deployments[0]
+    assert deployment.metadata.annotations == annotations
 
 
 async def test_rollback_states_what_it_does_not_restore(fake):

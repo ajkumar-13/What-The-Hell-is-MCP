@@ -43,7 +43,11 @@ def main() -> None:
     parser.add_argument(
         "--protect",
         default="",
-        help="comma-separated namespaces the writing tools must refuse",
+        help=(
+            "comma-separated namespaces the writing tools must refuse; replaces "
+            "the default list (kube-system,kube-public,kube-node-lease), so "
+            "include those to keep them"
+        ),
     )
     parser.add_argument(
         "--http",

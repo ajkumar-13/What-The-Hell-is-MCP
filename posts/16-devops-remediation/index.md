@@ -373,10 +373,13 @@ That puts the old image back and leaves everything else exactly where the bad de
 
 *A rollback restores a pod template. Most of what a bad deploy touches is not in the pod template.*
 
-**The fix is to replace the whole template, with a JSON Patch.** A JSON Patch is a list of operations applied to a document. The Kubernetes page "Rolling Back a Deployment" says what a rollback means: only the Deployment's pod template is rolled back. `kubectl rollout undo` sends a JSON Patch `replace` of `/spec/template`, and so does the project, in `src/k8s_responder/remediate.py`:
+**The fix is to replace the whole template, with a JSON Patch.** A JSON Patch is a list of operations applied to a document. The Kubernetes page "Rolling Back a Deployment" says what a rollback means: only the Deployment's pod template is rolled back. kubectl's source, `pkg/polymorphichelpers/rollback.go`, shows what `kubectl rollout undo` sends: one JSON Patch with two `replace` operations, `/spec/template` with the target ReplicaSet's template and `/metadata/annotations` with that ReplicaSet's annotations. The project sends the same two, in `src/k8s_responder/remediate.py`:
 
 ```python
-    patch = [{"op": "replace", "path": "/spec/template", "value": template}]
+    patch = [
+        {"op": "replace", "path": "/spec/template", "value": template},
+        {"op": "replace", "path": "/metadata/annotations", "value": annotations},
+    ]
 
     await call(
         conn.apps_v1.patch_namespaced_deployment,
@@ -387,7 +390,7 @@ That puts the old image back and leaves everything else exactly where the bad de
     )
 ```
 
-**A strategic merge patch is the wrong tool here, and the reason is subtle.** It is what `kubectl patch` sends unless told otherwise, and it merges lists by a key rather than replacing them. A container's `env` list is keyed by `name`, so an environment variable that exists in the current template and not in the target is kept rather than removed, and it survives the rollback, exactly as the merge above shows. "Put it back the way it was" needs a replace of the whole subtree, and the content type is how the request says so.
+**A strategic merge patch is the wrong tool here, and the reason is subtle.** It is what `kubectl patch` sends unless told otherwise, and it merges lists by a key rather than replacing them. A container's `env` list is keyed by `name`, so an environment variable that exists in the current template and not in the target is kept rather than removed, and it survives the rollback, as the image-only merge above also shows. "Put it back the way it was" needs a replace of the whole subtree, and the content type is how the request says so.
 
 Here is the patch the fake API server received for an approved `rollback_deployment("checkout")`, as `snippets/rollback.py` prints it:
 
@@ -400,9 +403,6 @@ Here is the patch the fake API server received for an approved `rollback_deploym
       "metadata": {
         "labels": {
           "app": "checkout"
-        },
-        "annotations": {
-          "kubernetes.io/change-cause": "rollback to revision 2 via k8s-responder: paged at 02:00"
         }
       },
       "spec": {
@@ -428,11 +428,19 @@ Here is the patch the fake API server received for an approved `rollback_deploym
         ]
       }
     }
+  },
+  {
+    "op": "replace",
+    "path": "/metadata/annotations",
+    "value": {
+      "deployment.kubernetes.io/revision": "3",
+      "kubernetes.io/change-cause": "rollback to revision 2 via k8s-responder: paged at 02:00"
+    }
   }
 ]
 ```
 
-The fixture's current revision has `FEATURE_NEW_CART=true` and a 256Mi memory limit. In the patch both are gone: the environment variable is absent, not merged, and the limit is back at 512Mi. `test_rollback_replaces_the_whole_pod_template` in `tests/test_server.py` asserts it directly:
+The fixture's current revision has `FEATURE_NEW_CART=true` and a 256Mi memory limit. In the patch both are gone: the environment variable is absent, not merged, and the limit is back at 512Mi. The script compares the first operation's value with revision 2's ReplicaSet template and prints `restored template equals revision 2's, pod-template-hash aside: True`. `test_rollback_replaces_the_whole_pod_template` in `tests/test_server.py` asserts it directly:
 
 ```python
     # The environment variable the bad deploy introduced is gone, not merged.
@@ -444,7 +452,9 @@ The fixture's current revision has `FEATURE_NEW_CART=true` and a 256Mi memory li
     assert container["resources"]["limits"]["memory"] == "512Mi"
 ```
 
-**Two details in that patch are easy to miss.** The `pod-template-hash` label is stripped before the template is sent. The Deployment controller computes that label and applies it to the ReplicaSets it creates, so copying it from an old ReplicaSet into the Deployment's template would be claiming to be that ReplicaSet; `kubectl rollout undo` strips it for the same reason. And a `kubernetes.io/change-cause` annotation is added, the one field this tool writes rather than restores. It lands in the pod template's metadata, which has two consequences worth knowing. Every new pod carries it, and the restored template differs from revision 2's by that annotation. And `kubectl rollout history` does not show it: the Deployment page says the history's change cause is copied from the Deployment's own `kubernetes.io/change-cause` annotation to its revisions when they are created, and this patch does not touch the Deployment's metadata. The reason the operator typed is recorded on the pods and in the server's log line, not in the rollout history.
+**Two details in that patch are easy to miss.** The `pod-template-hash` label is stripped before the template is sent. The Deployment controller computes that label and applies it to the ReplicaSets it creates, so copying it from an old ReplicaSet into the Deployment's template would be claiming to be that ReplicaSet; `kubectl rollout undo` strips it for the same reason. And nothing is added to the template, so it is revision 2's exactly; carrying the change cause in the second operation rather than in the template is what lets the controller reuse revision 2's ReplicaSet instead of creating a new one.
+
+The second operation is where the reason goes. The Deployment's annotations become the target ReplicaSet's, filtered as kubectl filters them: the Deployment keeps its own values for `deployment.kubernetes.io/revision`, the last-applied configuration and the replica-count annotations, and takes every other annotation from the ReplicaSet. The project then sets `kubernetes.io/change-cause` to the operator's reason, here `rollback to revision 2 via k8s-responder: paged at 02:00`. The Deployment page says the change cause is copied from the Deployment's `kubernetes.io/change-cause` annotation to its revisions, and kubectl's `history.go` shows `kubectl rollout history` reading each revision's cause from its ReplicaSet's annotation, falling back to the pod template's. So the reason the operator typed reaches the rollout history through the Deployment, and the server's log line records it too.
 
 **What a rollback does not restore is returned with every result.** Not in the documentation; in the payload:
 
@@ -452,7 +462,7 @@ The fixture's current revision has `FEATURE_NEW_CART=true` and a 256Mi memory li
 not_restored:
   - spec.replicas: the replica count lives outside the pod template and is left exactly where it is, including if something scaled it during the incident
   - deployment-level fields such as spec.strategy, minReadySeconds, progressDeadlineSeconds, and revisionHistoryLimit
-  - labels and annotations on the Deployment object itself
+  - labels on the Deployment object itself, and its revision, last-applied-configuration and replica-count annotations, which keep their current values
   - objects the template only references: ConfigMaps, Secrets, PersistentVolumeClaims, Services, Ingresses, and any HorizontalPodAutoscaler
   - anything changed outside this Deployment, which includes most of what a bad deploy actually touches
 warnings: ['spec.replicas was left at 3. A rollback does not restore the replica count.']
@@ -724,6 +734,8 @@ K8S_RESPONDER_MAX_REPLICAS=50 K8S_RESPONDER_PROTECTED_NAMESPACES=payments gives
 - Specification, *"Tools"*, revision 2026-07-28. The `ToolAnnotations` note quoted in section 2, the requirement that clients treat annotations as untrusted, and the rule that clients should prompt for confirmation. <https://modelcontextprotocol.io/specification/2026-07-28/server/tools>
 - Hungerford, O., Morrow, S., and Chang, L., *"Tool Annotations as Risk Vocabulary: What Hints Can and Can't Do"* (2026-03-16), Model Context Protocol blog. What `destructiveHint` can and cannot do. <https://blog.modelcontextprotocol.io/posts/2026-03-16-tool-annotations/>
 - Kubernetes, *"Rolling Back a Deployment"*. Why only the pod template rolls back, why revisions are ReplicaSets, and where the rollout history's change cause comes from. <https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-back-a-deployment>
+- kubectl source, `pkg/polymorphichelpers/rollback.go` and `history.go`. The two operations `kubectl rollout undo` sends, the annotations it keeps from the Deployment, and where `kubectl rollout history` reads a change cause. <https://github.com/kubernetes/kubectl/tree/master/pkg/polymorphichelpers>
+- Kubernetes, *"Update API Objects in Place Using kubectl patch"*. How a strategic merge patch merges the `containers` list by `name`, and the JSON Patch type. <https://kubernetes.io/docs/tasks/manage-kubernetes-objects/update-api-object-kubectl-patch/>
 - Kubernetes, *"Owners and Dependents"*. Controller owner references, the authoritative link a label selector is not. <https://kubernetes.io/docs/concepts/overview/working-with-objects/owners-dependents/>
 - MCP Python SDK, release 2.3.0. `Resolve`, `Elicit`, `ElicitationResult`, `ToolError`, and `Client` with an `elicitation_callback`. <https://github.com/modelcontextprotocol/python-sdk>
 - [code/15-devops-responder/](../../code/15-devops-responder/). The complete project, with the tests run in section 11.

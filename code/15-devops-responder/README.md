@@ -141,15 +141,22 @@ variable, a memory limit. Put only the image back and the pod comes up on the ol
 code with the new, broken configuration, the tool reports success, and the
 incident continues with everyone believing it is over.
 
-`rollback_deployment` sends a **JSON Patch that replaces `/spec/template`
-outright**, which is what `kubectl rollout undo` does. A strategic merge patch
+`rollback_deployment` sends the **JSON Patch `kubectl rollout undo` sends**: one
+operation replaces `/spec/template` outright with the target revision's
+template (its `pod-template-hash` label stripped, nothing added), and a second
+replaces `/metadata/annotations` with the target ReplicaSet's annotations,
+filtered as kubectl filters them, with `kubernetes.io/change-cause` set to the
+operator's reason. Because the template is exactly the old revision's, the
+controller reuses that revision's ReplicaSet, which inherits the change cause
+that `kubectl rollout history` shows. A strategic merge patch
 would not do: it merges lists by key, so an environment variable present in the
 current template and absent from the target would survive the rollback.
 
 What comes back: images, command, args, environment, resource requests and
-limits, probes, volumes, securityContext, and everything else under
-`spec.template`. What does not: `spec.replicas`, deployment-level fields such as
-`spec.strategy`, labels and annotations on the Deployment itself, and every
+limits, probes, volumes, securityContext, everything else under
+`spec.template`, and the Deployment's annotations as that revision recorded
+them. What does not: `spec.replicas`, deployment-level fields such as
+`spec.strategy`, labels on the Deployment itself, and every
 object the template merely references (ConfigMaps, Secrets, PVCs, Services, any
 HorizontalPodAutoscaler). Both lists are returned on every rollback in `restored`
 and `not_restored`, so the scope travels with the result.

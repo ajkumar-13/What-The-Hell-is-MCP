@@ -8,8 +8,9 @@ tests/conftest.py installed. First applies an image-only patch to the
 fixture's current pod template, merging containers by name the way a
 strategic merge patch merges that list, and prints what survives. Then calls
 rollback_deployment(checkout) over an in-memory client whose user approves,
-and prints the JSON Patch the fake API server received, its content type, the
-scope lists and the warnings of the result. Then the
+and prints the JSON Patch the fake API server received, its content type,
+whether the restored template equals revision 2's, the Deployment's
+annotations afterwards, and the scope lists and the warnings of the result. Then the
 ReplicaSets the label selector returns against the ones the deployment owns,
 a rollback to a revision that belongs to another deployment, and the same
 rollback with the ownership filter replaced by a pass-through. Nothing outside
@@ -99,6 +100,12 @@ async def the_rollback() -> None:
     print("\n== rollback_deployment(checkout), approved: the patch the API server received ==")
     print(json.dumps(state.json_patch(), indent=2))
     print(f"_content_type: {sent['_content_type']}")
+    target_rs = next(rs for rs in state.replica_sets if rs.metadata.name == "checkout-2b")
+    expected = k8s.ApiClient().sanitize_for_serialization(target_rs.spec.template)
+    expected["metadata"]["labels"].pop("pod-template-hash")
+    print("restored template equals revision 2's, pod-template-hash aside: "
+          f"{state.json_patch()[0]['value'] == expected}")
+    print(f"deployment annotations after the patch: {state.deployments[0].metadata.annotations}")
     print(f"\nfrom_revision={data['from_revision']} to_revision={data['to_revision']} "
           f"restored_images={data['restored_images']}")
     print("restored:")

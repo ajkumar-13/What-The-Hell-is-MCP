@@ -509,6 +509,8 @@ class FakeAppsV1:
         for op in body if isinstance(body, list) else []:
             if op.get("op") == "replace" and op.get("path") == "/spec/template":
                 dep.spec.template = _template_from_dict(op["value"])
+            elif op.get("op") == "replace" and op.get("path") == "/metadata/annotations":
+                dep.metadata.annotations = dict(op["value"])
         return dep
 
 

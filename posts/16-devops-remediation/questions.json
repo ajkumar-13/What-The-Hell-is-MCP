@@ -728,32 +728,33 @@
       ],
       "status": "reviewed",
       "updated": "2026-10-09",
-      "prompt": "The project's rollback adds a `kubernetes.io/change-cause` annotation to the restored pod template's metadata. Critique that choice: say what it changes about the restored template and the new pods, explain what `kubectl rollout history` shows for the rollback and why, and propose a change to the patch that records the reason where the history reads it.",
+      "prompt": "The project's rollback sends one JSON Patch with two `replace` operations, as `kubectl rollout undo` does: `/spec/template` with the target revision's template, and `/metadata/annotations` with the target ReplicaSet's annotations, the operator's reason set as `kubernetes.io/change-cause`. A reviewer proposes dropping the second operation and writing the reason into the restored template's annotations instead. Critique the proposal: say what it changes about the restored template and what the Deployment controller then does, explain where `kubectl rollout history` would find a change cause and when the reason would not be the one it shows, and say what else the second operation does to the Deployment.",
       "kind": "critique",
       "answer_length": "half a page",
-      "solution": "The annotation is written into `spec.template.metadata.annotations`, so it is part of the pod template. Two things follow. The restored template is no longer byte-identical to revision 2's: it carries one extra annotation, so it is revision 2's template plus a field, not revision 2's template. And every pod the rollout creates carries the annotation, because template metadata is copied onto the pods.\n\n`kubectl rollout history` does not show the reason. The Kubernetes Deployment page says the change cause is copied from the Deployment's own `kubernetes.io/change-cause` annotation to its revisions when they are created, not from the template inside them. This patch replaces `/spec/template` and leaves the Deployment's `/metadata/annotations` alone, so the reason the operator typed is not what the history shows; it survives only on the pods and in the server's log line.\n\nThe fix is to restore the template exactly and record the reason on the Deployment: drop the annotation from the template value, and add a second JSON Patch operation that sets `/metadata/annotations/kubernetes.io~1change-cause` (the `/` in the key escaped as `~1`) on the Deployment, in the same request so both apply together. The test that checks the cause would then read the Deployment's annotation instead of the template's.",
+      "solution": "Writing the reason into `spec.template.metadata.annotations` makes it part of the pod template. The restored template is then revision 2's plus one annotation, not revision 2's, so the Deployment controller does not recognize it as the template of revision 2's ReplicaSet and creates a new ReplicaSet instead of reusing the old one. Every pod of the rollout also carries the annotation, because template metadata is copied onto the pods. With nothing added to the template, as the project sends it, the template equals revision 2's (the snippet prints `True` for that comparison) and the old ReplicaSet is reused.\n\n`kubectl rollout history` reads a revision's change cause from the ReplicaSet's own `kubernetes.io/change-cause` annotation and falls back to the pod template's only when the ReplicaSet has none (kubectl's `history.go`). The ReplicaSet's annotation is copied from the Deployment's, as the Deployment page says. Under the proposal the Deployment's annotations are untouched, so if the Deployment already carries a change cause from an earlier change, the new revision inherits that stale cause and the history shows it, not the operator's reason; the template's annotation is shown only when no cause was ever set. Setting the cause on the Deployment, as the second operation does, puts the reason where the history reads it first.\n\nThe second operation also replaces the rest of the Deployment's annotations with the target ReplicaSet's, filtered as kubectl filters them: the Deployment keeps its own `deployment.kubernetes.io/revision`, last-applied configuration and replica-count annotations, and takes the other annotations as revision 2 recorded them. Both operations travel in one request, so they apply together or not at all.",
       "rubric": [
         {
-          "criterion": "States that the annotation lands in the pod template, so the restored template differs from the target revision's and every new pod carries it.",
+          "criterion": "States that an annotation written into the template makes it differ from revision 2's, so the controller creates a new ReplicaSet instead of reusing revision 2's, and every new pod carries it.",
           "points": 3
         },
         {
-          "criterion": "Explains that rollout history reads the change cause copied from the Deployment's own annotation, which this patch does not set.",
+          "criterion": "Explains that rollout history reads the ReplicaSet's change cause, copied from the Deployment, and falls back to the template's only when the ReplicaSet has none, so a stale cause on the Deployment would be shown instead of the reason.",
           "points": 3
         },
         {
-          "criterion": "Proposes recording the reason on the Deployment's metadata, for example a second JSON Patch operation, while restoring the template unchanged.",
+          "criterion": "Says what else the second operation does: the Deployment's other annotations become revision 2's, while its revision, last-applied and replica-count annotations keep their current values.",
           "points": 3
         },
         {
-          "criterion": "Notes the consequence for the operator: the typed reason is not where the history shows it.",
+          "criterion": "Notes that both operations are in one JSON Patch request, so they apply together.",
           "points": 1
         }
       ],
-      "explanation": "Section 6 prints the patch, with the annotation inside `/spec/template`, and cites the Deployment page's rule that the history's change cause comes from the Deployment's annotation. A cause recorded in the template is therefore on the pods and in the log, not in the history.",
+      "explanation": "Section 6 prints the two-operation patch, the line saying the restored template equals revision 2's, and the annotations the Deployment keeps; it cites kubectl's `history.go` for where the history reads a change cause and the Deployment page for the cause being copied from the Deployment to its revisions. A cause written into the template breaks the equality that lets the old ReplicaSet be reused, and loses to any cause the Deployment already carries.",
       "hints": [
-        "Find the annotation's path in the printed patch.",
-        "Ask which object's annotations the Deployment page says the history's change cause is copied from."
+        "Compare the template the proposal would send with revision 2's ReplicaSet template.",
+        "Ask which annotation `kubectl rollout history` reads first, and where that annotation is copied from.",
+        "List the annotations in the second operation's value and say which come from the Deployment and which from the ReplicaSet."
       ]
     },
     {

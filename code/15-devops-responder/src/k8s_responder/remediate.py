@@ -1,8 +1,8 @@
 """The tools that change the cluster. Post 16.
 
 This is the only module in the package that can write. Everything in `inspect`
-and `diagnose` reads; the `delete_`, `patch_`, and `create_` calls live here and
-nowhere else. If you want to run this server in a mode that genuinely cannot
+and `diagnose` reads; the `delete_` and `patch_` calls live here and nowhere
+else. If you want to run this server in a mode that genuinely cannot
 touch anything, delete the import of this module from `__init__.py` and the
 capability is gone, not merely discouraged.
 
@@ -58,6 +58,18 @@ from .cluster import ClusterError, PolicyError, call, current, limits, timestamp
 REVISION_ANNOTATION = "deployment.kubernetes.io/revision"
 CHANGE_CAUSE_ANNOTATION = "kubernetes.io/change-cause"
 POD_TEMPLATE_HASH = "pod-template-hash"
+
+# The Deployment annotations `kubectl rollout undo` keeps from the Deployment
+# rather than copying from the target ReplicaSet (`annotationsToSkip` in
+# kubectl's pkg/polymorphichelpers/rollback.go).
+ANNOTATIONS_TO_SKIP = (
+    "kubectl.kubernetes.io/last-applied-configuration",
+    REVISION_ANNOTATION,
+    "deployment.kubernetes.io/revision-history",
+    "deployment.kubernetes.io/desired-replicas",
+    "deployment.kubernetes.io/max-replicas",
+    "deprecated.deployment.rollback.to",
+)
 
 DESTRUCTIVE = ToolAnnotations(
     read_only_hint=False,
@@ -266,6 +278,8 @@ RESTORED_BY_ROLLBACK = [
     "volumes, volume mounts, securityContext, and serviceAccountName",
     "the pod template's own labels and annotations",
     "every other field under spec.template",
+    "the Deployment's own annotations, as the target revision's ReplicaSet "
+    "recorded them, with kubernetes.io/change-cause set to this rollback's reason",
 ]
 
 NOT_RESTORED_BY_ROLLBACK = [
@@ -273,7 +287,9 @@ NOT_RESTORED_BY_ROLLBACK = [
     "exactly where it is, including if something scaled it during the incident",
     "deployment-level fields such as spec.strategy, minReadySeconds, "
     "progressDeadlineSeconds, and revisionHistoryLimit",
-    "labels and annotations on the Deployment object itself",
+    "labels on the Deployment object itself, and its revision, "
+    "last-applied-configuration and replica-count annotations, which keep their "
+    "current values",
     "objects the template only references: ConfigMaps, Secrets, PersistentVolume"
     "Claims, Services, Ingresses, and any HorizontalPodAutoscaler",
     "anything changed outside this Deployment, which includes most of what a "
@@ -350,7 +366,8 @@ def preview_rollback(
         ),
         api_call=(
             f"PATCH /apis/apps/v1/namespaces/{namespace}/deployments/"
-            f"{deployment_name} (application/json-patch+json, replace /spec/template)"
+            f"{deployment_name} (application/json-patch+json, replace /spec/template "
+            "and /metadata/annotations)"
         ),
         reversible=(
             "Yes, by rolling forward again. The rollback itself creates a new "
@@ -491,6 +508,32 @@ def template_as_dict(template: Any) -> dict:
     if isinstance(labels, dict):
         labels.pop(POD_TEMPLATE_HASH, None)
     return body
+
+
+def rollback_annotations(deployment: Any, replica_set: Any) -> dict[str, str]:
+    """The Deployment's annotations after a rollback, computed as kubectl does.
+
+    The Deployment keeps its own values for the keys in `ANNOTATIONS_TO_SKIP`
+    (its revision counter, the last-applied configuration, the replica-count
+    bookkeeping) and takes every other annotation from the target ReplicaSet,
+    which the Deployment controller copied from the Deployment when it created
+    that revision.
+    """
+    current_annotations = (
+        (deployment.metadata.annotations or {}) if deployment.metadata else {}
+    )
+    target_annotations = (
+        (replica_set.metadata.annotations or {}) if replica_set.metadata else {}
+    )
+    annotations = {
+        key: current_annotations[key]
+        for key in ANNOTATIONS_TO_SKIP
+        if key in current_annotations
+    }
+    for key, value in target_annotations.items():
+        if key not in ANNOTATIONS_TO_SKIP:
+            annotations[key] = value
+    return annotations
 
 
 async def fetch_deployment(name: str, namespace: str) -> Any:
@@ -836,9 +879,11 @@ async def rollback_deployment(
 ) -> RollbackResult:
     """Roll a deployment back to a previous revision, once a human approves.
 
-    **What this restores.** The whole pod template. The patch is a JSON Patch
-    that replaces `/spec/template` outright with the template from the target
-    revision's ReplicaSet, which is what `kubectl rollout undo` does. Images,
+    **What this restores.** The whole pod template. The patch is a JSON Patch,
+    the one `kubectl rollout undo` sends: it replaces `/spec/template` outright
+    with the template from the target revision's ReplicaSet, and
+    `/metadata/annotations` with that ReplicaSet's annotations, the reason for
+    the rollback recorded as `kubernetes.io/change-cause`. Images,
     command, args, environment variables, resource requests and limits, probes,
     volumes, and securityContext all go back together. A rollback that restored
     only the container image would report success while leaving the environment
@@ -847,8 +892,8 @@ async def rollback_deployment(
 
     **What this does not restore.** `spec.replicas`, which lives outside the pod
     template and is deliberately left alone. Deployment-level fields such as
-    `spec.strategy` and `minReadySeconds`. Labels and annotations on the
-    Deployment object. And everything the template merely references: ConfigMaps,
+    `spec.strategy` and `minReadySeconds`. Labels on the Deployment object,
+    and its revision and bookkeeping annotations. And everything the template merely references: ConfigMaps,
     Secrets, PersistentVolumeClaims, Services, and any HorizontalPodAutoscaler.
     The same lists are returned in `restored` and `not_restored` so the answer
     travels with the result.
@@ -961,22 +1006,27 @@ async def rollback_deployment(
 
     note = _note(approval)
 
-    # Record why the template changed, the way `kubectl rollout undo` does. This
-    # is the one field we add to the restored template rather than restore.
-    change_cause = (
+    # The Deployment's annotations as `kubectl rollout undo` computes them, with
+    # the reason for this rollback as the change cause. It goes on the
+    # Deployment, not into the template: the template stays byte for byte the
+    # target revision's, so the controller reuses that revision's ReplicaSet,
+    # and the ReplicaSet inherits the cause, where `kubectl rollout history`
+    # reads it.
+    annotations = rollback_annotations(deployment, target)
+    annotations[CHANGE_CAUSE_ANNOTATION] = (
         f"rollback to revision {target_revision} via k8s-responder"
         + (f": {note}" if note else "")
     )
-    template.setdefault("metadata", {}).setdefault("annotations", {})[
-        CHANGE_CAUSE_ANNOTATION
-    ] = change_cause
 
-    # A JSON Patch `replace`, not a strategic merge. A strategic merge patch
+    # JSON Patch `replace`, not a strategic merge. A strategic merge patch
     # merges lists by key, so a container's environment variable that exists in
     # the current template and not in the target would survive the rollback.
     # `replace` swaps the whole subtree, which is the only thing that means
-    # "put it back the way it was".
-    patch = [{"op": "replace", "path": "/spec/template", "value": template}]
+    # "put it back the way it was". The two operations are the two kubectl sends.
+    patch = [
+        {"op": "replace", "path": "/spec/template", "value": template},
+        {"op": "replace", "path": "/metadata/annotations", "value": annotations},
+    ]
 
     await call(
         conn.apps_v1.patch_namespaced_deployment,
