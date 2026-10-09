@@ -563,7 +563,7 @@
       ],
       "status": "reviewed",
       "updated": "2026-10-09",
-      "prompt": "A research report says `\"stopped_because\": \"completed: visited every source\"` and `\"pages_failed\": 1`. What does that tell the caller?",
+      "prompt": "A research report says `\"stopped_because\": \"completed: attempted every source\"` and `\"pages_failed\": 1`. What does that tell the caller?",
       "select": "single",
       "options": [
         {
@@ -574,7 +574,7 @@
         },
         {
           "key": "b",
-          "text": "Every source was attempted; one failed to load and is listed in `failures`.",
+          "text": "One source could not be loaded; its error is in `failures`, and the loop went on.",
           "correct": true,
           "feedback": "Right. The loop ran out of URLs rather than budget, and a dead link is recorded and stepped over rather than ending the pass."
         },
@@ -591,7 +591,7 @@
           "feedback": "A dead link does not end the pass. A pass that stops early says `budget: ...` with the number of sources not visited."
         }
       ],
-      "explanation": "Section 11 prints this exact case: a dead link, then a page that loads, then the same page again gives `pages_visited=1`, `pages_failed=1`, the failure in `failures`, and `completed: visited every source`. A caller that reads only `stopped_because` misses the failure.",
+      "explanation": "Section 11 prints this exact case: a dead link, then a page that loads, then the same page again gives `pages_visited=1`, `pages_failed=1`, the failure in `failures`, and `completed: attempted every source`. Attempted is not read: a caller that reads only `stopped_because` misses the failure.",
       "hints": [
         "Ask what `stopped_because` describes: the loop or the pages.",
         "Section 7's dead-link handler appends and continues."

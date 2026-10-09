@@ -441,7 +441,7 @@ The script runs `research_urls` over the same three fixture URLs with different 
 {"max_pages": 2}   pages_visited=2 words_read=841  stopped_because: budget: page limit reached (2), 1 source(s) not visited
 {"max_words": 500} pages_visited=1 words_read=707  stopped_because: budget: word limit reached (500), 2 source(s) not visited
 {"max_words": 100} pages_visited=1 words_read=707  stopped_because: budget: word limit reached (500), 2 source(s) not visited
-(defaults)         pages_visited=3 words_read=1106  stopped_because: completed: visited every source
+(defaults)         pages_visited=3 words_read=1106  stopped_because: completed: attempted every source
 ```
 
 Set the first two lines against a report that simply contains two sources, or one. The pages are the same, and the facts are different. "Every source was read" and "the budget ran out and some were skipped" call for different next actions from the caller, and a report that cannot tell them apart forces the caller to guess. (The third line is a trap section 11 explains.)
@@ -455,7 +455,7 @@ Set the first two lines against a report that simply contains two sources, or on
             # One dead link must not end the pass. Record it and move on: a
             # report that says which sources failed is more useful than one
             # that quietly has fewer sources than you asked for.
-            failures.append(f"{url}: {exc}")
+            failures.append(str(exc))
             log.warning("research: skipping %s (%s)", url, exc)
             continue
 ```
@@ -510,7 +510,7 @@ The `verbatim` flag is checked, not asserted. The extractive summarizer returns 
   "words_read": 841,
   "words_returned": 113,
   "reduction_percent": 86.6,
-  "stopped_because": "completed: visited every source",
+  "stopped_because": "completed: attempted every source",
   "failures": []
 }
 ```
@@ -638,13 +638,13 @@ The tool fails outright, so a server still on the runway needs a path that works
 
 ```
 pages_visited=1 pages_failed=1
-failures: ['https://example.com/gone: could not load https://example.com/gone: net::ERR_NAME_NOT_RESOLVED']
-stopped_because: completed: visited every source
+failures: ['could not load https://example.com/gone: net::ERR_NAME_NOT_RESOLVED']
+stopped_because: completed: attempted every source
 ```
 
 The `net::ERR_NAME_NOT_RESOLVED` text is the suite's fixture fetcher imitating what a real browser reports for a host that does not resolve; a live run would carry the browser's own message.
 
-`stopped_because` describes the loop, not the outcome: every source was *attempted*, and one of them failed. A caller that reads only `stopped_because` misses the failure; `pages_failed` and `failures` carry it. (The URL appears twice because `load_page` already names it in its `ToolError` and the loop prefixes it again.)
+`stopped_because` describes the loop, not the outcome: it says every source was *attempted*, not that every source was read. A caller that reads only `stopped_because` misses the failure; `pages_failed` and `failures` carry it, and each `failures` entry is the `ToolError` message of `load_page`, which already names the URL.
 
 **A word budget that is not the one asked for.** The third budget line in section 7 asked for 100 words and was stopped at 500, because `research_urls` clamps `max_words` to at least 500 and `max_pages` to between 1 and 20. The gate also runs *before* each page, so a pass can overshoot by up to one page: the 500-word budget read 707 words. The word limit is a stopping rule, not a cap on what one page can cost.
 
