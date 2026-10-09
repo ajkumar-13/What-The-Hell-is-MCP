@@ -1,8 +1,24 @@
 id: mcp-020
 slug: 20-authorization
-title: "20 · Authorization: OAuth 2.1 for MCP servers"
+title: "20 - Authorization: OAuth 2.1 for MCP servers"
+summary: "Treats an authorized MCP server as an OAuth 2.1 resource server: when to leave authorization off, the metadata and challenge it publishes, the audience check, 401 against 403, and the two attacks behind the fiddly rules."
 date: 2026-07-26
-tags: [model-context-protocol, mcp, security, oauth, authorization, tokens]
-hero: diagrams/01-three-party-flow.svg
-reading_time: 19
+updated: 2026-10-09
+status: complete
 part: "Part V - Production"
+level: advanced
+reading_time: 28
+tags: [mcp, oauth, authorization, security, tokens]
+hero: diagrams/01-three-party-flow.svg
+prerequisites: [mcp-019]
+code: required
+outcomes:
+  - id: o1
+    text: "Decide whether a server needs authorization at all, and leave it off correctly on a local server."
+  - id: o2
+    text: "Publish protected resource metadata and the `WWW-Authenticate` challenge that points at it."
+  - id: o3
+    text: "Validate an inbound token, including the audience check, and answer `401` and `403` the way clients expect."
+  - id: o4
+    text: "Explain the mix-up attack and the confused deputy to whoever reviews the design."
+recommended: [mcp-008]

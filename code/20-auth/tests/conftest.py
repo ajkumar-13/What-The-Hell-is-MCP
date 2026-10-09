@@ -49,13 +49,12 @@ PROTOCOL_VERSION = "2026-07-28"
 
 #: Every envelope key the server demands on `params._meta`.
 #:
-#: Worth knowing before you spend an afternoon on it: the specification lists
-#: `clientInfo` as SHOULD, but `mcp==2.0.0b2` rejects a request without it,
-#: with `-32602` and the message "params._meta must carry the reserved
-#: protocol-version, client-info and client-capabilities envelope keys". All
-#: three are required in practice. Omit one while debugging a token and the
-#: failure arrives as a `400` that says nothing about authorization at all,
-#: which is a confusing place to land.
+#: The specification lists `clientInfo` as SHOULD and `mcp==2.3.0` serves a
+#: request without it; the protocol version and the client capabilities are
+#: required, and a request missing either gets `-32602` with a message naming
+#: both keys. Omit one while debugging a token and the failure arrives as a
+#: `400` that says nothing about authorization at all, which is a confusing
+#: place to land. The tests send all three anyway, so every frame is complete.
 REQUEST_META = {
     "io.modelcontextprotocol/protocolVersion": PROTOCOL_VERSION,
     "io.modelcontextprotocol/clientCapabilities": {},

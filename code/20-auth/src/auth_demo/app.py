@@ -117,6 +117,12 @@ def _build(
             issuer_url=issuer,  # type: ignore[arg-type]
             resource_server_url=resource_url(host, port),  # type: ignore[arg-type]
             required_scopes=list(REQUIRED_SCOPES),
+            # The SDK's own second check: refuse any token whose
+            # `AccessToken.resource`, as the verifier reports it, is not
+            # `resource_server_url`. It reads only what the verifier returns,
+            # so it adds to the audience check in `verifier.py` and does not
+            # replace it.
+            validate_token_resource=True,
         ),
     )
 
@@ -152,7 +158,7 @@ def build_static_server(
     and headers, and it is not a model of anything you should deploy.
     """
     return _build(
-        verifier or StaticTokenVerifier(),
+        verifier or StaticTokenVerifier(resource=resource_url(host, port)),
         issuer=STATIC_ISSUER,
         host=host,
         port=port,

@@ -21,7 +21,7 @@ import pytest
 
 from auth_demo.app import REQUIRED_SCOPES, build_static_server
 from auth_demo.verifier import StaticTokenVerifier, audience_names_us
-from conftest import jwt_server, mcp_headers, mcp_request, static_server
+from conftest import DEFAULT_HOST, DEFAULT_PORT, _serve, jwt_server, mcp_headers, mcp_request, static_server
 from toy_as.app import issuer_for
 from toy_as.provider import DEMO_SIGNING_KEY
 
@@ -236,7 +236,7 @@ async def test_insufficient_scope_challenge_carries_no_scope_parameter():
     """Post 20 section 9 reports a gap. This test is what keeps that report honest.
 
     The specification says a server **should** put a `scope` parameter in the
-    `WWW-Authenticate` challenge. Running `mcp==2.0.0b2` it does not: the
+    `WWW-Authenticate` challenge. Under `mcp==2.3.0` it does not: the
     required scope appears only in the human-readable `error_description`, so a
     client parsing the machine-readable parameter finds nothing.
 
@@ -284,3 +284,17 @@ def test_server_publishes_the_scope_it_requires():
     server = build_static_server()
     assert server.settings.auth is not None
     assert server.settings.auth.required_scopes == REQUIRED_SCOPES
+
+
+async def test_the_sdk_refuses_a_token_reported_for_another_resource():
+    """`validate_token_resource=True` is the SDK's own audience check.
+
+    A verifier that reports every token as issued for some other service makes
+    the bearer middleware refuse `good-token` with 401, before the scope check
+    and before the tool.
+    """
+    verifier = StaticTokenVerifier(resource=f"http://{DEFAULT_HOST}:{DEFAULT_PORT}/some-other-service")
+    app = build_static_server(verifier=verifier).streamable_http_app()
+    async with _serve(app, f"http://{DEFAULT_HOST}:{DEFAULT_PORT}") as client:
+        response = await client.post("/mcp", json=mcp_request(), headers=mcp_headers(token="good-token"))
+    assert response.status_code == 401

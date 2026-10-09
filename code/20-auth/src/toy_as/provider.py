@@ -165,7 +165,7 @@ class ToyAuthorizationServer(
     async def register_client(self, client_info: OAuthClientInformationFull) -> None:
         """Refused. Dynamic Client Registration is deprecated and off here.
 
-        The SDK still ships the `/register` handler and `2.0.0b2` attaches no
+        The SDK still ships the `/register` handler and `2.3.0` attaches no
         deprecation marker to it, but the route is only mounted when
         `ClientRegistrationOptions(enabled=True)` is passed, and the default is
         `False`. Nothing in this project turns it on, so this method is

@@ -69,7 +69,7 @@ uv run pytest
 ```
 
 ```
-21 passed, 1 warning
+22 passed
 ```
 
 The suite binds no socket. `streamable_http_app()` returns a Starlette application and the
@@ -80,14 +80,15 @@ Two things worth knowing about the test files:
 
 - **No `yield` fixtures.** The application lifespan and the client each own an anyio task
   group, and a task group must be exited by the task that entered it. An async yield fixture
-  tears down in a different task, and every test fails with `Attempted to exit cancel scope in
+  tears down in a different task, and every test errors in teardown with `Attempted to exit cancel scope in
   a different task than it was entered in`. Each test opens its own client with `async with`
   in the test body. Post 12 §4 covers this; `code/05-first-server/tests/` meets the same rule.
-- **`clientInfo` is required in practice.** The specification lists it as SHOULD, but
-  `mcp==2.0.0b2` rejects a request whose `params._meta` omits it, with `-32602` and the
-  message "params._meta must carry the reserved protocol-version, client-info and
-  client-capabilities envelope keys". Leave it out while debugging a token and the failure
-  arrives as a `400` that says nothing about authorization.
+- **Two `_meta` keys are required, not three.** `clientInfo` is a SHOULD and a request
+  without it is served. A request whose `params._meta` lacks the protocol version or the
+  client capabilities gets `-32602` with the message "params._meta must be an object carrying
+  the required 'io.modelcontextprotocol/protocolVersion' and
+  'io.modelcontextprotocol/clientCapabilities' envelope keys". Leave one out while debugging
+  a token and the failure arrives as a `400` that says nothing about authorization.
 
 ## Two findings this project produced
 
@@ -101,6 +102,6 @@ bites a path-less issuer, which is the common case.
 two values against each other rather than against a shared constant, because a shared constant
 would have been wrong in both places at once.
 
-**One SDK warning, not ours.** The suite emits one `IncompleteFieldDefinitionWarning` from
-`pydantic_settings` about an unresolved forward reference on a `lifespan` field inside the SDK.
-Nothing in this project can fix it and nothing here depends on it.
+**The SDK's resource check.** `AuthSettings.validate_token_resource=True` makes the bearer
+middleware refuse a token whose reported `AccessToken.resource` is not `resource_server_url`.
+Left unset, the SDK warns on every start; set, the suite runs with no warnings.

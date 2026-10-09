@@ -76,6 +76,11 @@ class StaticTokenVerifier:
 
     tokens: Mapping[str, list[str]] = field(default_factory=lambda: dict(POST_20_TOKENS))
     client_id: str = "demo-client"
+    #: The resource every known token is reported as issued for. With
+    #: `AuthSettings.validate_token_resource=True` the SDK refuses a token whose
+    #: reported resource is not `resource_server_url`, so `build_static_server`
+    #: passes its own identifier here; `None` makes every token fail that check.
+    resource: str | None = None
 
     async def verify_token(self, token: str) -> AccessToken | None:
         """Look the token up. Unknown strings are refused."""
@@ -86,6 +91,7 @@ class StaticTokenVerifier:
             token=token,
             client_id=self.client_id,
             scopes=list(scopes),
+            resource=self.resource,
         )
 
 
@@ -105,10 +111,12 @@ def audience_names_us(claims: Mapping[str, Any], resource: str) -> bool:
     so both shapes are handled and a bare string is not iterated character by
     character.
 
-    The comparison is exact. No case folding, no trailing-slash tolerance, no
-    default-port elision. The same reasoning post 20 section 8 gives for issuer
-    comparison applies here: the value being compared is an identifier, not a
-    URL to be resolved, and every helpful URL library will quietly break it.
+    The comparison is exact string equality against the published identifier.
+    The specification asks implementations to accept an uppercase scheme and
+    host (Canonical Server URI); this fixture need not, because the toy
+    authorization server copies `resource` into `aud` unchanged. A verifier
+    facing other authorization servers should lowercase the scheme and host of
+    both, and nothing else: the value is an identifier, not a URL to resolve.
 
     A missing `aud` is a refusal, not a pass. "The token did not say who it was
     for" is not evidence that it was for us.

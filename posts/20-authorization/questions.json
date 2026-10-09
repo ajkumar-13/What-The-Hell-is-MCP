@@ -1,0 +1,781 @@
+{
+  "standard": "2.1.0",
+  "post": "mcp-020",
+  "next_ordinal": 18,
+  "questions": [
+    {
+      "id": "mcp-020-q01",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "1",
+      "est_minutes": 2,
+      "tags": [
+        "stdio",
+        "credentials"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A server that the host launches as a child process over standard input and output needs a database password to do its work. What does the Authorization page say such a server should do?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Skip the authorization specification and retrieve the credential from the environment.",
+          "correct": true,
+          "feedback": "Correct. Implementations on stdio SHOULD NOT follow the authorization specification; the host spawned the process and nothing else can reach it, so there is no boundary for OAuth to add."
+        },
+        {
+          "key": "b",
+          "text": "Run the OAuth 2.1 authorization code flow with PKCE before answering its first request.",
+          "correct": false,
+          "feedback": "That is what an HTTP server reachable by several people does. On stdio it adds a browser round trip and a token store in exchange for no new security boundary."
+        },
+        {
+          "key": "c",
+          "text": "Publish protected resource metadata so the host can discover where to get a token.",
+          "correct": false,
+          "feedback": "Protected resource metadata is served over HTTP at a well-known URL; a stdio server has no URL to publish it at, and the rule tells it not to follow the authorization specification."
+        },
+        {
+          "key": "d",
+          "text": "Accept the password as an argument of each tool call so the model can supply it.",
+          "correct": false,
+          "feedback": "That hands a secret to the model and its context; the specification's answer for stdio is the environment the host passes to the process."
+        }
+      ],
+      "explanation": "Section 1 quotes the Authorization page: authorization is optional, HTTP implementations SHOULD conform, and stdio implementations SHOULD NOT follow the specification and instead retrieve credentials from the environment. The process inherits the host's environment and is reachable by nothing else.",
+      "hints": [
+        "Ask who can reach a process that the host itself spawned."
+      ]
+    },
+    {
+      "id": "mcp-020-q02",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 2,
+      "tags": [
+        "status-codes",
+        "scopes"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The project's static server requires `system:read`. A request arrives with `Authorization: Bearer weak-token`, a token the verifier recognizes but which carries no scopes. What does the server answer, and what should the client do next?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "`401` with `error=\"invalid_token\"`; the client starts a fresh login.",
+          "correct": false,
+          "feedback": "The token was recognized, so it is not invalid. Answering 401 here would send the client back through a full login when a step-up would do."
+        },
+        {
+          "key": "b",
+          "text": "`403` with `error=\"insufficient_scope\"`; the client asks for more scope.",
+          "correct": true,
+          "feedback": "Correct. The snippet prints `403   Bearer error=\"insufficient_scope\"`: the token is fine and not enough, which starts a step-up flow."
+        },
+        {
+          "key": "c",
+          "text": "`400 Bad Request`, because the token is malformed for this server.",
+          "correct": false,
+          "feedback": "400 is for a malformed authorization request. A well-formed token with thin scopes is a permissions problem, not a syntax one."
+        },
+        {
+          "key": "d",
+          "text": "`200` with an `isError` result whose text names the scope the token is missing.",
+          "correct": false,
+          "feedback": "Scope enforcement happens in the HTTP middleware before any MCP method runs, so no JSON-RPC result is produced at all."
+        }
+      ],
+      "explanation": "Section 6 separates the two codes: 401 means get a token, 403 means the token is fine but does not carry enough. Section 10's run of `snippets/four_requests.py` prints 403 with `insufficient_scope` for `weak-token`.",
+      "hints": [
+        "Was the token recognized, or not?",
+        "One status starts a login; the other starts a step-up."
+      ]
+    },
+    {
+      "id": "mcp-020-q03",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "9",
+      "est_minutes": 4,
+      "tags": [
+        "validate-token-resource",
+        "audience"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A server sets `validate_token_resource=True`. Its verifier skips the `aud` check and always returns an `AccessToken` whose `resource` is the server's own `resource_server_url`. A token issued for a calendar service, otherwise valid, is presented. What happens, and why?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "It is refused with `401`, because the SDK decodes the token and reads `aud` itself.",
+          "correct": false,
+          "feedback": "Nothing in the SDK's bearer authentication reads an access token's `aud`; the `ClaimsItIsForUs` row of `snippets/my_verifier.py` gets 200 for the calendar token."
+        },
+        {
+          "key": "b",
+          "text": "It is served with `200`, because the SDK compares only the resource the verifier reports.",
+          "correct": true,
+          "feedback": "Correct. The middleware's check reads `AccessToken.resource`, and this verifier reports the server's identifier whatever the token says."
+        },
+        {
+          "key": "c",
+          "text": "It is refused with `401`, because the flag has no effect until the SDK's 3.0 release.",
+          "correct": false,
+          "feedback": "The flag works now when set to True; 3.0 only changes the default for an unset field, which today behaves as False and warns."
+        },
+        {
+          "key": "d",
+          "text": "It is refused with `403`, because the middleware treats a foreign resource as a scope failure.",
+          "correct": false,
+          "feedback": "A failed resource check makes the backend return no user, which the route answers with 401, not 403."
+        }
+      ],
+      "explanation": "Section 9 runs four verifiers on the same settings. `ClaimsItIsForUs` reports the server's identifier for every token, and the calendar token gets 200: the SDK's resource check is a second line that sees only what the verifier reports, not a replacement for reading `aud`.",
+      "hints": [
+        "Ask what input the middleware's resource check actually reads.",
+        "Compare what the verifier reports with what the token says."
+      ]
+    },
+    {
+      "id": "mcp-020-q04",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "8",
+      "est_minutes": 2,
+      "tags": [
+        "mix-up",
+        "pkce"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Why does Proof Key for Code Exchange (PKCE) on its own fail to stop the mix-up attack, in which a hostile authorization server tries to redeem a code that an honest one issued?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The client sends its `code_verifier` to the token endpoint it believes is right, which here is the attacker's.",
+          "correct": true,
+          "feedback": "Correct. The specification puts it directly: PKCE alone does not prevent this attack because the client transmits the `code_verifier` to the attacker's token endpoint."
+        },
+        {
+          "key": "b",
+          "text": "An attacker who sees the authorization request can reverse its S256 challenge and so recover the original verifier.",
+          "correct": false,
+          "feedback": "S256 is a SHA-256 hash of a high-entropy verifier; reversing it is not the weakness. The attacker simply receives the verifier from the confused client."
+        },
+        {
+          "key": "c",
+          "text": "PKCE protects only confidential clients, and MCP clients are public.",
+          "correct": false,
+          "feedback": "PKCE exists precisely for public clients that cannot keep a secret; the project's demonstration client is public and still runs PKCE."
+        },
+        {
+          "key": "d",
+          "text": "The `iss` parameter replaced PKCE in revision 2026-07-28.",
+          "correct": false,
+          "feedback": "Issuer identification is added beside PKCE, not instead of it; the project's flow uses both."
+        }
+      ],
+      "explanation": "Section 8 quotes the specification: PKCE alone does not prevent the mix-up attack because the client transmits the `code_verifier` to the attacker's token endpoint. Issuer identification (RFC 9207) lets the client notice the wrong server before the code and verifier leave.",
+      "hints": [
+        "Follow where the verifier is sent when the client is confused about which server it is talking to."
+      ]
+    },
+    {
+      "id": "mcp-020-q05",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "4",
+      "est_minutes": 2,
+      "tags": [
+        "well-known",
+        "rfc-9728"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "An MCP server is served at `https://example.com/public/mcp`. At which URL does it publish its protected resource metadata under RFC 9728?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "`https://example.com/public/mcp/.well-known/oauth-protected-resource`",
+          "correct": false,
+          "feedback": "The well-known segment goes between the host and the path, not after the path."
+        },
+        {
+          "key": "b",
+          "text": "`https://example.com/.well-known/oauth-protected-resource`",
+          "correct": false,
+          "feedback": "That is the URL for a server at the root. The demonstration server answers 404 there because it lives on a path."
+        },
+        {
+          "key": "c",
+          "text": "`https://example.com/.well-known/oauth-protected-resource/public/mcp`",
+          "correct": true,
+          "feedback": "Correct. RFC 9728 inserts the well-known segment between the host and the resource path."
+        },
+        {
+          "key": "d",
+          "text": "`https://example.com/.well-known/oauth-authorization-server/public/mcp`",
+          "correct": false,
+          "feedback": "`oauth-authorization-server` is the authorization server's own metadata (RFC 8414), the next hop of the chain, not the resource server's."
+        }
+      ],
+      "explanation": "Section 4 gives the rule and this exact example: the well-known segment is inserted between the host and the resource path. The project's server publishes at `/.well-known/oauth-protected-resource/mcp` and answers 404 at the root URL.",
+      "hints": [
+        "The well-known segment goes right after the host.",
+        "What follows it is the resource's own path."
+      ]
+    },
+    {
+      "id": "mcp-020-q06",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "8",
+      "est_minutes": 4,
+      "tags": [
+        "issuer",
+        "rfc-9207"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "An authorization server publishes `\"issuer\": \"http://127.0.0.1:9123/\"` in its metadata, but its redirect carries `iss=http://127.0.0.1:9123`. A client uses the MCP Python SDK's `validate_authorization_response_iss`. What happens?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Accepted: both strings name the same host and port, so they are one issuer.",
+          "correct": false,
+          "feedback": "RFC 9207 comparison is simple string comparison; clients MUST NOT apply trailing-slash normalization. The snippet prints a rejection."
+        },
+        {
+          "key": "b",
+          "text": "Accepted here, but the resource server later refuses the token with `401`.",
+          "correct": false,
+          "feedback": "The client check fails first, on the redirect, so no code is redeemed and no token reaches the resource server."
+        },
+        {
+          "key": "c",
+          "text": "Rejected with an `iss` mismatch, before the code is sent to any token endpoint.",
+          "correct": true,
+          "feedback": "Correct. `snippets/issuer_slash.py` prints `Authorization response iss mismatch: http://127.0.0.1:9123 != http://127.0.0.1:9123/` for this pair."
+        },
+        {
+          "key": "d",
+          "text": "Rejected only if the server also advertises `authorization_response_iss_parameter_supported`.",
+          "correct": false,
+          "feedback": "That advertisement matters only when `iss` is absent. A present `iss` that differs is always rejected."
+        }
+      ],
+      "explanation": "Section 8 rebuilds the first version of the toy authorization server, whose metadata gained a slash from `AnyHttpUrl` while its `iss` did not, and the SDK client rejects the authorization response. A correct client would never have redeemed a code from that server.",
+      "hints": [
+        "How exact is an RFC 9207 comparison?",
+        "Which step of the flow runs the check?"
+      ]
+    },
+    {
+      "id": "mcp-020-q07",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "4",
+      "est_minutes": 1,
+      "tags": [
+        "www-authenticate"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "In the `401` challenge the SDK sends, which parameter of the `WWW-Authenticate` header gives the URL of the document that lists the server's authorization servers? Give the parameter name.",
+      "answer": {
+        "model": "`resource_metadata`",
+        "accept": [
+          "^(?![\\s\\S]*\\bresource[_ ]metadata\\b`?(?:\\s+(?:claim|parameter))?\\s+(?:is|was|are|does|do|need|needs)\\s*(?:n't|\\s+not|\\s+never)\\b)(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|never|isn't|is not|no|without)\\s+(?:the\\s+|an?\\s+)?`?resource[_ ]metadata)(?![\\s\\S]*\\bresource[_ ]metadata\\b`?(?:\\s+(?:claim|parameter))?\\s*(?:,|\\bor\\b|/|\\band\\b|&)\\s*`?(?:the\\s+)?(?:scope|error|error_description|realm|authorization_servers|resource)\\b)(?![\\s\\S]*\\b(?:scope|error|error_description|realm|authorization_servers|resource)\\b`?(?:\\s+(?:claim|parameter))?\\s*(?:,|\\bor\\b|/|\\band\\b|&)\\s*`?(?:the\\s+)?resource[_ ]metadata\\b)[\\s\\S]*\\bresource[_ ]metadata\\b[\\s\\S]*$"
+        ]
+      },
+      "explanation": "Section 4 prints the challenge: `Bearer error=\"invalid_token\", error_description=\"Authentication required\", resource_metadata=\"http://127.0.0.1:8123/.well-known/oauth-protected-resource/mcp\"`. The client fetches that URL and reads `authorization_servers` from the document.",
+      "hints": [
+        "It is the last parameter of the header the snippet prints."
+      ]
+    },
+    {
+      "id": "mcp-020-q08",
+      "type": "short",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "5",
+      "est_minutes": 1,
+      "tags": [
+        "audience",
+        "jwt"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A resource server has checked a JSON Web Token's signature, expiry and issuer. Which claim must it still compare against its own published `resource` value before serving the request? Name the claim.",
+      "answer": {
+        "model": "`aud`, the audience claim",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:aud|audience)\\b`?(?:\\s+(?:claim|parameter))?\\s+(?:is|was|are|does|do|need|needs)\\s*(?:n't|\\s+not|\\s+never)\\b)(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|never|isn't|is not|no|without)\\s+(?:the\\s+|an?\\s+)?`?(?:aud|audience)\\b)(?![\\s\\S]*\\b(?:aud|audience)\\b`?(?:\\s+(?:claim|parameter))?\\s*(?:,|\\bor\\b|/|\\band\\b|&)\\s*`?(?:the\\s+)?(?:iss|sub|exp|scope|client_id|iat|nbf|issuer|subject|jti)\\b)(?![\\s\\S]*\\b(?:iss|sub|exp|scope|client_id|iat|nbf|issuer|subject|jti)\\b`?(?:\\s+(?:claim|parameter))?\\s*(?:,|\\bor\\b|/|\\band\\b|&)\\s*`?(?:the\\s+)?(?:aud|audience)\\b)[\\s\\S]*\\b(?:aud|audience)\\b[\\s\\S]*$"
+        ]
+      },
+      "explanation": "Section 5: a correctly signed, unexpired token issued for another service must be refused, and the check is that the token names this server, which for a JWT is the `aud` claim compared against the `resource` in the metadata. `aud` may be a string or a list.",
+      "hints": [
+        "The check answers the question: who was this token issued for?",
+        "It is a three-letter registered claim name."
+      ]
+    },
+    {
+      "id": "mcp-020-q09",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "10",
+      "est_minutes": 2,
+      "tags": [
+        "status-codes"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The project's static server requires `system:read`; its verifier accepts `good-token` with that scope and `weak-token` with none, and refuses everything else. Give the HTTP status for a POST to `/mcp` with no `Authorization` header, with `Bearer nope`, with `Bearer weak-token`, and with `Bearer good-token`.",
+      "answer": {
+        "parts": [
+          {
+            "label": "no header",
+            "value": 401,
+            "tolerance": 0,
+            "unit": ""
+          },
+          {
+            "label": "nope",
+            "value": 401,
+            "tolerance": 0,
+            "unit": ""
+          },
+          {
+            "label": "weak-token",
+            "value": 403,
+            "tolerance": 0,
+            "unit": ""
+          },
+          {
+            "label": "good-token",
+            "value": 200,
+            "tolerance": 0,
+            "unit": ""
+          }
+        ]
+      },
+      "explanation": "Section 10's four requests: no token and an unknown token are both 401 with `invalid_token`, a recognized token without the scope is 403 with `insufficient_scope`, and a good token reaches `tools/list` with 200.",
+      "hints": [
+        "Two of the four have no usable token at all.",
+        "Separate a token that is unknown from one that is known but thin."
+      ],
+      "precision_note": "Printed by snippets/four_requests.py, section 'the four requests': 401, 401, 403, 200. The nearest wrong method, answering 401 for every refusal, gives 401 for weak-token."
+    },
+    {
+      "id": "mcp-020-q10",
+      "type": "numeric",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "12",
+      "est_minutes": 4,
+      "tags": [
+        "validate-token-resource"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Four tokens: one audienced at the server, one audienced at a calendar service, one audienced at the server but expired, and one the verifier does not know. The verifier skips the audience check and reports each token's own `aud` as `AccessToken.resource` and its `exp` as `expires_at`. How many of the four get `200` with `validate_token_resource` left unset, and how many with it set to `True`?",
+      "answer": {
+        "parts": [
+          {
+            "label": "unset",
+            "value": 2,
+            "tolerance": 0,
+            "unit": "tokens"
+          },
+          {
+            "label": "True",
+            "value": 1,
+            "tolerance": 0,
+            "unit": "tokens"
+          }
+        ]
+      },
+      "explanation": "The middleware refuses an expired `expires_at` in both cases and the unknown token never gets past the verifier. Unset, nothing compares the reported resource, so the calendar token joins the good one; with True, the reported calendar resource differs from `resource_server_url` and is refused, as section 12 and the `TrustsTheToken` row of section 9 print.",
+      "hints": [
+        "The middleware checks expiry on its own, whatever the flag says.",
+        "With the flag unset, which check is missing, and which token does that let through?"
+      ],
+      "precision_note": "Printed by snippets/my_verifier.py: 'TrustsTheToken' row (for-us=200, for-calendar=401) and the unset run (for-us=200, for-calendar=200); expired and unknown are 401 in both. Forgetting the middleware's expiry check gives 3 and 2."
+    },
+    {
+      "id": "mcp-020-q11",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "5",
+      "est_minutes": 12,
+      "tags": [
+        "audience",
+        "jwt"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Write `audience_names_us(claims, resource)`, the audience check of a token verifier. `claims` is a decoded token. Return `True` only when its `aud` claim names `resource` exactly: `aud` may be a single string or a list of strings, and a missing or empty `aud` is a refusal. Standard library only.",
+      "kind": "implement",
+      "language": "python",
+      "starter": "def audience_names_us(claims: dict, resource: str) -> bool:\n    \"\"\"True when the token's `aud` claim names `resource`.\"\"\"\n    raise NotImplementedError\n",
+      "solution": "def audience_names_us(claims: dict, resource: str) -> bool:\n    \"\"\"True when the token's `aud` claim names `resource`.\"\"\"\n    audience = claims.get(\"aud\")\n    if audience is None:\n        return False\n    allowed = audience if isinstance(audience, list) else [audience]\n    return resource in allowed\n",
+      "tests": "\nUS = \"http://127.0.0.1:8123/mcp\"\n\n# Both shapes RFC 7519 allows.\nassert audience_names_us({\"aud\": US}, US) is True\nassert audience_names_us({\"aud\": [US, \"https://other.example\"]}, US) is True\nassert audience_names_us({\"aud\": [\"https://other.example\", US]}, US) is True\n\n# Another service's token, however valid otherwise.\nassert audience_names_us({\"aud\": \"https://calendar.example.com\"}, US) is False\nassert audience_names_us({\"aud\": [\"https://calendar.example.com\"]}, US) is False\n\n# An empty list and a missing claim are refusals, not passes.\nassert audience_names_us({\"aud\": []}, US) is False\nassert audience_names_us({}, US) is False, \"a token that does not say who it is for is not for us\"\n\n# A bare string is one identifier, not a sequence of characters to search.\nassert audience_names_us({\"aud\": \"http://127.0.0.1:8123/mcp-admin\"}, US) is False, \"substring match\"\nassert audience_names_us({\"aud\": \"http://127.0.0.1:8123\"}, US) is False, \"a prefix is not the identifier\"\n\n# A trailing slash, or a path in another case, names a different resource.\nassert audience_names_us({\"aud\": US + \"/\"}, US) is False, \"trailing slash\"\nassert audience_names_us({\"aud\": \"HTTP://127.0.0.1:8123/MCP\"}, US) is False, \"path case\"\n\nprint(\"all audience tests passed\")\n",
+      "explanation": "Section 5 and the verifier of section 9: a bare string is wrapped in a list so it is compared as one identifier rather than searched character by character, a missing claim refuses, and each entry is compared by equality, never by substring or prefix.",
+      "hints": [
+        "Normalize the two allowed shapes into one list first.",
+        "Use equality against each entry, never substring search, and decide what a missing claim means before anything else."
+      ]
+    },
+    {
+      "id": "mcp-020-q12",
+      "type": "order",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "4",
+      "est_minutes": 3,
+      "tags": [
+        "discovery",
+        "flow"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Put the steps of the three-party flow in the order a client that knows only the server's endpoint performs them.",
+      "items": [
+        {
+          "key": "a",
+          "text": "Fetch the authorization server's metadata from `/.well-known/oauth-authorization-server`"
+        },
+        {
+          "key": "b",
+          "text": "POST to `/mcp` with no token and read the `401` challenge"
+        },
+        {
+          "key": "c",
+          "text": "Exchange the code at `/token`, sending the `code_verifier` and `resource`"
+        },
+        {
+          "key": "d",
+          "text": "Fetch the protected resource metadata named by `resource_metadata`"
+        },
+        {
+          "key": "e",
+          "text": "Repeat the POST to `/mcp` with the bearer token"
+        },
+        {
+          "key": "f",
+          "text": "Send the user to `/authorize` with a PKCE challenge and `resource`, and check the returned `iss`"
+        }
+      ],
+      "answer": [
+        "b",
+        "d",
+        "a",
+        "f",
+        "c",
+        "e"
+      ],
+      "partial_credit": true,
+      "explanation": "Section 4's walk of `snippets/three_party_flow.py`: the 401 names the protected resource metadata, which names the authorization server, whose metadata gives the endpoints; then authorize (checking `iss`), exchange the code, and repeat the request with the token.",
+      "hints": [
+        "Each step reads something the step before it returned.",
+        "The authorization server's address comes from the resource server's metadata."
+      ]
+    },
+    {
+      "id": "mcp-020-q13",
+      "type": "match",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "4",
+      "est_minutes": 3,
+      "tags": [
+        "metadata",
+        "rfc-9728"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Match each field of the protected resource metadata document to the job it does.",
+      "left": [
+        {
+          "key": "a",
+          "text": "`resource`"
+        },
+        {
+          "key": "b",
+          "text": "`authorization_servers`"
+        },
+        {
+          "key": "c",
+          "text": "`scopes_supported`"
+        },
+        {
+          "key": "d",
+          "text": "`bearer_methods_supported`"
+        }
+      ],
+      "right": [
+        {
+          "key": "p",
+          "text": "The canonical identifier the client asks a token to be audienced at"
+        },
+        {
+          "key": "q",
+          "text": "Who may issue tokens this server accepts; at least one entry"
+        },
+        {
+          "key": "r",
+          "text": "The published minimum set of scopes, not the full catalog"
+        },
+        {
+          "key": "s",
+          "text": "How the token travels: in a header"
+        },
+        {
+          "key": "t",
+          "text": "The token endpoint the client posts its code to"
+        }
+      ],
+      "answer": {
+        "a": "p",
+        "b": "q",
+        "c": "r",
+        "d": "s"
+      },
+      "explanation": "Section 4 gives each field one job. The token endpoint is not in this document at all: it is in the authorization server's own metadata, one hop further along the chain.",
+      "hints": [
+        "One description belongs to a different metadata document."
+      ]
+    },
+    {
+      "id": "mcp-020-q14",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "8",
+      "est_minutes": 1,
+      "tags": [
+        "mix-up",
+        "rfc-9207"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Under RFC 9207, which parameter does the authorization server add to its authorization response so that the client can detect a mix-up before it redeems the code? Give the parameter name.",
+      "answer": {
+        "model": "`iss`, the issuer identifier",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:iss|issuer)\\b`?(?:\\s+(?:claim|parameter))?\\s+(?:is|was|are|does|do|need|needs)\\s*(?:n't|\\s+not|\\s+never)\\b)(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|never|isn't|is not|no|without)\\s+(?:the\\s+|an?\\s+)?`?(?:iss|issuer)\\b)(?![\\s\\S]*\\b(?:iss|issuer)\\b`?(?:\\s+(?:claim|parameter))?\\s*(?:,|\\bor\\b|/|\\band\\b|&)\\s*`?(?:the\\s+)?(?:state|code|code_verifier|code_challenge|nonce|scope|aud|resource)\\b)(?![\\s\\S]*\\b(?:state|code|code_verifier|code_challenge|nonce|scope|aud|resource)\\b`?(?:\\s+(?:claim|parameter))?\\s*(?:,|\\bor\\b|/|\\band\\b|&)\\s*`?(?:the\\s+)?(?:iss|issuer)\\b)[\\s\\S]*\\b(?:iss|issuer)\\b[\\s\\S]*$"
+        ]
+      },
+      "explanation": "Section 8: the client records the `issuer` from the metadata it validated, the authorization server returns `iss` on the redirect (SEP-2468 makes sending it a SHOULD and validating it a MUST), and the client compares the two byte for byte before sending the code anywhere.",
+      "hints": [
+        "It names the authorization server that issued the code."
+      ]
+    },
+    {
+      "id": "mcp-020-q15",
+      "type": "long",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o1",
+        "o3"
+      ],
+      "section": "3",
+      "est_minutes": 10,
+      "tags": [
+        "sessions",
+        "design"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "To save a verification per call, a colleague proposes that the reverse proxy in front of an MCP server set a signed cookie after the first request whose token validates, and that the server accept the cookie in place of a token for the next hour. Critique the proposal against what the specification requires of a resource server.",
+      "kind": "critique",
+      "answer_length": "half a page",
+      "solution": "The proposal turns the cookie into a credential that stands in for the token, which the specification rules out twice: the Authorization page says authorization MUST be included in every HTTP request from client to server, and Security Best Practices says servers that implement authorization MUST verify all inbound requests and MUST NOT treat possession of a state handle as authentication. Revision 2026-07-28 removed protocol sessions, `Mcp-Session-Id` and the `initialize` handshake, so the only sessions left to misuse are ones a deployment invents, and this is one.\n\nThe practical harms follow from the checks the cookie skips. A token that expires, is revoked at an introspection endpoint, or loses a scope keeps working for an hour. The cookie carries no audience and no scope of its own unless the proxy reinvents them, so the five checks of the gate (presence, verification, lifetime, audience, scope) are replaced by one check of a different credential. And the cookie is a bearer credential with a new theft surface: whoever obtains it gets the user's access without ever holding a token issued for this server.\n\nWhat the post does instead is validate the token on every request: each request carries its own token in the `Authorization` header, the verifier checks it (including `aud`), and the SDK's middleware adds its expiry and resource checks. If verification is expensive, the right lever is cheaper verification (a local signature check against cached keys rather than an introspection call per request) with short token lifetimes, not a second credential.",
+      "rubric": [
+        {
+          "criterion": "Names the rule the proposal breaks: every request carries its token and is verified, and no session, cookie or handle stands in for it.",
+          "points": 3
+        },
+        {
+          "criterion": "Explains at least two checks the cookie bypasses, such as expiry, revocation, audience or scope.",
+          "points": 2
+        },
+        {
+          "criterion": "Notes the cookie is itself a new bearer credential with its own theft risk.",
+          "points": 1
+        },
+        {
+          "criterion": "Proposes validating the token on every request, with a cheaper verification path if cost is the concern.",
+          "points": 2
+        }
+      ],
+      "explanation": "Section 3 quotes the rules (authorization in every request, every inbound request verified, a state handle is not authentication) and notes that with protocol sessions gone, the rule now bites on sessions a deployment builds itself, such as a cookie a reverse proxy sets after the first authorized call.",
+      "hints": [
+        "Find the rules in section 3 about what every request must carry.",
+        "List the gate's five checks and ask which ones the cookie still performs."
+      ]
+    },
+    {
+      "id": "mcp-020-q16",
+      "type": "long",
+      "track": "connect",
+      "difficulty": 4,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "8",
+      "est_minutes": 12,
+      "tags": [
+        "confused-deputy",
+        "passthrough"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "An MCP server proxies a third-party API using one static client ID registered with that third party. Explain how the confused deputy attack lets an attacker obtain an authorization code without the user seeing a consent screen, state the requirement that stops it, and relate it to the token passthrough rule and to what post 08 says about third-party authorization through URL-mode elicitation.",
+      "kind": "connect",
+      "answer_length": "half a page",
+      "connects": [
+        "mcp-019",
+        "mcp-008"
+      ],
+      "solution": "The proxy holds one static client ID with the third-party authorization server. When a user authorizes once, that authorization server drops a consent cookie and from then on skips the consent screen for that client ID. An attacker registers a client against the proxy with a redirect URI the attacker controls and sends the user a crafted authorization link for it; the user's browser still carries the consent cookie, so the third party sees the same static client ID and skips consent, and the proxy delivers its authorization code to the attacker's redirect URI. The proxy has been used as a deputy with authority the user granted it for a different client.\n\nThe requirement is per-client consent owned by the proxy: MCP proxy servers using static client IDs MUST obtain user consent for each dynamically registered client before forwarding to third-party authorization servers.\n\nToken passthrough (post 19's attack classes, and section 3 here) is the other half of the same boundary: the proxy must not forward the token it received from the MCP client to the upstream API; it obtains its own token from the upstream authorization server, as an OAuth client in its own right. Post 08 draws the line from the elicitation side: third-party credentials must not transit the client, the server must not reuse the client's credentials against the third-party service, and URL-mode elicitation is not a way for a server to authorize users for itself. In every case the server keeps its relationship with the third party separate from the client's relationship with the server.",
+      "rubric": [
+        {
+          "criterion": "Explains the attack: static client ID, consent cookie in the user's browser, attacker-registered client with its own redirect URI reached through a crafted link, code delivered without a prompt.",
+          "points": 3
+        },
+        {
+          "criterion": "States the requirement: per-client user consent before forwarding to the third-party authorization server.",
+          "points": 2
+        },
+        {
+          "criterion": "Connects token passthrough: the server uses its own upstream token and never forwards the client's.",
+          "points": 2
+        },
+        {
+          "criterion": "Connects post 08: third-party credentials do not transit the client, and URL-mode elicitation does not authorize users for the server itself.",
+          "points": 1
+        }
+      ],
+      "explanation": "Section 8 describes the confused deputy and quotes the per-client consent requirement; section 3 quotes the passthrough MUST NOT, which post 19 classifies among the attack classes, and post 08 states the third-party authorization rules for URL-mode elicitation.",
+      "hints": [
+        "Start from what the third party remembers after the first consent.",
+        "Then ask which party's consent the attacker's new client never obtained."
+      ]
+    },
+    {
+      "id": "mcp-020-q17",
+      "type": "long",
+      "track": "edge",
+      "difficulty": 5,
+      "outcomes": [
+        "o2",
+        "o3"
+      ],
+      "section": "9",
+      "est_minutes": 20,
+      "tags": [
+        "scopes",
+        "middleware",
+        "design"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The SDK's insufficient-scope challenge carries no `scope` parameter. Design a replacement for the scope check that sends the challenge the specification asks for, on a server whose tools need different scopes (`system:read` for listing, `system:write` for changes). Say where the check runs, what the header contains, how the scopes the operation needs are named at once, what stays `401`, how the published `scopes_supported` relates to it, and which tests would show it works.",
+      "kind": "design",
+      "answer_length": "a page",
+      "solution": "Where it runs. The SDK's `RequireAuthMiddleware` enforces one route-wide `required_scopes` list before any MCP method runs, so per-tool scopes cannot be expressed there. Keep route-wide `required_scopes` at the minimum every call needs (`system:read`), and add a second check that knows the operation: either an ASGI middleware that reads the `Mcp-Method` and `Mcp-Name` routing headers, or a check inside the tool that compares the caller's `AccessToken.scopes` (from the request's authentication context) against the tool's own requirement. Because the response must be an HTTP 403 with a challenge, the middleware placement is the one that can answer at the HTTP layer; inside a tool the server can only return an `isError` result.\n\nThe header. For a call to a tool that needs `system:write` with a token holding only `system:read`, answer `403 Forbidden` with `WWW-Authenticate: Bearer error=\"insufficient_scope\", scope=\"system:read system:write\", resource_metadata=\"<the metadata URL>\", error_description=\"...\"`. The `scope` parameter names the full set the operation needs, space separated, not just the one missing scope, because challenging incrementally forces several authorization round trips for one operation.\n\nWhat stays 401. A missing, unverifiable, expired or wrongly audienced token is still `401` with `invalid_token`; scope is only evaluated for a token that is otherwise good. Mixing the two would send a client with a good token back through a full login.\n\nPublished scopes. `scopes_supported` stays the published minimum (`system:read`), so clients are not invited to request write access up front; `system:write` is reached by step-up when a write is attempted. The design must also keep the metadata URL in the challenge identical to the one the 401 names.\n\nTesting. Extend the four requests: a read-only token calling the write tool gets 403 with the `scope` parameter containing both scopes; the same token calling the read tool gets 200; a write-scoped token gets 200 for both; an unknown token still gets 401.",
+      "rubric": [
+        {
+          "criterion": "Places a per-operation check where it can answer at the HTTP layer, keeping route-wide required_scopes at the common minimum.",
+          "points": 3
+        },
+        {
+          "criterion": "Specifies the header with error=\"insufficient_scope\", a scope parameter, and resource_metadata.",
+          "points": 2
+        },
+        {
+          "criterion": "Names all scopes the operation needs in one challenge, with the reason (no incremental round trips).",
+          "points": 2
+        },
+        {
+          "criterion": "Keeps token failures at 401 and evaluates scope only for an otherwise valid token.",
+          "points": 2
+        },
+        {
+          "criterion": "Keeps scopes_supported as the published minimum and reaches higher scopes by step-up.",
+          "points": 1
+        },
+        {
+          "criterion": "Gives tests that would catch the gap and the 401/403 split.",
+          "points": 2
+        }
+      ],
+      "explanation": "Section 6 gives the SHOULD (403, insufficient_scope, a scope parameter, the metadata URL, all scopes at once) and the minimization rule; section 9 measures that the SDK's 403 under 2.3.0 carries no scope parameter and enforces one route-wide list.",
+      "hints": [
+        "The SDK's check is route-wide; ask what it cannot know about a single call.",
+        "Write the header the specification asks for, then decide which layer can send it.",
+        "Keep the 401 and 403 cases apart, and keep scopes_supported minimal."
+      ]
+    }
+  ]
+}
