@@ -1,8 +1,24 @@
 id: mcp-013
 slug: 13-database-analyst
-title: "13 · Project 1 · A secure database analyst"
+title: "13 - Project 1: A secure database analyst"
+summary: "Builds an MCP server that gives a model read access to PostgreSQL, refuses unsafe SQL before any connection is acquired, refuses what its parser cannot model, and leaves enforcement to the database role."
 date: 2026-07-24
-tags: [model-context-protocol, mcp, project, postgresql, security, sql]
-hero: diagrams/01-defense-in-depth.svg
-reading_time: 24
+updated: 2026-10-09
+status: complete
 part: "Part IV - Projects"
+level: intermediate
+reading_time: 33
+tags: [mcp, project, postgresql, security, sql, sqlglot]
+hero: diagrams/01-defense-in-depth.svg
+prerequisites: [mcp-012]
+code: required
+outcomes:
+  - id: o1
+    text: "Build a read-only database tool whose refusals happen before any connection is acquired."
+  - id: o2
+    text: "Separate the layers that only filter a statement from the two that enforce, and say which of a server's layers is which."
+  - id: o3
+    text: "Refuse the syntax a SQL parser quietly gave up on, instead of trusting a check that never ran."
+  - id: o4
+    text: "Test a security layer with no database at all, including the cases it deliberately allows."
+recommended: [mcp-006, mcp-007]

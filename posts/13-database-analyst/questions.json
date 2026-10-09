@@ -1,0 +1,825 @@
+{
+  "standard": "2.1.0",
+  "post": "mcp-013",
+  "next_ordinal": 18,
+  "questions": [
+    {
+      "id": "mcp-013-q01",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "8",
+      "est_minutes": 1,
+      "tags": [
+        "defense-in-depth",
+        "postgresql"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The analyst server stacks five layers between the model's SQL and the data. Which one still holds when every check in `security.py` is wrong?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The function blocklist, because it is matched on the parse tree rather than on the text.",
+          "correct": false,
+          "feedback": "The blocklist is one of the checks in `security.py`. It names only what was dangerous when it was written, so it is a filter that can be wrong."
+        },
+        {
+          "key": "b",
+          "text": "The login role `mcp_readonly`, which was granted `SELECT` and nothing else.",
+          "correct": true,
+          "feedback": "A grant is not a heuristic. A write that slipped past every filter still fails, because the role was never given the privilege."
+        },
+        {
+          "key": "c",
+          "text": "The `readOnlyHint: true` annotation on `query_database`.",
+          "correct": false,
+          "feedback": "Annotations are hints for the host. The specification says clients must treat them as untrusted unless the server is trusted, and nothing enforces them."
+        },
+        {
+          "key": "d",
+          "text": "The `LIMIT` ceiling of 1,000 rows, because every query must carry one.",
+          "correct": false,
+          "feedback": "The ceiling bounds how many rows come back, not what a statement does. It is a check in `security.py` like the others."
+        }
+      ],
+      "explanation": "Section 8 calls everything in `security.py` a filter and the role file the control: a login role that holds only `SELECT` refuses a write whatever the Python decided, because the privilege was never granted.",
+      "hints": [
+        "Ask which layers live in the server and which live in PostgreSQL."
+      ]
+    },
+    {
+      "id": "mcp-013-q02",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "7",
+      "est_minutes": 2,
+      "tags": [
+        "sqlglot",
+        "parsing"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The validator parses with `sqlglot` 30.13.0 at `dialect=\"postgres\"`. What does `sqlglot.parse_one(\"VACUUM FULL users\", dialect=\"postgres\")` do?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "It raises a `ParseError`, which the validator turns into a refusal.",
+          "correct": false,
+          "feedback": "That is what a careful reader expects, and it is exactly what does not happen. Only text the tokenizer or parser rejects outright raises."
+        },
+        {
+          "key": "b",
+          "text": "It logs a warning and returns an opaque `Command` node.",
+          "correct": true,
+          "feedback": "The script in section 7 prints the warning, `type(tree) = Command`, and the walk types `['Command', 'Literal']`."
+        },
+        {
+          "key": "c",
+          "text": "It returns a `Vacuum` node whose children the checks can walk like any other statement.",
+          "correct": false,
+          "feedback": "There is no modeled `VACUUM` here. The whole statement becomes one opaque node, which is why no check can look inside it."
+        },
+        {
+          "key": "d",
+          "text": "It returns `None`, so the validator sees an empty statement.",
+          "correct": false,
+          "feedback": "`None` entries appear only for empty statements. `VACUUM FULL users` comes back as a node; the trouble is that the node is opaque."
+        }
+      ],
+      "explanation": "Section 7: `sqlglot` does not raise on this statement. It logs `Falling back to parsing as a 'Command'` and returns an `exp.Command` whose only child is a string literal, so every tree-reading check finds nothing.",
+      "hints": [
+        "The interesting failure is the one that does not raise.",
+        "Look at the node types the section 7 transcript prints."
+      ]
+    },
+    {
+      "id": "mcp-013-q03",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "5",
+      "est_minutes": 2,
+      "tags": [
+        "tool-results",
+        "errors"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A model sends `query_database` a data-modifying common table expression. Under `mcp==2.3.0`, what does the client receive back?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "A JSON-RPC error object with code `-32602`, because the arguments failed the tool's input schema and the call never ran.",
+          "correct": false,
+          "feedback": "The arguments are a valid object with a string `sql`. The refusal comes from the tool, and the tool returns it as a result."
+        },
+        {
+          "key": "b",
+          "text": "A complete result, `isError: false`, whose `structuredContent` has `ok: false` and an empty `executed_sql`.",
+          "correct": true,
+          "feedback": "This is what `snippets/refusal_on_the_wire.py` prints. The refusal is an ordinary result, and nothing was acquired from a pool."
+        },
+        {
+          "key": "c",
+          "text": "A result with `isError: true` and a single text block reading `Error executing tool query_database`.",
+          "correct": false,
+          "feedback": "That is what a tool that crashes produces. This tool catches `SecurityError` and returns a `QueryResult` instead of raising."
+        },
+        {
+          "key": "d",
+          "text": "A result whose `executed_sql` holds the regenerated statement and whose `rows` is empty.",
+          "correct": false,
+          "feedback": "A refused statement is never regenerated for running; `executed_sql` is the empty string so the caller can tell that nothing ran."
+        }
+      ],
+      "explanation": "Section 5 shows the refusal as it came back: a complete result, `isError` false, and `structuredContent` with `ok: false`, an empty `executed_sql`, and the validator's sentence in `error`. The section also notes that the Tools page asks for `isError: true` on tool-originated errors, a SHOULD this project does not follow.",
+      "hints": [
+        "Ask whether `query_database` raises or returns when the validator refuses."
+      ]
+    },
+    {
+      "id": "mcp-013-q04",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "8",
+      "est_minutes": 3,
+      "tags": [
+        "postgresql",
+        "roles"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The role file sets `default_transaction_read_only = ON` and `statement_timeout = '30s'` with `ALTER ROLE mcp_readonly SET ...`. Which statement about those two lines is correct?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "They are grants stored on the role, so no statement a session sends can change them for the rest of its life.",
+          "correct": false,
+          "feedback": "`ALTER ROLE ... SET` stores defaults for the role's sessions, not privileges. A session may change either with `SET` or `set_config()`."
+        },
+        {
+          "key": "b",
+          "text": "They are role defaults that a session could change with `SET` or `set_config()`.",
+          "correct": true,
+          "feedback": "Section 8: the settings are defaults, a filter guards them, and the grant is what still refuses a write when everything else is wrong."
+        },
+        {
+          "key": "c",
+          "text": "`statement_timeout` is enforced by `asyncpg` on the client, so it stops working when the client disconnects.",
+          "correct": false,
+          "feedback": "That describes the pool's `command_timeout`. `statement_timeout` is enforced by the database server and survives a client that stopped listening."
+        },
+        {
+          "key": "d",
+          "text": "`default_transaction_read_only` is the setting that removes the role's `INSERT`, `UPDATE`, and `DELETE` privileges.",
+          "correct": false,
+          "feedback": "The role never had `INSERT`; the grant gives it only `SELECT`. The setting makes transactions read-only by default, a separate mechanism."
+        }
+      ],
+      "explanation": "Section 8 separates the grant from the two settings: the settings are role defaults that a session could change, so the validator's refusal of `SET` and the blocklist entry for `set_config` protect them, and the `SELECT`-only grant is what cannot be argued with.",
+      "hints": [
+        "Ask whether `ALTER ROLE ... SET` changes privileges or defaults.",
+        "Then ask which checks stop a session from changing a default."
+      ]
+    },
+    {
+      "id": "mcp-013-q05",
+      "type": "mcq",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "6",
+      "est_minutes": 3,
+      "tags": [
+        "validator",
+        "limit"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Which of these statements does `validate_read_query` allow? Select every one that passes.",
+      "select": "multiple",
+      "options": [
+        {
+          "key": "a",
+          "text": "`SELECT * FROM users WHERE full_name = 'pg_sleep' LIMIT 1`",
+          "correct": true,
+          "feedback": "`pg_sleep` is a string literal here, not a call, so the tree walk finds no blocked function and the statement regenerates unchanged."
+        },
+        {
+          "key": "b",
+          "text": "`SELECT count(*) FROM users`",
+          "correct": true,
+          "feedback": "An ungrouped aggregate returns one row by construction, so it is exempt from the `LIMIT` rule and runs as `SELECT COUNT(*) FROM users`."
+        },
+        {
+          "key": "c",
+          "text": "`SELECT * FROM users LIMIT 100000`",
+          "correct": true,
+          "feedback": "An over-large `LIMIT` is clamped rather than refused; it runs as `LIMIT 1000` and the caller is told."
+        },
+        {
+          "key": "d",
+          "text": "`SELECT country, count(*) FROM users GROUP BY country`",
+          "correct": false,
+          "feedback": "A grouped aggregate returns one row per group and gets no exemption, so the missing `LIMIT` is refused."
+        },
+        {
+          "key": "e",
+          "text": "`SELECT * FROM users UNION SELECT * FROM users`",
+          "correct": false,
+          "feedback": "A `Union` is a read root, but it still needs a top-level `LIMIT`, and this one has none."
+        },
+        {
+          "key": "f",
+          "text": "`SELECT 1 LIMIT 1; DROP TABLE users;`",
+          "correct": false,
+          "feedback": "This parses as two statements, and the validator refuses anything that is not exactly one."
+        }
+      ],
+      "explanation": "Section 6's transcript shows the literal case and the clamp allowed, the ungrouped aggregate exempt, and the grouped aggregate and chained statements refused. A `UNION` without a `LIMIT` falls to the same rule as any other read.",
+      "hints": [
+        "Check each statement against the order of checks in the section 6 table.",
+        "Two of the rules have deliberate exceptions: the aggregate exemption and the clamp."
+      ]
+    },
+    {
+      "id": "mcp-013-q06",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "7",
+      "est_minutes": 4,
+      "tags": [
+        "sqlglot",
+        "parsing",
+        "validator"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Suppose the explicit `isinstance(statement, exp.Command)` refusal were deleted from `parse_single_statement`. Which of the remaining checks of `validate_read_query` would still refuse `DO $$ BEGIN PERFORM pg_sleep(30); END $$`? Select every one.",
+      "select": "multiple",
+      "options": [
+        {
+          "key": "a",
+          "text": "The root-type check: a `Command` is not one of the four read roots.",
+          "correct": true,
+          "feedback": "The root check is an allowlist of four read roots, so an opaque root fails it. Section 7 notes that a root check written as a denylist would pass it."
+        },
+        {
+          "key": "b",
+          "text": "`check_dangerous_functions`, because the statement calls `pg_sleep`.",
+          "correct": false,
+          "feedback": "The call is inside a string literal below an opaque node. `function_names()` returns an empty list, so the blocklist finds nothing."
+        },
+        {
+          "key": "c",
+          "text": "`reject_nested_mutations`, because the opaque node counts as a mutation.",
+          "correct": false,
+          "feedback": "The opaque node is the root, and the nested-mutation check skips the root. Below it there is only a `Literal`."
+        },
+        {
+          "key": "d",
+          "text": "`enforce_limit`, because an opaque node carries no `LIMIT`.",
+          "correct": true,
+          "feedback": "The script prints `enforce_limit()   : refuses` for all four opaque statements: there is no `LIMIT` to find and no aggregate exemption."
+        },
+        {
+          "key": "e",
+          "text": "The `SELECT ... INTO` check, because the walk finds an `Into` node.",
+          "correct": false,
+          "feedback": "The walk types are only `Command` and `Literal`; there is no `Into` node to find."
+        }
+      ],
+      "explanation": "Section 7's transcript shows `a read root?      = False` and `enforce_limit()   : refuses` for every opaque statement, while the blocklist and nested-mutation checks raise nothing. Both refusals that remain are accidents of shape, which is why the project refuses the opaque node explicitly.",
+      "hints": [
+        "Separate the checks that read the tree's contents from the ones that look at its shape.",
+        "Ask what a tree whose only nodes are `Command` and `Literal` offers each check."
+      ]
+    },
+    {
+      "id": "mcp-013-q07",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "5",
+      "est_minutes": 2,
+      "tags": [
+        "injection",
+        "sample-table"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`fetch_table_sample` coerces `sample_table`'s `limit` argument with `max(1, min(int(limit), MAX_SAMPLE_ROWS))`, where `MAX_SAMPLE_ROWS` is 100. What `LIMIT` ends up in the statement for `limit=250`, and for `limit=-5`?",
+      "answer": {
+        "parts": [
+          {
+            "label": "LIMIT for limit=250",
+            "value": 100,
+            "tolerance": 0,
+            "unit": "rows"
+          },
+          {
+            "label": "LIMIT for limit=-5",
+            "value": 1,
+            "tolerance": 0,
+            "unit": "rows"
+          }
+        ]
+      },
+      "precision_note": "Closed form from the coercion line section 5 quotes: min(250, 100) = 100, and max(1, min(-5, 100)) = max(1, -5) = 1.",
+      "explanation": "The inner `min` caps the value at the ceiling and the outer `max` floors it at one, so 250 becomes 100 and a negative value becomes 1. Coercing through `int` also means the value can never carry SQL syntax.",
+      "hints": [
+        "Apply the inner `min` first, then the outer `max`."
+      ]
+    },
+    {
+      "id": "mcp-013-q08",
+      "type": "numeric",
+      "track": "run",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "10",
+      "est_minutes": 2,
+      "tags": [
+        "testing",
+        "pytest"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "With no `DATABASE_URL`, `uv run --extra dev pytest` inside `code/13-postgres-analyst/` ends `85 passed, 12 skipped`, and `tests/test_security.py` on its own ends `61 passed`. How many tests does `tests/test_server.py` collect in total, and how many of those run without a database?",
+      "answer": {
+        "parts": [
+          {
+            "label": "tests collected in test_server.py",
+            "value": 36,
+            "tolerance": 0,
+            "unit": "tests"
+          },
+          {
+            "label": "test_server.py tests that run without a database",
+            "value": 24,
+            "tolerance": 0,
+            "unit": "tests"
+          }
+        ]
+      },
+      "precision_note": "From the runs quoted in section 10: the whole suite is 85 + 12 = 97 tests, test_security.py is 61 with no skips, so test_server.py is 97 - 61 = 36, of which 85 - 61 = 24 pass and 12 skip; the per-file run prints 24 passed, 12 skipped.",
+      "explanation": "Every skip is in `test_server.py`, because `test_security.py` needs no database at all. Subtracting the security file's 61 from the 85 that passed leaves 24 server tests that run in memory, and adding the 12 skips gives 36.",
+      "hints": [
+        "Decide first which file the skips can belong to.",
+        "Subtract the security file's count from the passed total, then add the skips."
+      ]
+    },
+    {
+      "id": "mcp-013-q09",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 1,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "6",
+      "est_minutes": 1,
+      "tags": [
+        "validator",
+        "blocklist"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "In the project's `security.py`, how many function names does `DANGEROUS_FUNCTIONS` hold, and how many node types does the `_MUTATIONS` tuple list?",
+      "answer": {
+        "parts": [
+          {
+            "label": "names in DANGEROUS_FUNCTIONS",
+            "value": 16,
+            "tolerance": 0,
+            "unit": "names"
+          },
+          {
+            "label": "node types in _MUTATIONS",
+            "value": 13,
+            "tolerance": 0,
+            "unit": "types"
+          }
+        ]
+      },
+      "precision_note": "Printed by snippets/validator_cases.py on its first line: sqlglot 30.13.0; 16 blocked functions; 13 mutation node types.",
+      "explanation": "Section 6's table gives both: the blocklist matches 16 names against called functions, and the nested-mutation check refuses any of thirteen node types below the root, `exp.Command` among them.",
+      "hints": [
+        "Both numbers appear in the section 6 table of checks."
+      ]
+    },
+    {
+      "id": "mcp-013-q10",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "7",
+      "est_minutes": 1,
+      "tags": [
+        "sqlglot",
+        "parsing"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Given `CALL do_it()`, which it cannot model, `sqlglot` does not raise. Name the node type it returns instead.",
+      "answer": {
+        "model": "An opaque `exp.Command` node (a `Command`), with the raw text held in a `Literal` below it.",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might|not sure|unsure|i think|i guess|i believe)\\b)(?![\\s\\S]*\\b(?:not|never|no|isn't|is not|rather than|instead of)\\b\\W+(?:an?\\s+|the\\s+)?(?:opaque\\s+)?(?:exp\\.)?commands?\\b)(?![\\s\\S]*\\b(?:or|either)\\b[^.;]{0,25}\\b(?:parseerror|parse error|error|literal|anonymous|select|none)\\b)(?![\\s\\S]*\\b(?:parseerror|parse error|literal|anonymous|select|none)\\b[^.;]{0,25}\\bor\\b)(?=[\\s\\S]*\\b(?:exp\\.)?commands?\\b)[\\s\\S]{3,}$"
+        ]
+      },
+      "explanation": "Section 7: `sqlglot` logs `Falling back to parsing as a 'Command'` and returns `exp.Command`, which is why the project refuses that node type explicitly and lists it in `_MUTATIONS`.",
+      "hints": [
+        "The warning `sqlglot` logs names the node type."
+      ]
+    },
+    {
+      "id": "mcp-013-q11",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "9",
+      "est_minutes": 2,
+      "tags": [
+        "annotations",
+        "roles"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`query_database` publishes `readOnlyHint: true`. In one or two sentences, say why that annotation is not what makes the tool read-only, and what does.",
+      "answer": {
+        "model": "Annotations are hints that clients must treat as untrusted unless the server is trusted, and nothing enforces them; the tool is read-only because it acquires connections from a pool whose PostgreSQL role holds `SELECT` and nothing else.",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might|not sure|unsure|i think|i guess|i believe)\\b)(?![\\s\\S]*\\b(?:annotations?|readonlyhint|hints?)\\b(?:(?!\\b(?:not|never|nothing|no|cannot|doesn|isn|can|won)\\b)[^.;]){0,30}\\b(?:enforces(?!\\s+nothing)|is enforced|are enforced|enforced by|guarantees|makes (?:it|the tool) read-only|prevents|blocks|stops)\\b)(?![\\s\\S]*\\bbecause of (?:the |its )?(?:annotations?|hints?|readonlyhint)\\b)(?![\\s\\S]*\\b(?:roles?|grants?|pool|privileges?)\\b[^.;]{0,20}\\b(?:only|just|merely) an? (?:backup|fallback|extra)\\b)(?![\\s\\S]*\\b(?:roles?|grants?|pool|privileges?)\\b[^.;]{0,15}\\b(?:is not|isn't|are not|aren't|does not|doesn't|do not|don't|never)\\b[^.;]{0,20}\\b(?:matter|what|the control|enforce|stop|help)\\w*)(?![\\s\\S]*\\b(?:validator|parser|sqlglot)\\b(?:(?!\\b(?:while|but|whereas|and|role|grants?|pool|not|never|only|just|merely|doesn|isn)\\b)[^.;,]){0,40}\\b(?:makes|enforces|guarantees|is what makes|is the control)\\b)(?![\\s\\S]*\\b(?:not|never|no|isn't|is not|doesn't|does not)\\b\\W+(?:(?!(?:but|annotations?|hints?|readonlyhint)\\b)\\w+\\W+){0,2}?(?:role|grants?|pool|privileges?|permissions?)\\b)(?=[\\s\\S]*\\b(?:hints?|untrusted|not trusted|advisory|unenforced|enforced|enforce|enforces|enforcement|self-reported|declarative|informational|claims?|ignored?|trust)\\b)(?=[\\s\\S]*\\b(?:roles?|grants?|granted|privileges?|permissions?|select[- ]only|only select|select and nothing else|read[- ]only (?:transactions?|pool|connections?)|pool)\\b)(?=(?:\\W*\\b\\w+\\b){6})[\\s\\S]{20,}$"
+        ]
+      },
+      "explanation": "Section 9 quotes the Tools page: clients MUST treat annotations as untrusted unless they come from a trusted server. What makes the two read tools read-only is the pool they acquire from, logged in as a role granted only `SELECT` (section 8).",
+      "hints": [
+        "Ask who, if anyone, enforces an annotation.",
+        "Then name the layer section 8 calls the control."
+      ]
+    },
+    {
+      "id": "mcp-013-q12",
+      "type": "long",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "8",
+      "est_minutes": 10,
+      "tags": [
+        "defense-in-depth",
+        "design"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "List the five layers that stand between the model's SQL and the data in this server. Classify each as a filter or as enforcement, say where it lives, and give one concrete statement or situation in which it fails to stop something harmful.",
+      "kind": "explain",
+      "solution": "1. **Parse and walk the tree** (`sqlglot`, in `security.py`): a filter. It fails on syntax the parser cannot model: `EXPLAIN ANALYZE DELETE FROM users` becomes an opaque `Command`, and without the explicit refusal the tree-reading checks would see nothing in it.\n\n2. **The function blocklist** (16 names, in `security.py`): a filter. It fails on a function nobody listed, such as one an extension adds, or on `pg_sleep` reached through a wrapper function.\n\n3. **The `LIMIT` rule** (required, clamped to 1,000, in `security.py`): a filter. It bounds rows, never cost: a three-way self join with `LIMIT 1000` passes and can still pin the database.\n\n4. **The login role `mcp_readonly`** (in PostgreSQL, from `002-readonly-role.sql`): enforcement. It holds `SELECT` and nothing else, so a write that slipped past every filter fails. It still permits any `SELECT`, including `SELECT email, full_name FROM users LIMIT 1000`, which is a data breach the role allows.\n\n5. **`statement_timeout = '30s'`** (a role setting in PostgreSQL): enforcement, applied by the database server even when the client has gone. Thirty seconds of load still happens before the query is canceled, and as a role default it relies on the validator refusing `SET` and `set_config` to stay in place.",
+      "rubric": [
+        {
+          "criterion": "Names all five layers and puts the first three in the server and the last two in PostgreSQL.",
+          "points": 2
+        },
+        {
+          "criterion": "Classifies the parser, blocklist, and LIMIT rule as filters and the role and statement timeout as enforcement.",
+          "points": 2
+        },
+        {
+          "criterion": "Gives a concrete, correct failure for each of the three filters.",
+          "points": 3
+        },
+        {
+          "criterion": "Gives a correct limit for the role (any SELECT, including personal data) and for the timeout (load before cancellation, or that it is a role default).",
+          "points": 3
+        }
+      ],
+      "answer_length": "five short paragraphs",
+      "explanation": "Sections 6 to 8 give the layers, the hero figure their split into three filters and two enforcing layers, and section 8 the specific way each filter can be wrong. Even the enforcing layers have limits: the role allows every read, and the timeout lets thirty seconds of work happen.",
+      "hints": [
+        "Start from the hero figure's five rows.",
+        "For each filter, pick an example from section 7 or section 8's list of ways a filter is wrong."
+      ]
+    },
+    {
+      "id": "mcp-013-q13",
+      "type": "long",
+      "track": "connect",
+      "difficulty": 4,
+      "outcomes": [
+        "o2",
+        "o1"
+      ],
+      "section": "8",
+      "est_minutes": 12,
+      "tags": [
+        "design",
+        "writes",
+        "mrtr"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Post 14 (`mcp-014`) gives the same server a `write_database` tool. Using this post and post 08 (`mcp-008`), design the write path so that it stays defensible: say which of this post's layers carry over, what has to replace `SELECT`-only as the enforcing layer when the server must be able to write, and where a human confirmation fits so that the model cannot supply it.",
+      "kind": "connect",
+      "solution": "The filters carry over unchanged in kind: the statement is parsed once with `sqlglot`, a `Command` node is refused, it must be exactly one statement, mutation nodes below the root are refused, and the function blocklist applies. The root allowlist changes to `INSERT`, `UPDATE`, and `DELETE`, and an `UPDATE` or `DELETE` must carry a `WHERE` clause, which is a floor (`WHERE true` passes it) rather than a guarantee. As on the read path, every refusal happens before any connection is acquired, and the statement that runs is the one regenerated from the tree, with comments dropped, so the text a human approves is the text that executes.\n\nThe enforcing layer becomes a second login role behind a second pool, `mcp_writer` behind `DATABASE_WRITE_URL`, holding `INSERT`, `UPDATE`, and `DELETE` on the tables but owning none of them, so it cannot `DROP` or `ALTER` them, with no fallback from the write URL to the read one. Any privilege beyond that, such as `CREATE` on the schema for an audit table, is a cost to name and keep as small as possible. The read path keeps its own `SELECT`-only role, so a bug in the query path cannot reach a connection that can write. An outer switch, `ENABLE_WRITES`, keeps the write pool from being opened at all unless it is on.\n\nThe human confirmation sits on the critical path after validation and before the transaction, and it must arrive in a parameter the model cannot see or forge: as post 08 teaches, the approval parameter is resolved through elicitation over a Multi Round-Trip Request and stripped from the published input schema, so the model can supply only the statement and a dry-run flag. Nobody is asked to confirm a dry run or a statement the validator is going to refuse.",
+      "rubric": [
+        {
+          "criterion": "Carries over the parser, the opaque-node refusal, single statement, nested mutation and blocklist checks, and validation before acquisition.",
+          "points": 3
+        },
+        {
+          "criterion": "Replaces SELECT-only with a separate write role and pool, scoped to the intended tables and kept apart from the read role, with no fallback.",
+          "points": 3
+        },
+        {
+          "criterion": "Places the confirmation after validation and before execution, in a parameter hidden from the published schema and resolved by elicitation.",
+          "points": 3
+        },
+        {
+          "criterion": "Notes that the regenerated statement is what the human approves and what runs.",
+          "points": 1
+        }
+      ],
+      "answer_length": "three paragraphs",
+      "connects": [
+        "mcp-014",
+        "mcp-008"
+      ],
+      "explanation": "This post makes the database role the control and the validator a filter that runs before any pool is touched; post 08 makes an approval unforgeable by keeping it out of the input schema and resolving it through elicitation. The project's write path combines both with a second role and pool.",
+      "hints": [
+        "List which checks of `security.py` do not depend on the statement being a read.",
+        "A role that may write needs a narrower scope and its own pool.",
+        "Post 08's approval parameter is the model for the human gate."
+      ]
+    },
+    {
+      "id": "mcp-013-q14",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "7",
+      "est_minutes": 8,
+      "tags": [
+        "validator",
+        "python"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The toy validator below works on a parse tree given as nested tuples `(type, name, children)`, the shape a parser like `sqlglot` produces in miniature. Unknown syntax arrives as a `Command` node, and the validator lets it through: a `DO` block, a `VACUUM`, and a `Command` nested inside a `SELECT` all pass. Fix `validate` so that it refuses an opaque `Command` node anywhere in the tree, keeps every refusal it already makes, and still allows ordinary reads, including one that mentions `pg_sleep` inside a string literal.",
+      "kind": "fix",
+      "language": "python",
+      "starter": "READ_ROOTS = {\"Select\", \"Union\", \"Intersect\", \"Except\"}\nMUTATIONS = {\"Insert\", \"Update\", \"Delete\", \"Drop\", \"Create\", \"Alter\"}\nBLOCKED = {\"pg_sleep\", \"pg_read_file\", \"set_config\"}\n\n\ndef walk(node):\n    \"\"\"Yield a node and every node below it. A node is (type, name, children).\"\"\"\n    yield node\n    for child in node[2]:\n        yield from walk(child)\n\n\ndef validate(tree):\n    \"\"\"Raise ValueError to refuse the parsed statement; return None to allow it.\"\"\"\n    if tree[0] in MUTATIONS:\n        raise ValueError(f\"{tree[0]} is not a read\")\n    for node in walk(tree):\n        if node is not tree and node[0] in MUTATIONS:\n            raise ValueError(f\"a nested {node[0]} is not a read\")\n        if node[0] == \"Func\" and node[1] in BLOCKED:\n            raise ValueError(f\"function {node[1]} is blocked\")\n",
+      "solution": "READ_ROOTS = {\"Select\", \"Union\", \"Intersect\", \"Except\"}\nMUTATIONS = {\"Insert\", \"Update\", \"Delete\", \"Drop\", \"Create\", \"Alter\"}\nBLOCKED = {\"pg_sleep\", \"pg_read_file\", \"set_config\"}\n\n\ndef walk(node):\n    \"\"\"Yield a node and every node below it. A node is (type, name, children).\"\"\"\n    yield node\n    for child in node[2]:\n        yield from walk(child)\n\n\ndef validate(tree):\n    \"\"\"Raise ValueError to refuse the parsed statement; return None to allow it.\"\"\"\n    # An opaque node is a node no check below can see inside: refuse it anywhere.\n    if any(node[0] == \"Command\" for node in walk(tree)):\n        raise ValueError(\"the parser could not model this statement\")\n    if tree[0] not in READ_ROOTS:\n        raise ValueError(f\"{tree[0]} is not a read\")\n    for node in walk(tree):\n        if node is not tree and node[0] in MUTATIONS:\n            raise ValueError(f\"a nested {node[0]} is not a read\")\n        if node[0] == \"Func\" and node[1] in BLOCKED:\n            raise ValueError(f\"function {node[1]} is blocked\")\n",
+      "tests": "def T(kind, name=\"\", *children):\n    return (kind, name, list(children))\n\n\ndef refused(tree):\n    try:\n        result = validate(tree)\n    except ValueError:\n        return True\n    assert result is None, \"validate returns None when it allows a statement\"\n    return False\n\n\nlimit_1 = T(\"Limit\", \"\", T(\"Literal\", \"1\"))\ndo_block = T(\"Command\", \"DO\", T(\"Literal\", \"$$ BEGIN PERFORM pg_sleep(30); END $$\"))\nvacuum = T(\"Command\", \"VACUUM\", T(\"Literal\", \"FULL users\"))\nnested = T(\"Select\", \"\", T(\"Star\"), T(\"Subquery\", \"\", T(\"Command\", \"CALL\", T(\"Literal\", \"do_it()\"))), limit_1)\nplain = T(\"Select\", \"\", T(\"Column\", \"email\"), T(\"From\", \"\", T(\"Table\", \"users\")), T(\"Limit\", \"\", T(\"Literal\", \"5\")))\nliteral = T(\"Select\", \"\", T(\"Star\"), T(\"From\", \"\", T(\"Table\", \"users\")),\n            T(\"Where\", \"\", T(\"EQ\", \"\", T(\"Column\", \"full_name\"), T(\"Literal\", \"pg_sleep\"))), limit_1)\nunion = T(\"Union\", \"\", T(\"Select\", \"\", T(\"Column\", \"id\")), T(\"Select\", \"\", T(\"Column\", \"id\")), limit_1)\nsleeper = T(\"Select\", \"\", T(\"Func\", \"pg_sleep\", T(\"Literal\", \"30\")), limit_1)\ncte = T(\"Select\", \"\", T(\"With\", \"\", T(\"CTE\", \"\", T(\"Delete\", \"\", T(\"Table\", \"users\")))), T(\"Star\"), limit_1)\ndrop = T(\"Drop\", \"\", T(\"Table\", \"users\"))\nexplain = T(\"Command\", \"EXPLAIN\", T(\"Literal\", \"ANALYZE DELETE FROM users\"))\nmentions = T(\"Select\", \"\", T(\"Star\"), T(\"From\", \"\", T(\"Table\", \"notes\")),\n             T(\"Where\", \"\", T(\"EQ\", \"\", T(\"Column\", \"body\"), T(\"Literal\", \"Command\"))), limit_1)\n\nassert refused(do_block), \"a DO block parses to an opaque Command: refuse it\"\nassert refused(vacuum), \"VACUUM parses to an opaque Command: refuse it\"\nassert refused(nested), \"an opaque Command nested below a Select must be refused too\"\nassert not refused(plain), \"an ordinary SELECT must still be allowed\"\nassert not refused(literal), \"pg_sleep inside a string literal is not a call\"\nassert not refused(union), \"a UNION is a read root\"\nassert refused(sleeper), \"a blocked function must still be refused\"\nassert refused(cte), \"a DELETE inside a CTE must still be refused\"\nassert refused(drop), \"a DROP must still be refused\"\nassert refused(explain), \"EXPLAIN ANALYZE parses to an opaque Command too: refuse the node type, not a list of keywords\"\nassert not refused(mentions), \"the word Command inside a string literal is data, not a node\"\nprint(\"all validate tests passed\")\n",
+      "entry": "python -c \"exec(open('solution.py').read()); exec(open('tests.py').read())\"",
+      "expected_output": "all validate tests passed\n",
+      "explanation": "Section 7's rule is to refuse the opaque thing, because no check that reads the tree can see inside it. Walking every node for `Command` catches the root and nested cases; replacing the root denylist with the `READ_ROOTS` allowlist adds the shape check that section 7 says should not be left to luck. Matching the literal text instead of the tree would refuse the harmless string literal.",
+      "hints": [
+        "The bug is a node type that none of the checks mention.",
+        "It can appear at the root or below it, so look at every node `walk` yields.",
+        "The root check lists the types to refuse; ask what a list of the types to allow would do with a type nobody thought of."
+      ]
+    },
+    {
+      "id": "mcp-013-q15",
+      "type": "order",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "6",
+      "est_minutes": 3,
+      "tags": [
+        "validator",
+        "pipeline"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Put the steps of one `query_database` call in the order the server performs them, from the statement arriving to the statement running.",
+      "items": [
+        {
+          "key": "a",
+          "text": "Parse the text as exactly one statement, refusing an opaque `Command` node."
+        },
+        {
+          "key": "b",
+          "text": "Require the root to be `Select`, `Union`, `Intersect`, or `Except`."
+        },
+        {
+          "key": "c",
+          "text": "Refuse any mutation node below the root."
+        },
+        {
+          "key": "d",
+          "text": "Refuse `SELECT ... INTO`."
+        },
+        {
+          "key": "e",
+          "text": "Refuse any function on the blocklist."
+        },
+        {
+          "key": "f",
+          "text": "Require a literal `LIMIT` and clamp it to 1,000."
+        },
+        {
+          "key": "g",
+          "text": "Regenerate the statement from the tree with comments dropped."
+        },
+        {
+          "key": "h",
+          "text": "Acquire a connection from the read pool and run the statement."
+        }
+      ],
+      "answer": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f",
+        "g",
+        "h"
+      ],
+      "partial_credit": true,
+      "explanation": "Section 6's table gives the order of the checks in `validate_read_query`; the plan it returns carries the regenerated statement, and only then does `query_database` acquire a connection, which is why a refusal never touches a pool (section 5).",
+      "hints": [
+        "Nothing is acquired until every check has passed.",
+        "The section 6 table lists the checks in the order they run."
+      ]
+    },
+    {
+      "id": "mcp-013-q16",
+      "type": "match",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "8",
+      "est_minutes": 4,
+      "tags": [
+        "defense-in-depth",
+        "postgresql"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Match each situation to the layer of the analyst server that stops it, or to the fact that nothing in this server does.",
+      "left": [
+        {
+          "key": "a",
+          "text": "`SELECT pg_sleep(30) LIMIT 1` sent to `query_database`"
+        },
+        {
+          "key": "b",
+          "text": "`WITH d AS (DELETE FROM users RETURNING *) SELECT * FROM d LIMIT 1` sent to `query_database`"
+        },
+        {
+          "key": "c",
+          "text": "A bug in the query path sends `DELETE FROM orders WHERE id = 1` straight to a read-pool connection"
+        },
+        {
+          "key": "d",
+          "text": "A valid three-way self join with `LIMIT 1000` that would run for ten minutes"
+        },
+        {
+          "key": "e",
+          "text": "`SELECT email, full_name FROM users LIMIT 1000` sent to `query_database`"
+        }
+      ],
+      "right": [
+        {
+          "key": "a",
+          "text": "The function blocklist"
+        },
+        {
+          "key": "b",
+          "text": "The nested-mutation check"
+        },
+        {
+          "key": "c",
+          "text": "The `mcp_readonly` role: `SELECT` only, read-only transactions by default"
+        },
+        {
+          "key": "d",
+          "text": "The role's `statement_timeout`"
+        },
+        {
+          "key": "e",
+          "text": "Nothing in this server; it needs a restricted view, row-level security, or a narrower role"
+        },
+        {
+          "key": "f",
+          "text": "The `readOnlyHint` annotation"
+        },
+        {
+          "key": "g",
+          "text": "The `LIMIT` ceiling"
+        }
+      ],
+      "answer": {
+        "a": "a",
+        "b": "b",
+        "c": "c",
+        "d": "d",
+        "e": "e"
+      },
+      "explanation": "Section 6 shows the blocklist and nested-mutation refusals; section 8 makes the role the layer that holds when a write bypasses the validator and the timeout the answer to cost the parser cannot see; section 10 records that a full read of personal data is valid SQL. Annotations enforce nothing, and the `LIMIT` ceiling bounds rows, not cost.",
+      "hints": [
+        "Two of the situations never reach PostgreSQL.",
+        "One situation is allowed by every layer this server has."
+      ]
+    },
+    {
+      "id": "mcp-013-q17",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o4",
+        "o1"
+      ],
+      "section": "10",
+      "est_minutes": 2,
+      "tags": [
+        "testing",
+        "in-memory"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Seven parametrized refusal cases in `tests/test_server.py` call `query_database` through `Client(mcp)` and pass on a machine with no PostgreSQL at all. Why do they not need a database?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "`Client(mcp)` swaps the database for an in-memory fake that answers every query.",
+          "correct": false,
+          "feedback": "The in-memory client replaces the transport, not the database. The read pool is simply never opened when `DATABASE_URL` is unset."
+        },
+        {
+          "key": "b",
+          "text": "The validator refuses each statement before any pool is touched.",
+          "correct": true,
+          "feedback": "Section 5's first decision: a refused statement never gets near a connection, which is what lets most of the suite run without PostgreSQL."
+        },
+        {
+          "key": "c",
+          "text": "The in-memory client skips the server's lifespan, so no pool is opened.",
+          "correct": false,
+          "feedback": "The lifespan does run: `snippets/startup_modes.py` prints its warning that `DATABASE_URL` is not set and its `ready (reads only)` line."
+        },
+        {
+          "key": "d",
+          "text": "The tests are marked `needs_database` and only look as if they pass.",
+          "correct": false,
+          "feedback": "Tests marked `needs_database` are skipped, not passed. The refusal tests carry no such mark and run every time."
+        }
+      ],
+      "explanation": "Validation happens before a pool is touched (sections 5 and 10), so every refusal path is testable in memory; only the tests that need rows, the catalog, or the role itself are marked `needs_database` and skip.",
+      "hints": [
+        "Ask at which step of the pipeline a refused statement stops."
+      ]
+    }
+  ]
+}
