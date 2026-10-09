@@ -148,7 +148,7 @@ async def run_research(
 
     words_read = 0
     words_returned = 0
-    stopped_because = "completed: visited every source"
+    stopped_because = "completed: attempted every source"
 
     # A duplicate URL is a wasted page against the budget. Dedupe, but keep the
     # caller's order: the first link is usually the one they trust most.
@@ -195,7 +195,7 @@ async def run_research(
             # One dead link must not end the pass. Record it and move on: a
             # report that says which sources failed is more useful than one
             # that quietly has fewer sources than you asked for.
-            failures.append(f"{url}: {exc}")
+            failures.append(str(exc))
             log.warning("research: skipping %s (%s)", url, exc)
             continue
 

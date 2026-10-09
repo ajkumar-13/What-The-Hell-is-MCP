@@ -13,8 +13,7 @@ Two design decisions carry the rest of the file:
 
 2. **Playwright is imported lazily, inside `start()`.** Importing this module
    must not require the package, because `pip install playwright` is only half
-   the job -- the browser binaries are a separate several-hundred-megabyte
-   download. A server that cannot import its own modules cannot even tell you
+   the job -- the browser binaries are a separate, large download. A server that cannot import its own modules cannot even tell you
    what is missing.
 """
 

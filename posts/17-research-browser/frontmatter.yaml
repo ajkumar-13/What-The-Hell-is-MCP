@@ -1,8 +1,24 @@
 id: mcp-017
 slug: 17-research-browser
-title: "17 · Project 3 · A deep research browser"
+title: "17 - Project 3: A deep research browser"
+summary: "Builds a research browser whose value is the discard: extraction keeps 4,126 of a page's 76,201 bytes, every result reports bytes in, bytes out and method, and screenshots come back as image blocks."
 date: 2026-07-25
-tags: [model-context-protocol, mcp, project, playwright, extraction, context]
-hero: diagrams/01-html-to-article.svg
-reading_time: 21
+updated: 2026-10-09
+status: complete
 part: "Part IV - Projects"
+level: intermediate
+reading_time: 30
+tags: [mcp, project, playwright, extraction, context, caching]
+hero: diagrams/01-html-to-article.svg
+prerequisites: [mcp-006]
+code: required
+outcomes:
+  - id: o1
+    text: "Drive a headless browser from an MCP server behind a small fetcher protocol, so the test suite runs the real tools without a browser."
+  - id: o2
+    text: "Extract article text from a page and report the bytes in, the bytes out, the reduction, and the method alongside it."
+  - id: o3
+    text: "Return a screenshot as a real image content block while still publishing an output schema."
+  - id: o4
+    text: "Cache extractions with bounds on both age and count, and explain why a `tools/call` result carries no protocol caching hints."
+recommended: [mcp-012, mcp-016]

@@ -155,7 +155,7 @@ def test_the_fallback_never_returns_javascript_as_prose(spa_shell_html: str) -> 
 
     markdownify's `strip=` removes the tag and keeps the text, so passing it
     `["script"]` hands back the page's minified bundle as extracted content:
-    hundreds of words, a plausible-looking word count, and nothing a reader
+    2,539 words, a plausible-looking word count, and nothing a reader
     would call text. Elements have to be removed from the tree first.
     """
     result = extract(spa_shell_html, url="https://example.com/app/x")

@@ -1,0 +1,808 @@
+{
+  "standard": "2.1.0",
+  "post": "mcp-017",
+  "next_ordinal": 19,
+  "questions": [
+    {
+      "id": "mcp-017-q01",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "2",
+      "est_minutes": 2,
+      "tags": [
+        "extraction",
+        "receipt"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`browse_url` is called on a client-rendered page read without a browser, and its result carries `raw_bytes: 48522`, `clean_bytes: 46`, `reduction_percent: 99.9`, `method: \"markdownify\"` and `word_count: 6`. What does that receipt say?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The extractor did its job well: almost all of the page was boilerplate and it was removed.",
+          "correct": false,
+          "feedback": "A high reduction is not a quality score. Six words from a 48,522-byte document means almost nothing was found, and the post's six words are the page title."
+        },
+        {
+          "key": "b",
+          "text": "The page held no article markup before rendering; the six words are all the fallback found.",
+          "correct": true,
+          "feedback": "Right. The shell carries its article as an inline payload that only the page's script turns into markup, so the extractor had nothing but the title to keep."
+        },
+        {
+          "key": "c",
+          "text": "trafilatura crashed, so the server substituted a summary written by markdownify.",
+          "correct": false,
+          "feedback": "Nothing crashed and nothing was summarized. trafilatura kept less than the 200-character minimum, the fallback kept the title, and the method says which ran."
+        },
+        {
+          "key": "d",
+          "text": "The extraction found nothing at all, because a method of markdownify is how the server labels an empty page.",
+          "correct": false,
+          "feedback": "An empty extraction is labeled `empty`. Here the fallback did find something, the 46 bytes of the title, which is why the label is `markdownify`."
+        }
+      ],
+      "explanation": "Section 2 shows this exact receipt for `spa-shell.html` fetched without rendering: the extracted text is the six words of the `<title>`. A reduction of 99.9 percent can mean everything useful was thrown away, which is why the server reports both byte counts, the word count and the method together.",
+      "hints": [
+        "Compare the word count with what an article of any length would have."
+      ]
+    },
+    {
+      "id": "mcp-017-q02",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "4",
+      "est_minutes": 2,
+      "tags": [
+        "markdownify",
+        "fallback"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The previous edition's fallback called `markdownify(html, strip=[\"script\", \"style\", \"nav\", \"footer\", \"header\"])`. On the client-rendered fixture it returned 2,539 words. What did `strip=` do to a `<script>` element?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Removed the element and everything inside it, so the 2,539 words are all article text.",
+          "correct": false,
+          "feedback": "That is what `decompose()` does to a parsed element. The fixture has no article in it before rendering, so 2,539 words cannot be article text."
+        },
+        {
+          "key": "b",
+          "text": "Removed the tag and kept its text, so the script's contents came back as prose.",
+          "correct": true,
+          "feedback": "Right. `strip=` drops the tag markup and keeps the text; inside `<script>` and `<style>` the text is code, state and a style sheet."
+        },
+        {
+          "key": "c",
+          "text": "Kept the element but converted it to a fenced code block, which the word count then included.",
+          "correct": false,
+          "feedback": "markdownify does not turn scripts into code blocks here; the text comes back as plain prose with no marking at all, which is what made the defect look like a success."
+        },
+        {
+          "key": "d",
+          "text": "Raised an error that the fallback caught, so the 2,539 words came from trafilatura instead.",
+          "correct": false,
+          "feedback": "Nothing raised. The method was markdownify, and the leaked strings `dataLayer` and `addEventListener` came from the script text it kept."
+        }
+      ],
+      "explanation": "Section 4: `strip=` removes the tag and keeps the text, so on the shell 1,777 words came from `<script>` elements (1,433 of them the serialized `__NEXT_DATA__` store) and 673 from `<style>`. The fix removes the elements from the parsed tree with `decompose()` before conversion.",
+      "hints": [
+        "Think about the difference between a tag and the text between its opening and closing markup."
+      ]
+    },
+    {
+      "id": "mcp-017-q03",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "7",
+      "est_minutes": 2,
+      "tags": [
+        "content-blocks",
+        "screenshot"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Under `mcp==2.3.0`, a tool declared `-> list` returns `[{\"type\": \"text\", \"text\": \"...\"}, {\"type\": \"image\", \"data\": \"iVBORw0KGgo=\", \"mimeType\": \"image/png\"}]`. What does the client receive?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "A text block and an image block, because the dictionaries have the content block shape.",
+          "correct": false,
+          "feedback": "The SDK does not inspect a list of plain dictionaries for content block shapes. Only real `ImageContent` objects, or a hand-built `CallToolResult`, become image blocks."
+        },
+        {
+          "key": "b",
+          "text": "One text block holding the whole list as a JSON array, with the list repeated in `structuredContent`.",
+          "correct": false,
+          "feedback": "The run in section 7 prints two text blocks, one per dictionary, and `structuredContent` comes back null."
+        },
+        {
+          "key": "c",
+          "text": "Two text blocks, each holding one dictionary serialized as JSON, and no `outputSchema` on the tool.",
+          "correct": true,
+          "feedback": "Right. Each dictionary is treated as data and serialized into its own text block; the base64 arrives as prose and the bare `list` annotation publishes no schema."
+        },
+        {
+          "key": "d",
+          "text": "A protocol error, because a tool result may not contain a dictionary with a `data` field.",
+          "correct": false,
+          "feedback": "Nothing in the protocol or the SDK rejects this; the call succeeds, which is why the defect shipped unnoticed."
+        }
+      ],
+      "explanation": "Section 7 rebuilds the previous edition's return on a throwaway server: `outputSchema: null` and content block types `['text', 'text']`, the second holding the image dictionary as JSON. A real image needs an `ImageContent` block.",
+      "hints": [
+        "The return annotation decides how the SDK treats the value; a plain `list` of `dict` is data, not content."
+      ]
+    },
+    {
+      "id": "mcp-017-q04",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "6",
+      "est_minutes": 3,
+      "tags": [
+        "caching",
+        "protocol"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Under revision 2026-07-28, which of these results must carry the caching hints `ttlMs` and `cacheScope` when they are complete? Select every one that applies.",
+      "select": "multiple",
+      "options": [
+        {
+          "key": "a",
+          "text": "The result of `tools/list`.",
+          "correct": true,
+          "feedback": "Yes. `ListToolsResult` extends `CacheableResult`, and the Caching page lists `tools/list` among the six methods."
+        },
+        {
+          "key": "b",
+          "text": "The result of `tools/call` for `browse_url`, which may come from the server's page cache.",
+          "correct": false,
+          "feedback": "`CallToolResult` does not extend `CacheableResult`, so a tool result carries neither field, however the server produced it; `from_cache` is the tool's own field."
+        },
+        {
+          "key": "c",
+          "text": "The result of `resources/read`.",
+          "correct": true,
+          "feedback": "Yes. `resources/read` is one of the six methods the Caching page lists."
+        },
+        {
+          "key": "d",
+          "text": "The result of `server/discover`.",
+          "correct": true,
+          "feedback": "Yes. `server/discover` is in the list too, and `DiscoverResult` extends `CacheableResult`."
+        },
+        {
+          "key": "e",
+          "text": "The result of `prompts/get`.",
+          "correct": false,
+          "feedback": "`prompts/get` is not among the six; the listing method `prompts/list` is, but fetching one prompt is not cacheable."
+        }
+      ],
+      "explanation": "Section 6 quotes the Caching page: `server/discover`, `tools/list`, `prompts/list`, `resources/list`, `resources/templates/list` and `resources/read`. `tools/call` and `prompts/get` are not in the set, and the SDK's `CallToolResult` type has no `ttlMs` or `cacheScope` field.",
+      "hints": [
+        "The list is mostly listing methods.",
+        "Ask whether the result type extends `CacheableResult`."
+      ]
+    },
+    {
+      "id": "mcp-017-q05",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "3",
+      "est_minutes": 2,
+      "tags": [
+        "playwright",
+        "imports"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Why does the research browser import `playwright.async_api` inside `PlaywrightFetcher.start()` rather than at the top of `browser.py`?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "So the server imports without the package, and a missing package or browser is reported with the command that fixes it.",
+          "correct": true,
+          "feedback": "Right. Importing the server never needs Playwright, so the suite and any tooling can import it, and `start()` then raises `BrowserUnavailable` with the command to run."
+        },
+        {
+          "key": "b",
+          "text": "Because a top-level import of Playwright writes to standard output and would corrupt the stdio stream.",
+          "correct": false,
+          "feedback": "Nothing in the post or the project says Playwright prints at import; the reason given is that the package may be missing or installed without its browser."
+        },
+        {
+          "key": "c",
+          "text": "Because the import starts Chromium, and the tests must not start a browser.",
+          "correct": false,
+          "feedback": "Importing a module does not launch a browser; `chromium.launch()` does, and that runs only in `start()`, which is a no-op when a fetcher is injected."
+        },
+        {
+          "key": "d",
+          "text": "Because the Python package and the browser binary are the same download, so the import fails until the download finishes.",
+          "correct": false,
+          "feedback": "They are separate: `uv sync` installs the bindings and `playwright install chromium` downloads the browser, which is exactly why the error has to say which step is missing."
+        }
+      ],
+      "explanation": "Section 3: installing the Python package is only half the installation, and a server that cannot import its own modules cannot say what is missing. `snippets/fetcher_seam.py` prints that `playwright` is not in `sys.modules` after importing the server.",
+      "hints": [
+        "Ask what the server can still do when an import at module load fails."
+      ]
+    },
+    {
+      "id": "mcp-017-q06",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "3",
+      "est_minutes": 3,
+      "tags": [
+        "lifespan",
+        "testing"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A test installs a fixture fetcher with `browser.use(fixture)` and then opens `async with Client(mcp)`, which runs the server's lifespan: `browser.start()`, then on exit `browser.stop()` and `cache.clear()`. What happens to the fixture fetcher?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "`start()` replaces it with a `PlaywrightFetcher`, because the lifespan always launches the real browser.",
+          "correct": false,
+          "feedback": "`start()` returns at once when a fetcher is already installed; that is what lets the suite run the same lifespan with no browser."
+        },
+        {
+          "key": "b",
+          "text": "It serves every call, and `stop()` leaves it open, because the session only closes a fetcher it started.",
+          "correct": true,
+          "feedback": "Right. `use()` marks the fetcher as not owned, so `stop()` neither closes it nor forgets it; the snippet prints `closed by the lifespan: False`."
+        },
+        {
+          "key": "c",
+          "text": "It is used for every tool call, and `stop()` closes it, so a test cannot inspect it afterward.",
+          "correct": false,
+          "feedback": "`stop()` closes the fetcher only when `_owns_fetcher` is true, which `use()` sets to false; the test can still read `fixture.fetched` after the client exits."
+        },
+        {
+          "key": "d",
+          "text": "The lifespan raises `BrowserUnavailable`, because a fixture fetcher has no `start()` method.",
+          "correct": false,
+          "feedback": "`BrowserSession.start()` returns before looking for a `start()` method when a fetcher is installed; `BrowserUnavailable` comes from `require()` only when no fetcher exists."
+        }
+      ],
+      "explanation": "Section 3 shows the lifespan and the script's run with the fixture installed: it logs `research browser ready (fetcher=fixture)` and `research browser stopped`, and the injected fetcher is not closed. Ownership follows who started the fetcher.",
+      "hints": [
+        "Read what `use()` sets besides the fetcher.",
+        "`stop()` checks one flag before it closes anything."
+      ]
+    },
+    {
+      "id": "mcp-017-q07",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "7",
+      "est_minutes": 1,
+      "tags": [
+        "output-schema",
+        "screenshot"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`screenshot_page` builds its own `CallToolResult` with a text block and an image block, and still publishes an output schema derived from the dataclass `ScreenshotMeta`. Write its return annotation.",
+      "answer": {
+        "model": "`Annotated[CallToolResult, ScreenshotMeta]`",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|never|avoid|instead of|rather than)\\s+(?:an?\\s+|the\\s+)?`?(?:typing\\.)?annotated\\s*\\[\\s*(?:mcp_types\\.)?calltoolresult)(?![\\s\\S]*annotated\\s*\\[\\s*screenshotmeta)(?![\\s\\S]*screenshotmeta\\s*\\]`?\\s+(?:is not|isn't|is never|was not|wasn't)\\b)[\\s\\S]*\\b(?:typing\\.)?annotated\\s*\\[\\s*(?:mcp_types\\.|types\\.)?calltoolresult\\s*,\\s*screenshotmeta\\s*\\][\\s\\S]*$"
+        ]
+      },
+      "explanation": "Section 7: the SDK reads the `CallToolResult` arm as the handler owning the content blocks and the second arm as the type to derive the output schema from, so `tools/list` publishes `ScreenshotMeta`'s five fields while the result carries a real image block.",
+      "hints": [
+        "It is a `typing` construct with two arguments: the result type first, then the metadata class."
+      ]
+    },
+    {
+      "id": "mcp-017-q08",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "6",
+      "est_minutes": 1,
+      "tags": [
+        "caching",
+        "structured-content"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A `tools/call` result has no protocol field for caching. Which field of `browse_url`'s own structured result tells the model whether the text came from the server's page cache?",
+      "answer": {
+        "model": "`from_cache`",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:it is|it's|is really|actually|the field is|the answer is)\\s+`?(?:use_cache|ttlms|cachescope|cached|truncated)\\b)(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|never|isn't|is not)\\s+(?:the\\s+)?(?:field\\s+)?`?from[_ ]cache)(?![\\s\\S]*\\bfrom[_ ]cache`?\\s*(?:\\bor\\b|/|\\band\\b)\\s*`?(?:use_cache|cached|ttlms|cachescope))(?![\\s\\S]*\\b(?:use_cache|cached|ttlms|cachescope)`?\\s*(?:\\bor\\b|/|\\band\\b)\\s*`?from[_ ]cache)(?![\\s\\S]*\\bfrom[_ ]cache`?\\s+(?:is not|isn't|is never|was not|wasn't)\\b)[\\s\\S]*\\bfrom[_ ]cache\\b[\\s\\S]*$"
+        ]
+      },
+      "explanation": "Section 6: `browse_url` and `search_in_page` report `from_cache` in their structured results, so the model can tell a fresh read from a reused one; the snippet prints `False`, `True`, `False` for two browses and a third with `use_cache` false.",
+      "hints": [
+        "It is a boolean in `PageContent`, named for where the extraction came from."
+      ]
+    },
+    {
+      "id": "mcp-017-q09",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 2,
+      "tags": [
+        "receipt",
+        "reduction"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The article fixture is 76,201 bytes of HTML and its extracted text is 4,126 bytes. What `reduction_percent` does `extract()` report? Give the value as the function rounds it.",
+      "answer": {
+        "value": 94.6,
+        "tolerance": 0.05,
+        "unit": "percent"
+      },
+      "explanation": "Section 5 shows the derivation: `(1 - clean_bytes / raw_bytes) * 100`, rounded to one decimal. $(1 - 4126 / 76201) \\times 100 = 94.585...$, which rounds to 94.6.",
+      "hints": [
+        "The percentage is of bytes discarded, not of bytes kept.",
+        "Divide kept by raw, subtract from one, and multiply by 100."
+      ],
+      "precision_note": "Closed form: (1 - 4126/76201) x 100 = 94.585, rounded to 94.6; snippets/extraction.py prints 94.6 for article.html. The nearest wrong method, the kept share, gives 5.4."
+    },
+    {
+      "id": "mcp-017-q10",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "8",
+      "est_minutes": 3,
+      "tags": [
+        "bounds",
+        "word-cap"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`browse_url` clamps its `max_words` argument with `max(100, min(max_words, MAX_MAX_WORDS))`, where `MAX_MAX_WORDS` is 20,000. Give `returned_words` for two calls: `max_words=50` on a page whose extracted text has 707 words, and `max_words=30000` on a page whose extracted text has 25,000 words.",
+      "answer": {
+        "parts": [
+          {
+            "label": "max_words=50, 707-word page",
+            "value": 100,
+            "tolerance": 0,
+            "unit": "words"
+          },
+          {
+            "label": "max_words=30000, 25,000-word page",
+            "value": 20000,
+            "tolerance": 0,
+            "unit": "words"
+          }
+        ]
+      },
+      "explanation": "Section 8: the clamp raises 50 to the floor of 100, and 707 words exceed it, so 100 are returned with `truncated: true`. The second request is held to the 20,000 ceiling, and the 25,000-word page is cut to 20,000.",
+      "hints": [
+        "Apply the inner `min` first, then the outer `max`.",
+        "Then compare the clamped cap with the page's word count."
+      ],
+      "precision_note": "Closed form: max(100, min(50, 20000)) = 100 and min(707, 100) = 100; max(100, min(30000, 20000)) = 20000 and min(25000, 20000) = 20000. snippets/browse_tools.py prints returned_words=100 for max_words=5 on the 707-word article. Taking max_words literally gives 50 and 25,000."
+    },
+    {
+      "id": "mcp-017-q11",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "6",
+      "est_minutes": 4,
+      "tags": [
+        "caching",
+        "eviction"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A `PageCache(ttl_seconds=10, max_entries=2)` with an injected clock receives `put(\"a\")` at $t = 0$, `put(\"b\")` at $t = 5$, `put(\"c\")` at $t = 12$ and `put(\"d\")` at $t = 13$, each for a new URL. After the last put, how many entries does it hold, and what is its `evictions` counter?",
+      "answer": {
+        "parts": [
+          {
+            "label": "entries",
+            "value": 2,
+            "tolerance": 0,
+            "unit": "entries"
+          },
+          {
+            "label": "evictions",
+            "value": 1,
+            "tolerance": 0,
+            "unit": "evictions"
+          }
+        ]
+      },
+      "explanation": "Section 6: at $t = 12$ the cache is full and `a` is 12 seconds old, past the TTL, so `_evict_oldest()` clears it without counting an eviction. At $t = 13$ it is full again with `b` (8 seconds) and `c` (1 second) both fresh, so the oldest live entry `b` is dropped and counted. `c` and `d` remain.",
+      "hints": [
+        "Making room clears stale entries first and counts nothing for them.",
+        "An entry is stale when its age is strictly greater than `ttl_seconds`."
+      ],
+      "precision_note": "Traced with the project's PageCache and the suite's FakeClock: entries 2 (c and d), evictions 1. Counting the stale removal as an eviction, the nearest wrong reading, gives 2."
+    },
+    {
+      "id": "mcp-017-q12",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 10,
+      "tags": [
+        "receipt",
+        "utf-8"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Write `receipt(html, text)` returning a dict with four keys: `raw_bytes` and `clean_bytes`, the UTF-8 byte lengths of `html` and `text`; `reduction_percent`, the share of bytes discarded as a percentage rounded to one decimal, and `0.0` when `html` is empty; and `word_count`, the number of whitespace-separated words in `text`. Standard library only.",
+      "kind": "implement",
+      "language": "python",
+      "starter": "def receipt(html: str, text: str) -> dict:\n    \"\"\"Bytes in, bytes out, the reduction, and the word count.\"\"\"\n    raise NotImplementedError\n",
+      "solution": "def receipt(html: str, text: str) -> dict:\n    \"\"\"Bytes in, bytes out, the reduction, and the word count.\"\"\"\n    raw_bytes = len(html.encode(\"utf-8\"))\n    clean_bytes = len(text.encode(\"utf-8\"))\n    reduction = 0.0 if raw_bytes == 0 else (1 - clean_bytes / raw_bytes) * 100\n    return {\n        \"raw_bytes\": raw_bytes,\n        \"clean_bytes\": clean_bytes,\n        \"reduction_percent\": round(reduction, 1),\n        \"word_count\": len(text.split()),\n    }\n",
+      "tests": "\n# The article fixture's counts, as section 5 tabulates them.\nr = receipt(\"x\" * 76201, \"y\" * 4126)\nassert (r[\"raw_bytes\"], r[\"clean_bytes\"]) == (76201, 4126), r\nassert r[\"reduction_percent\"] == 94.6, r[\"reduction_percent\"]\n\n# Bytes, not characters: an accented letter is two bytes in UTF-8.\nr = receipt(\"\\u00e9\" * 10 + \"a\" * 10, \"\\u00e9\" * 5)\nassert (r[\"raw_bytes\"], r[\"clean_bytes\"]) == (30, 10), r\nassert r[\"reduction_percent\"] == 66.7, r[\"reduction_percent\"]\n\n# An empty document divides by nothing.\nr = receipt(\"\", \"\")\nassert r == {\"raw_bytes\": 0, \"clean_bytes\": 0, \"reduction_percent\": 0.0, \"word_count\": 0}, r\nassert isinstance(r[\"reduction_percent\"], float), type(r[\"reduction_percent\"])\n\n# Words are whitespace-separated, across newlines.\nr = receipt(\"<p>a</p>\" * 20, \"Rendering budgets,\\nmeasured | Northwind Review\")\nassert r[\"word_count\"] == 6, r[\"word_count\"]\nassert isinstance(r[\"reduction_percent\"], float)\nprint(\"all receipt tests passed\")\n",
+      "explanation": "Section 5: the receipt is derived, not asserted. Bytes are counted on the UTF-8 encoding, because a character count understates any page with non-ASCII text, and the ratio is computed from the two counts before rounding, with a guard for an empty document, as `extract()` does.",
+      "hints": [
+        "`str.encode('utf-8')` gives the bytes; its length is the count.",
+        "Compute the percentage from the unrounded ratio, guard the empty case, and round only at the end."
+      ]
+    },
+    {
+      "id": "mcp-017-q13",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "6",
+      "est_minutes": 12,
+      "tags": [
+        "caching",
+        "eviction"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`BoundedCache` below always throws away its oldest entry when it is full, even when some entries are already past their TTL. Fix `_make_room()` so that, when the cache is full, it first removes every expired entry without counting those removals as evictions, and only when no entry is expired removes the single oldest entry and counts one eviction. Leave the rest of the class as it is.",
+      "kind": "fix",
+      "language": "python",
+      "starter": "class BoundedCache:\n    \"\"\"At most `max_entries` values, each fresh for `ttl_seconds`.\"\"\"\n\n    def __init__(self, ttl_seconds: float, max_entries: int, clock) -> None:\n        self.ttl_seconds = ttl_seconds\n        self.max_entries = max_entries\n        self.clock = clock\n        self.store = {}  # key -> (value, stored_at)\n        self.evictions = 0\n\n    def _expired(self, stored_at: float) -> bool:\n        return (self.clock() - stored_at) > self.ttl_seconds\n\n    def get(self, key):\n        item = self.store.get(key)\n        if item is None:\n            return None\n        value, stored_at = item\n        if self._expired(stored_at):\n            del self.store[key]\n            return None\n        return value\n\n    def put(self, key, value) -> None:\n        if key not in self.store and len(self.store) >= self.max_entries:\n            self._make_room()\n        self.store[key] = (value, self.clock())\n\n    def _make_room(self) -> None:\n        oldest = min(self.store, key=lambda k: self.store[k][1])\n        del self.store[oldest]\n        self.evictions += 1\n",
+      "solution": "class BoundedCache:\n    \"\"\"At most `max_entries` values, each fresh for `ttl_seconds`.\"\"\"\n\n    def __init__(self, ttl_seconds: float, max_entries: int, clock) -> None:\n        self.ttl_seconds = ttl_seconds\n        self.max_entries = max_entries\n        self.clock = clock\n        self.store = {}  # key -> (value, stored_at)\n        self.evictions = 0\n\n    def _expired(self, stored_at: float) -> bool:\n        return (self.clock() - stored_at) > self.ttl_seconds\n\n    def get(self, key):\n        item = self.store.get(key)\n        if item is None:\n            return None\n        value, stored_at = item\n        if self._expired(stored_at):\n            del self.store[key]\n            return None\n        return value\n\n    def put(self, key, value) -> None:\n        if key not in self.store and len(self.store) >= self.max_entries:\n            self._make_room()\n        self.store[key] = (value, self.clock())\n\n    def _make_room(self) -> None:\n        stale = [k for k, (_, stored_at) in self.store.items() if self._expired(stored_at)]\n        if stale:\n            for k in stale:\n                del self.store[k]\n            return\n        oldest = min(self.store, key=lambda k: self.store[k][1])\n        del self.store[oldest]\n        self.evictions += 1\n",
+      "tests": "\nclass Clock:\n    def __init__(self):\n        self.now = 1000.0\n\n    def __call__(self):\n        return self.now\n\n\n# Full and every entry fresh: the oldest live entry goes, and that is one eviction.\nclock = Clock()\nc = BoundedCache(ttl_seconds=600, max_entries=3, clock=clock)\nfor key in (\"z\", \"a\", \"m\"):\n    c.put(key, key.upper())\n    clock.now += 1\nc.put(\"b\", \"B\")\nassert set(c.store) == {\"a\", \"m\", \"b\"}, sorted(c.store)\nassert c.evictions == 1, c.evictions\n\n# Full and both entries stale: both are cleared, no live entry is touched, no eviction counted.\nclock = Clock()\nc = BoundedCache(ttl_seconds=10, max_entries=2, clock=clock)\nc.put(\"old-1\", 1)\nclock.now += 1\nc.put(\"old-2\", 2)\nclock.now += 11\nc.put(\"new\", 3)\nassert set(c.store) == {\"new\"}, sorted(c.store)\nassert c.evictions == 0, c.evictions\n\n# Full with one stale entry: only it goes, and the fresh one survives.\nclock = Clock()\nc = BoundedCache(ttl_seconds=10, max_entries=2, clock=clock)\nc.put(\"stale\", 1)\nclock.now += 11\nc.put(\"fresh\", 2)\nc.put(\"newest\", 3)\nassert set(c.store) == {\"fresh\", \"newest\"}, sorted(c.store)\nassert c.evictions == 0, c.evictions\n\n# Full with the oldest entry exactly ttl_seconds old: it is still fresh, so it is evicted and counted.\nclock = Clock()\nc = BoundedCache(ttl_seconds=10, max_entries=2, clock=clock)\nc.put(\"a\", 1)\nclock.now += 5\nc.put(\"b\", 2)\nclock.now += 5\nc.put(\"c\", 3)\nassert set(c.store) == {\"b\", \"c\"}, sorted(c.store)\nassert c.evictions == 1, c.evictions\n\n# Replacing a key that is already cached never makes room.\nclock = Clock()\nc = BoundedCache(ttl_seconds=600, max_entries=2, clock=clock)\nc.put(\"a\", 1)\nc.put(\"b\", 2)\nc.put(\"a\", 3)\nassert set(c.store) == {\"a\", \"b\"} and c.evictions == 0\nassert c.get(\"a\") == 3\n\n# Age is a strict bound: exactly ttl_seconds old is still a hit.\nclock = Clock()\nc = BoundedCache(ttl_seconds=10, max_entries=2, clock=clock)\nc.put(\"a\", 1)\nclock.now += 10\nassert c.get(\"a\") == 1\nclock.now += 1\nassert c.get(\"a\") is None\nprint(\"all cache tests passed\")\n",
+      "explanation": "Section 6 shows `_evict_oldest()`: expired entries are dead weight, so they go first and are not counted; only when everything is fresh is the oldest live entry dropped and the eviction counted. That keeps a fresh page from being thrown away while a stale one sits in the cache.",
+      "hints": [
+        "Collect the expired keys before deleting any, so the dictionary is not changed while it is read.",
+        "If that list is not empty, delete them all and return before the oldest-entry branch."
+      ]
+    },
+    {
+      "id": "mcp-017-q14",
+      "type": "order",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o2",
+        "o4"
+      ],
+      "section": "4",
+      "est_minutes": 3,
+      "tags": [
+        "pipeline",
+        "caching"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Put the steps of one `browse_url` call for a URL that is not yet cached, with `use_cache` left true, in the order the code runs them.",
+      "items": [
+        {
+          "key": "a",
+          "text": "Look the URL up in the page cache, and miss."
+        },
+        {
+          "key": "b",
+          "text": "Clamp `max_words` between 100 and 20,000."
+        },
+        {
+          "key": "c",
+          "text": "Ask the installed fetcher for the page's HTML."
+        },
+        {
+          "key": "d",
+          "text": "Run `extract()` on the HTML."
+        },
+        {
+          "key": "e",
+          "text": "Store the extraction in the page cache."
+        },
+        {
+          "key": "f",
+          "text": "Cut the text to the clamped word cap and set `truncated`."
+        }
+      ],
+      "answer": [
+        "b",
+        "a",
+        "c",
+        "d",
+        "e",
+        "f"
+      ],
+      "explanation": "Section 8 shows `browse_url` clamping `max_words` before it calls `load_page()`, and the figure in section 4 traces `load_page()`: the cache lookup, the fetch, the extraction and the cache write. The word cap is applied afterward, so the cache always holds the whole extraction.",
+      "hints": [
+        "The argument is clamped before any page work starts.",
+        "The cache stores the full extraction, so the cut comes last."
+      ]
+    },
+    {
+      "id": "mcp-017-q15",
+      "type": "match",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o1",
+        "o2",
+        "o3"
+      ],
+      "section": "11",
+      "est_minutes": 3,
+      "tags": [
+        "diagnosis",
+        "symptoms"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Match each symptom a reader of this server might see to its cause.",
+      "left": [
+        {
+          "key": "a",
+          "text": "A screenshot tool's result holds two text blocks, one of them JSON with `\"type\": \"image\"` inside."
+        },
+        {
+          "key": "b",
+          "text": "`browse_url` reports a 99.9 percent reduction, six words, and method `markdownify`."
+        },
+        {
+          "key": "c",
+          "text": "The server imports and its test suite passes, but under a host the stdio server exits with status 1 before replying, and its standard error ends with `BrowserUnavailable`."
+        },
+        {
+          "key": "d",
+          "text": "A result has `resultType: \"complete\"` and `isError: true`, with the text `Error executing tool browse_url: could not load ...`."
+        }
+      ],
+      "right": [
+        {
+          "key": "p",
+          "text": "The tool returned plain dictionaries under a `list` annotation instead of `ImageContent`."
+        },
+        {
+          "key": "q",
+          "text": "A client-rendered page was read without its script running, so only the title was found."
+        },
+        {
+          "key": "r",
+          "text": "The Python bindings are installed but the browser binary is not."
+        },
+        {
+          "key": "s",
+          "text": "The fetcher raised, and `load_page()` turned the exception into a `ToolError`."
+        },
+        {
+          "key": "t",
+          "text": "`trafilatura` was given `favor_precision=True` and discarded the article."
+        }
+      ],
+      "answer": {
+        "a": "p",
+        "b": "q",
+        "c": "r",
+        "d": "s"
+      },
+      "explanation": "Section 11 and the sections it points back to: the list of dictionaries becomes text blocks (section 7), a shell read without rendering yields its title (section 2), the lazy import lets the server import without Chromium while its lifespan fails at startup (sections 3 and 11), and a fetch failure is a `ToolError` whose message reaches the model (section 11).",
+      "hints": [
+        "One cause on the right matches no symptom.",
+        "Ask, for each symptom, which layer produced it: the SDK's serialization, the page, the installation, or the tool."
+      ]
+    },
+    {
+      "id": "mcp-017-q16",
+      "type": "long",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "3",
+      "est_minutes": 15,
+      "tags": [
+        "testing",
+        "design"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A team is adding a second expensive dependency to the research browser: a PDF renderer that turns a URL into text and needs a native binary. Design how it enters the server so that the test suite still runs every tool through the real protocol path with no binary installed. Name the seam, where it is installed and started, what happens at import time and at shutdown, and how a missing binary is reported to the operator and to the model.",
+      "kind": "design",
+      "solution": "The renderer sits behind a small `Protocol`, say `PdfRenderer` with a `name` and an `async def render(url) -> str` plus `close()`, and the tools ask a session object for whatever renderer is installed rather than importing a concrete class. The session mirrors `BrowserSession`: `use(renderer)` installs one and marks it as not owned, and `start()` is a no-op when one is installed, so the suite installs a fixture renderer that reads saved text and runs the real lifespan and the real tools over `Client(mcp)` with no binary. The native library is imported lazily inside the real implementation's `start()`, so importing the server never fails and the suite and any tooling can import it. The server's lifespan starts the session once per process and stops it in a `finally`, closing only a renderer it started itself, so nothing leaks and a test can inspect its fixture afterward. A missing package or binary raises a specific exception whose message names the install command for the operator; inside a tool, the failure is raised as `ToolError` with a sentence the model can read, so the call comes back as an `isError` result rather than a bare `Error executing tool <name>`.",
+      "rubric": [
+        {
+          "criterion": "Puts the renderer behind a small protocol and an injection point that the tools ask, not a class they import",
+          "points": 2
+        },
+        {
+          "criterion": "Makes start a no-op for an injected implementation so the suite runs the real lifespan and tools in memory",
+          "points": 2
+        },
+        {
+          "criterion": "Imports the native library lazily inside start, so the server imports without it",
+          "points": 2
+        },
+        {
+          "criterion": "Owns the real implementation in the lifespan with cleanup in a finally, closing only what it started",
+          "points": 2
+        },
+        {
+          "criterion": "Reports a missing binary with a message naming the fix, and as a ToolError the model can read inside a tool",
+          "points": 2
+        }
+      ],
+      "answer_length": "two paragraphs",
+      "explanation": "Section 3 builds exactly this for the browser: a small `PageFetcher` protocol the tools ask for through `browser.require()`, an injection point whose `start()` is a no-op for an injected fetcher, a lazy import inside the real implementation's `start()`, and a lifespan that owns the real one and closes only what it started. The same shape carries over to any expensive native dependency.",
+      "hints": [
+        "Start from the shape of `PageFetcher` and `BrowserSession` and ask which parts generalize.",
+        "Separate what happens when the module is imported from what happens when the lifespan starts."
+      ]
+    },
+    {
+      "id": "mcp-017-q17",
+      "type": "long",
+      "track": "connect",
+      "difficulty": 4,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "8",
+      "est_minutes": 15,
+      "tags": [
+        "bounds",
+        "context"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Post 15's `get_logs` bounds a log read in lines and in bytes and reports what it dropped. Compare that with how this post's `browse_url` bounds what reaches the model. Which bounds does each apply, which end of the content does each keep, and how does each tell the model that it is not seeing everything?",
+      "kind": "connect",
+      "connects": [
+        "mcp-015"
+      ],
+      "solution": "Both servers treat the model's context as the scarce resource and refuse to hand over raw material unbounded. `get_logs` applies two bounds: `tail_lines`, which the Kubernetes API applies and which bounds what crosses the wire, and `max_bytes`, applied locally to the newest end, which bounds what reaches the model; both requests are clamped against configured maxima. It keeps the newest end, because a crash is explained by the last lines, and snaps the cut to a line boundary. It reports `truncated`, `dropped_bytes`, `dropped_lines` and a `note` that says how to see a different window. `browse_url` applies extraction first, which is the large bound (94.6 and 99.6 percent of the bytes discarded on the two article pages), and then a word cap clamped between 100 and 20,000. It keeps the beginning of the article, because that is where an article's argument starts, and reports `word_count`, `returned_words` and `truncated` beside the byte counts and method. The common rule: clamp a model-supplied limit rather than reject it, keep the part that answers the question, and say in the result exactly what was cut so the model can ask again or say it cannot tell.",
+      "rubric": [
+        {
+          "criterion": "Names both of get_logs' bounds and what each bounds (wire against context)",
+          "points": 2
+        },
+        {
+          "criterion": "Names extraction and the clamped word cap as browse_url's bounds",
+          "points": 2
+        },
+        {
+          "criterion": "States which end each keeps and why (newest log lines, the start of the article)",
+          "points": 2
+        },
+        {
+          "criterion": "Names the reporting fields of each and why silent truncation misleads a model",
+          "points": 2
+        },
+        {
+          "criterion": "Draws the shared rule: clamp model-supplied limits and report what was cut",
+          "points": 1
+        }
+      ],
+      "answer_length": "two paragraphs",
+      "explanation": "Section 8 bounds `browse_url` twice, by extraction and by a clamped word cap, and reports `word_count`, `returned_words` and `truncated`; post 15 bounds `get_logs` in lines and in bytes, keeps the newest end, and reports the dropped counts. Both clamp the model's own limit and say what was cut.",
+      "hints": [
+        "List each tool's bounds first, then its reporting fields.",
+        "Ask where the useful part of a log is, and where the useful part of an article is."
+      ]
+    },
+    {
+      "id": "mcp-017-q18",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "7",
+      "est_minutes": 3,
+      "tags": [
+        "output-schema",
+        "screenshot"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A refactor changes `screenshot_page`'s return annotation from `Annotated[CallToolResult, ScreenshotMeta]` to a bare `CallToolResult` and leaves the body alone. What changes for a client?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Nothing: the body still sets `structured_content`, so `tools/list` still publishes the `ScreenshotMeta` schema.",
+          "correct": false,
+          "feedback": "The schema is derived from the annotation, not from what the body happens to return; a bare `CallToolResult` annotation publishes no `outputSchema`."
+        },
+        {
+          "key": "b",
+          "text": "The image block becomes a text block, because only the `Annotated` form lets a tool return an image.",
+          "correct": false,
+          "feedback": "The handler builds the blocks itself, so they reach the client unchanged; the image block does not depend on the second arm."
+        },
+        {
+          "key": "c",
+          "text": "`tools/list` publishes no `outputSchema`, but each call still returns the image block and the metadata.",
+          "correct": true,
+          "feedback": "Right. The second arm of `Annotated` is the only thing the schema comes from; the hand-built result is untouched."
+        },
+        {
+          "key": "d",
+          "text": "Every call fails, because a `CallToolResult` with `structured_content` needs a published schema.",
+          "correct": false,
+          "feedback": "A tool may return structured content without publishing a schema; post 06 prints exactly that, `outputSchema: null` with structured content present."
+        }
+      ],
+      "explanation": "Section 7: the SDK reads the `CallToolResult` arm as the handler owning the content blocks and the `ScreenshotMeta` arm as the schema. Post 06 shows that a bare `-> CallToolResult` trades the schema for the shape, which is why `test_every_tool_publishes_an_output_schema` exists.",
+      "hints": [
+        "Ask which part of the signature the published schema is read from.",
+        "Separate what `tools/list` publishes from what one call returns."
+      ]
+    }
+  ]
+}

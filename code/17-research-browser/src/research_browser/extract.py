@@ -17,8 +17,9 @@ Two extractors, in order:
   more boilerplate, which is exactly why it is second.
 
 When both come back empty the method is reported as `empty` rather than dressed
-up as a successful extraction. A page that rendered nothing is a real answer,
-and it is the answer you get for a JavaScript shell fetched without a browser.
+up as a successful extraction. A JavaScript shell fetched without a browser is
+not that case: the fallback keeps its title, so read the word count beside the
+method.
 """
 
 from __future__ import annotations
@@ -42,8 +43,9 @@ MIN_USEFUL_CHARS = 200
 # This has to happen before markdownify sees the document. markdownify's own
 # `strip=` argument removes the *tag* and keeps the *text*, which on a `<script>`
 # means the page's JavaScript comes back as prose. On tests/fixtures/spa-shell.html
-# that turned a JavaScript shell into 2,539 words, 1,777 of them the minified
-# bundle, extracted with every appearance of success.
+# that turned a JavaScript shell into 2,539 words, 1,777 of them from <script>
+# elements (1,433 of those the serialized page store), extracted with every
+# appearance of success.
 _DROP_ELEMENTS = (
     "script",
     "style",
@@ -138,7 +140,8 @@ def extract(html: str, *, url: str = "", title: str = "") -> Extraction:
     if text is None or len(text.strip()) < MIN_USEFUL_CHARS:
         fallback = _try_markdownify(html)
         # Only accept the fallback if it actually did better. On a JavaScript
-        # shell neither one finds anything, and saying so is the honest answer.
+        # shell the fallback may find only the title; the word count, not the
+        # method, is what shows that.
         if fallback is not None and len(fallback.strip()) > len((text or "").strip()):
             text = fallback
             method = "markdownify"

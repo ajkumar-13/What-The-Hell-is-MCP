@@ -34,7 +34,7 @@ log = logging.getLogger("research-browser")
 async def lifespan(server: MCPServer) -> AsyncIterator[BrowserSession]:
     """Own the browser process for the lifetime of the server.
 
-    Launching Chromium costs a second or two. Doing it once here, rather than
+    Launching Chromium is the slow step of a request. Doing it once here, rather than
     once per tool call, is the whole reason the browser is a singleton. The
     `finally` is load-bearing: a Chromium that outlives its server is a leaked
     process the host has no way to reap.
