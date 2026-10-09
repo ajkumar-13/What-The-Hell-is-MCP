@@ -1,8 +1,22 @@
 id: mcp-019
 slug: 19-security
-title: "19 · Security: the attacks the protocol does not stop"
+title: "19 - Security: the attacks the protocol does not stop"
+summary: "Maps which MCP attack classes the specification's security page covers, which live only in third-party research, and where each crosses the trust boundary, then shows which controls hold when the filters above them fail."
 date: 2026-07-25
-tags: [model-context-protocol, mcp, security, prompt-injection, threat-model]
-hero: diagrams/01-trust-boundary.svg
-reading_time: 25
+updated: 2026-10-09
+status: complete
 part: "Part V - Production"
+level: intermediate
+reading_time: 37
+tags: [mcp, security, threat-model, prompt-injection, tool-poisoning, lethal-trifecta]
+hero: diagrams/01-trust-boundary.svg
+prerequisites: [mcp-011]
+code: included
+outcomes:
+  - id: o1
+    text: "Name each attack class and point at where it crosses the trust boundary."
+  - id: o2
+    text: "Tell a control from a filter in a server, and order them so the control sits underneath."
+  - id: o3
+    text: "Audit a host's approval gate against the three ways an attacker gets in before it fires."
+recommended: [mcp-013, mcp-014, mcp-018]

@@ -42,7 +42,7 @@ Two terms are deliberately listed twice, because MCP and OAuth 2.1 use the same 
 
 **Content block**: One piece of a tool result or of a prompt message: `text`, `image`, `audio`, `resource_link`, or an embedded `resource`.
 
-**Cross-server shadowing**: An attack where one server's tool description changes how the model uses a *different*, trusted server's tools. The malicious server is never called, so nothing about it appears in the tool-call arguments, and, combined with a rug pull, nothing appears in the user-facing log either. Not the host-side *shadow* strategy for name collisions.
+**Cross-server shadowing**: An attack where one server's tool description changes how the model uses a *different*, trusted server's tools. The malicious server is never called, so its only trace is in the trusted tool's arguments (the redirected recipient), and, combined with a rug pull, it need never appear in the user-facing log. Not the host-side *shadow* strategy for name collisions.
 
 **CSP (Content Security Policy)**: The browser policy the host applies to an MCP Apps view. The host builds it from the resource's own `ui.csp` declarations over a `default-src 'none'` base: `connectDomains` becomes `connect-src`, `resourceDomains` becomes the script, style, image, font, and media sources, and `frameDomains` becomes `frame-src`. A declaration is a request, and the host is free to narrow it but never to allow a domain that was not declared.
 
@@ -168,7 +168,7 @@ Two terms are deliberately listed twice, because MCP and OAuth 2.1 use the same 
 
 **SSRF (Server-Side Request Forgery)**: Making a party fetch a URL an attacker chose. In MCP it is mostly a client problem: the URLs come from the server the client connected to, so a client requires `https://` outside loopback, blocks private and link-local ranges, and re-checks every redirect hop. A server meets it too if it fetches a client-supplied CIMD document.
 
-**State handle hijacking**: Revision 2026-07-28's replacement for the session-hijacking section of Security Best Practices. A handle for state that spans requests (a task id, an application-level handle) is an identifier, not a credential: a server **must** verify every inbound request, **must not** treat possession of a handle as authentication, and **should** key stored state by user and handle together. Post 19 section 3 reads the page.
+**State handle hijacking**: Revision 2026-07-28's replacement for the session-hijacking section of Security Best Practices. A handle for state that spans requests (a task id, an application-level handle) is an identifier, not a credential: a server that implements authorization **must** verify every inbound request, no server may treat possession of a handle as authentication (**must not**), and servers **should** bind each handle to the authenticated user, for example by keying stored state by user and handle. Post 19 section 3 reads the page.
 
 **Stateless**: The property, new in 2026-07-28, that every request carries everything the server needs to handle it, so any replica can serve any request.
 

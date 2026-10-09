@@ -105,7 +105,7 @@ Index: https://modelcontextprotocol.io/seps. The rendered SEP pages do not use p
 
 These attack classes are **not** covered by the normative specification. All are third-party research, and all are live concerns for a server author.
 
-- Invariant Labs, *"MCP Security Notification: Tool Poisoning Attacks"* (2025). https://invariantlabs.ai/blog/mcp-security-notification-tool-poisoning-attacks
+- Beurer-Kellner, L. and Fischer, M., Invariant Labs, *"MCP Security Notification: Tool Poisoning Attacks"* (2025-04-01). https://invariantlabs.ai/blog/mcp-security-notification-tool-poisoning-attacks
 - Invariant Labs, *"GitHub MCP Exploited: Accessing private repositories via MCP"* (2025-05-26). https://invariantlabs.ai/blog/mcp-github-vulnerability
 - Trail of Bits, *"Jumping the line: how MCP servers can attack you before you ever use them"* (2025). https://blog.trailofbits.com/2025/04/21/jumping-the-line-how-mcp-servers-can-attack-you-before-you-ever-use-them/
 - Trail of Bits, *"How MCP servers can steal your conversation history"* (2025). https://blog.trailofbits.com/2025/04/23/how-mcp-servers-can-steal-your-conversation-history/

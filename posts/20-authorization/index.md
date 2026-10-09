@@ -457,7 +457,7 @@ The verifier must set `AccessToken.resource` to the audience it confirmed; a tab
 
 - Specification, *"Authorization"*, revision 2026-07-28, including its Client Registration, Authorization Server Discovery, and Security Considerations sections. Every requirement quoted in sections 1 to 8. <https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization>
 - Specification, *"Client registration"*, revision 2026-07-28. Client ID Metadata Documents, and Dynamic Client Registration as deprecated (section 7). <https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization/client-registration>
-- Specification, *"Security Best Practices"*. Token passthrough, the confused deputy, session hijacking, and scope minimization. <https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices>
+- Specification, *"Security Best Practices"*. Token passthrough, the confused deputy, state handle hijacking, and scope minimization. <https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices>
 - Specification, *"Transports: Streamable HTTP"*, revision 2026-07-28. The `Origin` rule of section 3. <https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http>
 - Specification, deprecated features registry. The window for Dynamic Client Registration. <https://modelcontextprotocol.io/specification/2026-07-28/deprecated>
 - RFC 9728, *OAuth 2.0 Protected Resource Metadata*; RFC 8707, *Resource Indicators for OAuth 2.0*; RFC 9207, *OAuth 2.0 Authorization Server Issuer Identification*; RFC 7591, *OAuth 2.0 Dynamic Client Registration Protocol*; RFC 7636, *Proof Key for Code Exchange (PKCE)*.
