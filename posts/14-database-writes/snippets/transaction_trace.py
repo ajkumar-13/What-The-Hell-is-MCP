@@ -18,15 +18,13 @@ and the audit resource read back afterwards; how the resource renders a
 statement carrying a pipe and a newline; and what MCPServer does with an
 MCP_-prefixed variable in the environment.
 
-The validator and the driver live in the project's environment rather than the
-root one, so when the root environment lacks the project's dependencies the
-script runs itself again under `uv run --project code/13-postgres-analyst`.
+The series root's environment pins the project's asyncpg, sqlglot and
+python-dotenv beside the SDK, so this runs there as it is.
 """
 
 from __future__ import annotations
 
 import os
-import subprocess
 import sys
 from pathlib import Path
 
@@ -34,26 +32,13 @@ sys.dont_write_bytecode = True  # leave no __pycache__ behind in code/
 ROOT = Path(__file__).resolve().parents[3]
 PROJECT = ROOT / "code" / "13-postgres-analyst"
 
-try:
-    import asyncpg  # noqa: F401  the project's own dependencies
-    import dotenv  # noqa: F401
-    import sqlglot  # noqa: F401
-except ModuleNotFoundError:
-    if os.environ.get("POST14_SNIPPET_CHILD"):
-        raise
-    env = {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"}
-    env.update(POST14_SNIPPET_CHILD="1", PYTHONDONTWRITEBYTECODE="1", PYTHONIOENCODING="utf-8")
-    uv = os.environ.get("UV", "uv")
-    sys.exit(subprocess.call(
-        [uv, "run", "--frozen", "--quiet", "--project", str(PROJECT), "python", str(Path(__file__).resolve())],
-        env=env,
-    ))
-
 import asyncio  # noqa: E402
 import datetime as dt  # noqa: E402
 import json  # noqa: E402
 import logging  # noqa: E402
 from contextlib import asynccontextmanager  # noqa: E402
+
+import asyncpg  # noqa: E402
 
 os.environ.update(DATABASE_URL="", DATABASE_WRITE_URL="", ENABLE_WRITES="true")
 os.environ.pop("AUDIT_SESSION_ID", None)

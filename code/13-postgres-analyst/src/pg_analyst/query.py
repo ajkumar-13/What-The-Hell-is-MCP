@@ -10,9 +10,11 @@ statement never gets near a connection. What runs is the SQL regenerated from
 the parse tree, not the text that arrived, and the caller is told which is
 which by getting `executed_sql` back in the result.
 
-Errors are returned in the result rather than raised. A model that gets a
-structured `ok: false` with a `error` string can correct itself on the next
-turn; a model that gets a protocol error usually just apologizes.
+Errors are returned in the result rather than raised. A refusal comes back as
+a result with `isError: true` whose structured body has `ok: false` and an
+`error` sentence, so a host sees a failure and the model can still correct
+itself on the next turn; a model that gets a protocol error usually just
+apologizes.
 """
 
 from __future__ import annotations
@@ -23,12 +25,12 @@ import ipaddress
 import logging
 import uuid
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Annotated, Any
 
 import asyncpg
-from mcp_types import ToolAnnotations
+from mcp_types import CallToolResult, ToolAnnotations
 
-from .app import mcp
+from .app import mcp, tool_error
 from .database import DatabaseNotConfigured, db
 from .schema import MAX_SAMPLE_ROWS, fetch_table_sample
 from .security import MAX_ROWS, SecurityError, validate_read_query
@@ -113,7 +115,7 @@ class TableSample:
     title="Run a read-only SQL query",
     annotations=READ_ONLY,
 )
-async def query_database(sql: str) -> QueryResult:
+async def query_database(sql: str) -> Annotated[CallToolResult, QueryResult]:
     """Run one SELECT statement against the database and return the rows.
 
     Only a single SELECT is accepted. Every statement must carry a LIMIT of at
@@ -133,11 +135,13 @@ async def query_database(sql: str) -> QueryResult:
     except SecurityError as exc:
         # Refused. No pool was touched, no connection was acquired.
         log.info("query refused: %s", exc)
-        return QueryResult(
-            ok=False,
-            executed_sql="",
-            row_count=0,
-            error=f"Refused by the SQL validator: {exc}",
+        return tool_error(
+            QueryResult(
+                ok=False,
+                executed_sql="",
+                row_count=0,
+                error=f"Refused by the SQL validator: {exc}",
+            )
         )
 
     notice = ""
@@ -148,17 +152,21 @@ async def query_database(sql: str) -> QueryResult:
         async with db.read_connection() as conn:
             records = await conn.fetch(plan.sql)
     except DatabaseNotConfigured as exc:
-        return QueryResult(ok=False, executed_sql=plan.sql, row_count=0, error=str(exc))
+        return tool_error(
+            QueryResult(ok=False, executed_sql=plan.sql, row_count=0, error=str(exc))
+        )
     except asyncpg.PostgresError as exc:
         # The database's own refusals land here, including the ones that matter
         # most: `permission denied`, and `canceling statement due to statement
         # timeout`. Those are the read-only role doing the job the validator
         # only approximates.
-        return QueryResult(
-            ok=False,
-            executed_sql=plan.sql,
-            row_count=0,
-            error=f"PostgreSQL refused the query: {exc}",
+        return tool_error(
+            QueryResult(
+                ok=False,
+                executed_sql=plan.sql,
+                row_count=0,
+                error=f"PostgreSQL refused the query: {exc}",
+            )
         )
 
     columns = list(records[0].keys()) if records else []
@@ -176,7 +184,7 @@ async def query_database(sql: str) -> QueryResult:
     title="Sample rows from a table",
     annotations=READ_ONLY,
 )
-async def sample_table(table: str, limit: int = 10) -> TableSample:
+async def sample_table(table: str, limit: int = 10) -> Annotated[CallToolResult, TableSample]:
     """Read the first few rows of one table, to see the shape of the data.
 
     Faster and safer than writing a query when all you want is a look at what
@@ -189,21 +197,19 @@ async def sample_table(table: str, limit: int = 10) -> TableSample:
     """
     try:
         sql, records = await fetch_table_sample(table, limit)
-    except LookupError as exc:
-        return TableSample(
-            ok=False, table=table, executed_sql="", row_count=0, error=str(exc)
-        )
-    except DatabaseNotConfigured as exc:
-        return TableSample(
-            ok=False, table=table, executed_sql="", row_count=0, error=str(exc)
+    except (LookupError, DatabaseNotConfigured) as exc:
+        return tool_error(
+            TableSample(ok=False, table=table, executed_sql="", row_count=0, error=str(exc))
         )
     except asyncpg.PostgresError as exc:
-        return TableSample(
-            ok=False,
-            table=table,
-            executed_sql="",
-            row_count=0,
-            error=f"PostgreSQL refused the query: {exc}",
+        return tool_error(
+            TableSample(
+                ok=False,
+                table=table,
+                executed_sql="",
+                row_count=0,
+                error=f"PostgreSQL refused the query: {exc}",
+            )
         )
 
     columns = list(records[0].keys()) if records else []

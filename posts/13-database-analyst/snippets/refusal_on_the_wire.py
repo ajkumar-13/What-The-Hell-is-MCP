@@ -14,36 +14,18 @@ result carries.
 
 To see the frames, the script wraps the in-memory dispatcher's
 send_raw_request, a private seam of mcp 2.3.0 (`client.session._dispatcher`);
-it observes the call and changes nothing. The series root's environment pins
-the project's dependencies too; should it lack them, the script runs itself
-again under `uv run --project code/13-postgres-analyst`.
+it observes the call and changes nothing.
 """
 
 from __future__ import annotations
 
 import os
-import subprocess
 import sys
 from pathlib import Path
 
 sys.dont_write_bytecode = True  # leave no __pycache__ behind in code/
 ROOT = Path(__file__).resolve().parents[3]
 PROJECT = ROOT / "code" / "13-postgres-analyst"
-
-try:
-    import asyncpg  # noqa: F401  the project's own dependencies
-    import dotenv  # noqa: F401
-    import sqlglot  # noqa: F401
-except ModuleNotFoundError:
-    if os.environ.get("POST13_SNIPPET_CHILD"):
-        raise
-    env = {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"}
-    env.update(POST13_SNIPPET_CHILD="1", PYTHONDONTWRITEBYTECODE="1", PYTHONIOENCODING="utf-8")
-    uv = os.environ.get("UV", "uv")
-    sys.exit(subprocess.call(
-        [uv, "run", "--frozen", "--quiet", "--project", str(PROJECT), "python", str(Path(__file__).resolve())],
-        env=env,
-    ))
 
 import asyncio  # noqa: E402
 import json  # noqa: E402

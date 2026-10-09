@@ -129,15 +129,15 @@
         },
         {
           "key": "b",
-          "text": "A complete result, `isError: false`, whose `structuredContent` has `ok: false` and an empty `executed_sql`.",
+          "text": "A complete result, `isError: true`, whose `structuredContent` has `ok: false` and an empty `executed_sql`.",
           "correct": true,
-          "feedback": "This is what `snippets/refusal_on_the_wire.py` prints. The refusal is an ordinary result, and nothing was acquired from a pool."
+          "feedback": "This is what `snippets/refusal_on_the_wire.py` prints. The refusal is a tool execution error reported inside the result, with the reason in `structuredContent`, and nothing was acquired from a pool."
         },
         {
           "key": "c",
           "text": "A result with `isError: true` and a single text block reading `Error executing tool query_database`.",
           "correct": false,
-          "feedback": "That is what a tool that crashes produces. This tool catches `SecurityError` and returns a `QueryResult` instead of raising."
+          "feedback": "That is what a tool that crashes produces. This tool catches `SecurityError` and returns its own result, with `ok: false` and the validator's sentence in `structuredContent`."
         },
         {
           "key": "d",
@@ -146,7 +146,7 @@
           "feedback": "A refused statement is never regenerated for running; `executed_sql` is the empty string so the caller can tell that nothing ran."
         }
       ],
-      "explanation": "Section 5 shows the refusal as it came back: a complete result, `isError` false, and `structuredContent` with `ok: false`, an empty `executed_sql`, and the validator's sentence in `error`. The section also notes that the Tools page asks for `isError: true` on tool-originated errors, a SHOULD this project does not follow.",
+      "explanation": "Section 5 shows the refusal as it came back: a complete result with `isError` true, as the Tools page asks of an error that originates in the tool, and `structuredContent` with `ok: false`, an empty `executed_sql`, and the validator's sentence in `error`. The model reads the sentence; a host reads the flag.",
       "hints": [
         "Ask whether `query_database` raises or returns when the validator refuses."
       ]
@@ -375,25 +375,25 @@
       ],
       "status": "reviewed",
       "updated": "2026-10-09",
-      "prompt": "With no `DATABASE_URL`, `uv run --extra dev pytest` inside `code/13-postgres-analyst/` ends `85 passed, 12 skipped`, and `tests/test_security.py` on its own ends `61 passed`. How many tests does `tests/test_server.py` collect in total, and how many of those run without a database?",
+      "prompt": "With no `DATABASE_URL`, `uv run --extra dev pytest` inside `code/13-postgres-analyst/` ends `89 passed, 12 skipped`, and `tests/test_security.py` on its own ends `64 passed`. How many tests does `tests/test_server.py` collect in total, and how many of those run without a database?",
       "answer": {
         "parts": [
           {
             "label": "tests collected in test_server.py",
-            "value": 36,
+            "value": 37,
             "tolerance": 0,
             "unit": "tests"
           },
           {
             "label": "test_server.py tests that run without a database",
-            "value": 24,
+            "value": 25,
             "tolerance": 0,
             "unit": "tests"
           }
         ]
       },
-      "precision_note": "From the runs quoted in section 10: the whole suite is 85 + 12 = 97 tests, test_security.py is 61 with no skips, so test_server.py is 97 - 61 = 36, of which 85 - 61 = 24 pass and 12 skip; the per-file run prints 24 passed, 12 skipped.",
-      "explanation": "Every skip is in `test_server.py`, because `test_security.py` needs no database at all. Subtracting the security file's 61 from the 85 that passed leaves 24 server tests that run in memory, and adding the 12 skips gives 36.",
+      "precision_note": "From the runs quoted in section 10: the whole suite is 89 + 12 = 101 tests, test_security.py is 64 with no skips, so test_server.py is 101 - 64 = 37, of which 89 - 64 = 25 pass and 12 skip; the per-file run prints 25 passed, 12 skipped.",
+      "explanation": "Every skip is in `test_server.py`, because `test_security.py` needs no database at all. Subtracting the security file's 64 from the 89 that passed leaves 25 server tests that run in memory, and adding the 12 skips gives 37.",
       "hints": [
         "Decide first which file the skips can belong to.",
         "Subtract the security file's count from the passed total, then add the skips."

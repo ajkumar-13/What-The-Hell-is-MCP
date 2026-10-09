@@ -39,6 +39,11 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 REVOKE CREATE ON SCHEMA public FROM mcp_readonly;
 
+-- No temporary tables either. PUBLIC holds TEMPORARY on every new database, so
+-- without this a session that switched default_transaction_read_only off
+-- could create them.
+REVOKE TEMPORARY ON DATABASE analytics FROM PUBLIC;
+
 -- Every transaction this role opens is read-only, whatever it thinks it is
 -- doing. This is what turns an INSERT that slipped past the parser into
 -- "ERROR: cannot execute INSERT in a read-only transaction".
@@ -100,7 +105,12 @@ ALTER DEFAULT PRIVILEGES FOR ROLE mcp_writer IN SCHEMA public
 --   * Ownership of the seeded tables, so it cannot DROP or ALTER them.
 --   * Superuser, so pg_read_file and friends fail regardless of the blocklist.
 --
--- One more that would be worth adding on a real system: the audit table should
--- be append-only for this role. Granting INSERT but not UPDATE or DELETE on
--- mcp_audit_log specifically, after it exists, means a compromised write path
--- can add to the record but cannot edit it.
+-- One more that a real system would want: an audit table that is append-only
+-- for this role. Revoking UPDATE and DELETE on mcp_audit_log from mcp_writer
+-- does not get there, because mcp_writer creates the table and so owns it, and
+-- an owner can re-grant itself anything and can drop the table. The table has
+-- to be created and owned by another role, which grants mcp_writer only what
+-- an INSERT ... RETURNING id needs (INSERT on the table, SELECT on its id
+-- column, USAGE on its sequence). The project's startup creation must then be skipped:
+-- ensure_audit_table() runs CREATE INDEX IF NOT EXISTS, which fails on a table
+-- another role owns.

@@ -9,37 +9,17 @@ For each tool it prints the input properties, the title and required fields of
 the output schema, and the annotations in their wire spelling; then the
 resource and template URIs. Last, it passes one value of each awkward type
 through the project's jsonable() and prints what a row would carry.
-
-The series root's environment pins the project's dependencies too; should it
-lack them, the script runs itself again under
-`uv run --project code/13-postgres-analyst`.
 """
 
 from __future__ import annotations
 
 import os
-import subprocess
 import sys
 from pathlib import Path
 
 sys.dont_write_bytecode = True  # leave no __pycache__ behind in code/
 ROOT = Path(__file__).resolve().parents[3]
 PROJECT = ROOT / "code" / "13-postgres-analyst"
-
-try:
-    import asyncpg  # noqa: F401  the project's own dependencies
-    import dotenv  # noqa: F401
-    import sqlglot  # noqa: F401
-except ModuleNotFoundError:
-    if os.environ.get("POST13_SNIPPET_CHILD"):
-        raise
-    env = {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"}
-    env.update(POST13_SNIPPET_CHILD="1", PYTHONDONTWRITEBYTECODE="1", PYTHONIOENCODING="utf-8")
-    uv = os.environ.get("UV", "uv")
-    sys.exit(subprocess.call(
-        [uv, "run", "--frozen", "--quiet", "--project", str(PROJECT), "python", str(Path(__file__).resolve())],
-        env=env,
-    ))
 
 import asyncio  # noqa: E402
 import datetime as dt  # noqa: E402

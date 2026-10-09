@@ -19,18 +19,60 @@ marked `needs_database` and skip when `DATABASE_URL` is unset.
 from __future__ import annotations
 
 import os
+from contextlib import asynccontextmanager
 
 import pytest
 from mcp import Client
 from mcp_types import ElicitResult
 
-from pg_analyst import mcp
+from pg_analyst import database, mcp
 from pg_analyst.security import MAX_ROWS
 
 needs_database = pytest.mark.skipif(
     not os.getenv("DATABASE_URL"),
     reason="DATABASE_URL is not set; start docker-compose.yml to run these",
 )
+
+
+class _StartupOnlyConnection:
+    """Accepts the lifespan's CREATE statements and nothing else."""
+
+    async def execute(self, sql: str, *args) -> str:
+        assert sql.lstrip().startswith("CREATE"), f"a test reached the database: {sql!r}"
+        return "CREATE"
+
+
+class _StandInWritePool:
+    """Opened in place of asyncpg's pool, so `db.writes_configured` is true.
+
+    The write tool asks a human only when there is a write pool to send the
+    statement to, so every test of the question needs one. None of these tests
+    lets a write reach it: each one declines, cancels, answers no, dry-runs, or
+    is refused first, and any other statement fails the test.
+    """
+
+    @asynccontextmanager
+    async def acquire(self):
+        yield _StartupOnlyConnection()
+
+    async def close(self) -> None:
+        pass
+
+
+@pytest.fixture
+def write_pool(monkeypatch):
+    """ENABLE_WRITES on, and a stand-in write pool opened at startup."""
+    monkeypatch.setenv("ENABLE_WRITES", "true")
+    monkeypatch.setenv("DATABASE_WRITE_URL", "postgresql://stand-in")
+
+    real_create_pool = database.asyncpg.create_pool
+
+    async def create_pool(url, **kwargs):
+        if url != "postgresql://stand-in":
+            return await real_create_pool(url, **kwargs)  # the read pool, if configured
+        return _StandInWritePool()
+
+    monkeypatch.setattr(database.asyncpg, "create_pool", create_pool)
 
 
 def answering(action: str, content: dict | None = None, seen: list | None = None):
@@ -141,6 +183,7 @@ async def test_query_database_refuses_before_touching_a_pool(sql):
     async with Client(mcp) as c:
         result = await c.call_tool("query_database", {"sql": sql})
         data = result.structured_content
+        assert result.is_error is True
         assert data["ok"] is False
         assert "Refused by the SQL validator" in data["error"]
         assert data["executed_sql"] == ""
@@ -149,11 +192,17 @@ async def test_query_database_refuses_before_touching_a_pool(sql):
 
 async def test_a_refusal_is_a_result_not_a_protocol_error():
     """A model that gets structured `ok: false` can correct itself next turn.
-    A model that gets a JSON-RPC error usually just apologizes."""
+    A model that gets a JSON-RPC error usually just apologizes.
+
+    The result carries `isError: true`, as the Tools page asks of an error that
+    originates in the tool, and it is still a complete result: `call_tool`
+    returns it rather than raising."""
     async with Client(mcp) as c:
         result = await c.call_tool("query_database", {"sql": "DROP TABLE users"})
-        assert result.is_error is not True
+        assert result.is_error is True
         assert result.result_type == "complete"
+        assert result.structured_content["ok"] is False
+        assert "Refused by the SQL validator" in result.structured_content["error"]
 
 
 # ---------------------------------------------------------------------------
@@ -166,6 +215,7 @@ async def test_writes_are_disabled_by_default():
             "write_database", {"sql": "UPDATE users SET active = false WHERE id = 1"}
         )
         assert result.structured_content["status"] == "disabled"
+        assert result.is_error is True
 
 
 async def test_nobody_is_asked_to_confirm_when_writes_are_disabled():
@@ -179,11 +229,9 @@ async def test_nobody_is_asked_to_confirm_when_writes_are_disabled():
     assert seen == []
 
 
-async def test_an_invalid_write_is_rejected_without_asking_anyone(monkeypatch):
+async def test_an_invalid_write_is_rejected_without_asking_anyone(write_pool):
     """Asking a human to approve something the server has already decided to
     refuse teaches them to click through prompts without reading them."""
-    monkeypatch.setenv("ENABLE_WRITES", "true")
-
     seen: list[str] = []
     async with answering("accept", {"confirm": True}, seen=seen) as c:
         result = await c.call_tool("write_database", {"sql": "DELETE FROM users"})
@@ -191,12 +239,11 @@ async def test_an_invalid_write_is_rejected_without_asking_anyone(monkeypatch):
 
     assert data["status"] == "rejected"
     assert "WHERE" in data["detail"]
+    assert result.is_error is True
     assert seen == []
 
 
-async def test_a_dry_run_executes_nothing_and_asks_nothing(monkeypatch):
-    monkeypatch.setenv("ENABLE_WRITES", "true")
-
+async def test_a_dry_run_executes_nothing_and_asks_nothing(write_pool):
     seen: list[str] = []
     async with answering("accept", {"confirm": True}, seen=seen) as c:
         result = await c.call_tool(
@@ -210,11 +257,12 @@ async def test_a_dry_run_executes_nothing_and_asks_nothing(monkeypatch):
     assert data["table"] == "users"
     assert data["executed_sql"] == "UPDATE users SET active = FALSE WHERE id = 3"
     assert data["affected_rows"] == 0
+    assert result.is_error is not True
     assert seen == []
 
 
-async def test_declining_does_not_write(monkeypatch):
-    monkeypatch.setenv("ENABLE_WRITES", "true")
+async def test_declining_does_not_write(write_pool):
+    """A person saying no is not a failure of the tool, so no `isError`."""
     async with answering("decline") as c:
         result = await c.call_tool(
             "write_database", {"sql": "DELETE FROM orders WHERE id = 1"}
@@ -222,10 +270,10 @@ async def test_declining_does_not_write(monkeypatch):
         data = result.structured_content
     assert data["status"] == "declined"
     assert "declined" in data["detail"].lower()
+    assert result.is_error is not True
 
 
-async def test_dismissing_the_prompt_does_not_write(monkeypatch):
-    monkeypatch.setenv("ENABLE_WRITES", "true")
+async def test_dismissing_the_prompt_does_not_write(write_pool):
     async with answering("cancel") as c:
         result = await c.call_tool(
             "write_database", {"sql": "DELETE FROM orders WHERE id = 1"}
@@ -235,8 +283,7 @@ async def test_dismissing_the_prompt_does_not_write(monkeypatch):
     assert "dismissed" in data["detail"].lower()
 
 
-async def test_answering_no_does_not_write(monkeypatch):
-    monkeypatch.setenv("ENABLE_WRITES", "true")
+async def test_answering_no_does_not_write(write_pool):
     async with answering("accept", {"confirm": False}) as c:
         result = await c.call_tool(
             "write_database", {"sql": "DELETE FROM orders WHERE id = 1"}
@@ -246,7 +293,7 @@ async def test_answering_no_does_not_write(monkeypatch):
     assert "answered no" in data["detail"].lower()
 
 
-async def test_the_question_is_asked_once_and_names_the_statement(monkeypatch):
+async def test_the_question_is_asked_once_and_names_the_statement(write_pool):
     """The MRTR convergence test.
 
     The SDK pins a recorded answer to a SHA-256 digest of the exact rendered
@@ -256,8 +303,6 @@ async def test_the_question_is_asked_once_and_names_the_statement(monkeypatch):
 
     One entry in `seen` is the whole assertion.
     """
-    monkeypatch.setenv("ENABLE_WRITES", "true")
-
     seen: list[str] = []
     async with answering("decline", seen=seen) as c:
         await c.call_tool(
@@ -270,11 +315,9 @@ async def test_the_question_is_asked_once_and_names_the_statement(monkeypatch):
     assert "4242" in seen[0]
 
 
-async def test_the_confirmation_question_is_identical_across_calls(monkeypatch):
+async def test_the_confirmation_question_is_identical_across_calls(write_pool):
     """Same arguments in, same question out, every time. This is the property
     the digest match depends on."""
-    monkeypatch.setenv("ENABLE_WRITES", "true")
-
     seen: list[str] = []
     for _ in range(3):
         async with answering("decline", seen=seen) as c:
@@ -302,6 +345,23 @@ async def test_an_approved_write_with_no_write_pool_fails_cleanly(monkeypatch):
     assert data["status"] == "failed"
     assert "DATABASE_WRITE_URL" in data["detail"]
     assert data["affected_rows"] == 0
+    assert result.is_error is True
+
+
+async def test_nobody_is_asked_to_confirm_when_there_is_no_write_pool(monkeypatch):
+    """A write that cannot run never prompts a human: the resolver checks the
+    pool as well as the switch and the statement."""
+    monkeypatch.setenv("ENABLE_WRITES", "true")
+    monkeypatch.delenv("DATABASE_WRITE_URL", raising=False)
+
+    seen: list[str] = []
+    async with answering("accept", {"confirm": True}, seen=seen) as c:
+        result = await c.call_tool(
+            "write_database", {"sql": "DELETE FROM orders WHERE id = 1"}
+        )
+
+    assert result.structured_content["status"] == "failed"
+    assert seen == []
 
 
 # ---------------------------------------------------------------------------

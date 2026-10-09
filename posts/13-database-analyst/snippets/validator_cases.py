@@ -11,16 +11,13 @@ section 7, what sqlglot hands back for syntax it cannot model: the warning it
 logs, the node types in the tree, what the tree-reading checks find in it, and
 the validator's refusal.
 
-The validator needs sqlglot, which the series root's environment pins too
-(30.13.0, as the project's lock does); should it lack the project's
-dependencies, the script runs itself again under
-`uv run --project code/13-postgres-analyst`.
+The validator needs sqlglot, which the series root's environment pins
+(30.13.0, as the project's lock does).
 """
 
 from __future__ import annotations
 
 import os
-import subprocess
 import sys
 from pathlib import Path
 
@@ -28,23 +25,10 @@ sys.dont_write_bytecode = True  # leave no __pycache__ behind in code/
 ROOT = Path(__file__).resolve().parents[3]
 PROJECT = ROOT / "code" / "13-postgres-analyst"
 
-try:
-    import asyncpg  # noqa: F401  the project's own dependencies
-    import dotenv  # noqa: F401
-    import sqlglot
-except ModuleNotFoundError:
-    if os.environ.get("POST13_SNIPPET_CHILD"):
-        raise
-    env = {k: v for k, v in os.environ.items() if k != "VIRTUAL_ENV"}
-    env.update(POST13_SNIPPET_CHILD="1", PYTHONDONTWRITEBYTECODE="1", PYTHONIOENCODING="utf-8")
-    uv = os.environ.get("UV", "uv")
-    sys.exit(subprocess.call(
-        [uv, "run", "--frozen", "--quiet", "--project", str(PROJECT), "python", str(Path(__file__).resolve())],
-        env=env,
-    ))
-
 import logging  # noqa: E402
 import textwrap  # noqa: E402
+
+import sqlglot  # noqa: E402
 
 # Keep a .env on this machine from pointing the project at a real database.
 os.environ.update(DATABASE_URL="", DATABASE_WRITE_URL="", ENABLE_WRITES="false")
@@ -107,6 +91,7 @@ def main() -> None:
         "SELECT * FROM users",
         "SELECT pg_sleep(30) LIMIT 1",
         "SELECT * INTO evil FROM users LIMIT 1",
+        "SELECT * FROM users LIMIT 1 FOR UPDATE",
     ):
         verdict(sql)
 

@@ -36,9 +36,12 @@ uv run python -m pg_analyst   # stdio, what a desktop host spawns
 instead. Loopback by default, deliberately: this process holds live database
 credentials.
 
-Under stdio, **stdout is the protocol channel**. A stray `print()` anywhere in
-this package would be parsed as a JSON-RPC frame and break the connection. All
-logging goes to stderr, which is set up in `app.py`.
+Under stdio, **stdout is the protocol channel**. While it serves, `mcp` 2.3.0
+points file descriptor 1 at stderr, so a flushed `print()` in a tool body lands
+on stderr; a `print()` still in Python's buffer reaches the pipe when the
+process exits, and one that runs at import time, before the transport starts,
+goes straight into the JSON-RPC stream and corrupts it. All logging goes to
+stderr, which is set up in `app.py`.
 
 ## Defense in depth, in the order the layers run
 
@@ -65,6 +68,12 @@ boundary.** A parser can be surprised; a `GRANT` that was never issued cannot.
 The module docstring in `security.py` lists, in detail, six things the
 validator cannot catch, and every one of them lands on layer 4.
 
+A refusal from any layer comes back as a tool result with `isError: true` and a
+structured body (`ok: false` and an `error` sentence on the read path, a
+`status` and a `detail` on the write path), so a host sees a failure and the
+model reads the reason. A dry run, a commit, and a human saying no are ordinary
+results.
+
 ## Two roles, two URLs
 
 `DATABASE_URL` names `mcp_readonly`. `DATABASE_WRITE_URL` names `mcp_writer`.
@@ -90,7 +99,8 @@ live row count would re-render differently on the retry, never match its own
 answer, and loop until `input_required_max_rounds` gave up.
 
 Nobody is asked to confirm a dry run, a statement the validator is going to
-refuse, or anything at all when `ENABLE_WRITES` is off. Prompting a human for
+refuse, a write when there is no write pool to run it, or anything at all when
+`ENABLE_WRITES` is off. Prompting a human for
 approval of something that was never going to run is how you train them to
 click through prompts without reading them.
 
@@ -103,11 +113,13 @@ with it.
 ## Test
 
 ```bash
-uv run pytest
+uv run --extra dev pytest
 ```
 
-With no database configured that is `85 passed, 12 skipped`; the twelve skips
-are the tests marked `needs_database`.
+With no database configured that is `89 passed, 12 skipped`: 64 in
+`tests/test_security.py`, and 25 passed and 12 skipped in
+`tests/test_server.py`. The twelve skips are the tests marked
+`needs_database`.
 
 Two files, two levels, from post 12:
 

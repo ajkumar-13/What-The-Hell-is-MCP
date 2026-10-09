@@ -50,7 +50,7 @@ code/13-postgres-analyst/
 │   ├── audit.py                post 14
 │   └── writes.py               post 14
 └── tests/
-    ├── test_security.py        61 tests, no database, no event loop
+    ├── test_security.py        64 tests, no database, no event loop
     └── test_server.py          in-memory protocol tests
 ```
 
@@ -98,7 +98,7 @@ startup log:
   WARNING  postgres-analyst.database: DATABASE_URL is not set. The server is starting without a read pool and every database tool will refuse to run.
   INFO     postgres-analyst: postgres-analyst ready (reads only)
 
-query_database: resultType 'complete', isError false
+query_database: resultType 'complete', isError true
 {
   "ok": false,
   "executed_sql": "SELECT email FROM users LIMIT 5",
@@ -110,7 +110,7 @@ query_database: resultType 'complete', isError false
 }
 ```
 
-The result carries the fix rather than a traceback, and the schema resource of section 4 reads `Schema unavailable:` followed by the same sentence. Then the script sets `DATABASE_URL`, after the import, to a port on 127.0.0.1 that nothing listens on, and opens a second client:
+The result is flagged as an error and carries the fix rather than a traceback, and the schema resource of section 4 reads `Schema unavailable:` followed by the same sentence. Then the script sets `DATABASE_URL`, after the import, to a port on 127.0.0.1 that nothing listens on, and opens a second client:
 
 ```
 opening the client raised ConnectionRefusedError, raised through app.py:lifespan -> database.py:connect
@@ -134,18 +134,22 @@ Introspection at read time is the fix, and the primitive is a **resource**, not 
 
 All three return Markdown, on the project's view that a model reads a Markdown table more reliably than deeply nested JSON. A template variable is untrusted input, and `{table}` reaches the query as a bind parameter and nothing else, so the worst a hostile value can do is match no rows.
 
-**Two things in the introspection query are bugs waiting to happen, and an earlier version of the project had both.** A primary key's name is also the name of the index behind it, and index names are unique within a schema, not across the database. Join `information_schema.table_constraints` to `key_column_usage` on `constraint_name` alone and a `users_pkey` belonging to `staging.users` matches the `public.users` rows. The corrected join, in the `_COLUMNS_SQL` string of `src/pg_analyst/schema.py`, qualifies on both sides:
+**Two things in the introspection queries are bugs waiting to happen, and an earlier version of the project had both.** The first is privilege. `information_schema.table_constraints` lists only the constraints on tables the current user owns or holds a privilege other than `SELECT` on, and `constraint_column_usage` lists only columns of tables a current role owns. The read role holds `SELECT` and nothing else, so through those views it sees no primary key and no foreign key at all. The second is naming. The views identify a constraint by schema and name, but PostgreSQL makes a foreign key's name unique only within its table, so two tables in one schema may each carry a foreign key of the same name, and a join on the name pairs each one's columns with the other's. The corrected queries read `pg_catalog.pg_constraint`, which every role can read and which names a constraint's table by its object identifier, `conrelid`. The primary-key test, in the `_COLUMNS_SQL` string of `src/pg_analyst/schema.py`:
 
 ```sql
-    JOIN information_schema.key_column_usage ku
-        ON tc.constraint_name = ku.constraint_name
-       AND tc.constraint_schema = ku.constraint_schema
-       AND tc.table_schema = ku.table_schema
-    WHERE tc.constraint_type = 'PRIMARY KEY'
-      AND tc.table_schema = $1::text
+        FROM pg_catalog.pg_constraint con
+        JOIN pg_catalog.pg_class cls ON cls.oid = con.conrelid
+        JOIN pg_catalog.pg_namespace ns ON ns.oid = cls.relnamespace
+        JOIN pg_catalog.pg_attribute att
+            ON att.attrelid = con.conrelid
+           AND att.attnum = ANY (con.conkey)
+        WHERE con.contype = 'p'
+          AND ns.nspname::text = c.table_schema::text
+          AND cls.relname::text = c.table_name::text
+          AND att.attname::text = c.column_name::text
 ```
 
-The consequence of getting it wrong is worse than a wrong row count. The output of this query is a document whose entire job is telling a model which column identifies a row, so a false primary key becomes a wrong `WHERE` clause in every query that follows. The foreign-key query had the same defect and got the same schema qualification.
+The consequence of getting it wrong is worse than a wrong row count. The output of this query is a document whose entire job is telling a model which column identifies a row, so a missing or false primary key becomes a wrong `WHERE` clause in every query that follows. The foreign-key query joins `pg_constraint` to the table a key belongs to through `conrelid` and to the table it points at through `confrelid`, so a shared name cannot pair the wrong columns. Both resources need a database, so their tests are among the twelve that skip without one, and the job in section 11 prints both.
 
 The `::text` casts are not decoration either. `information_schema` columns are the `sql_identifier` domain, and comparing one to a bare placeholder leaves PostgreSQL inferring a domain type for the parameter. Casting the parameter side pins it.
 
@@ -188,10 +192,10 @@ Wire format before the software development kit (SDK) call, as always. A `tools/
     title="Run a read-only SQL query",
     annotations=READ_ONLY,
 )
-async def query_database(sql: str) -> QueryResult:
+async def query_database(sql: str) -> Annotated[CallToolResult, QueryResult]:
 ```
 
-and, after the docstring, the first thing its body does:
+The return annotation is the SDK's spelling for a tool that sometimes builds its own result: `QueryResult` still supplies the output schema, a successful read returns a plain `QueryResult`, and a refusal returns a `CallToolResult`. After the docstring, the first thing the body does:
 
 ```python
     try:
@@ -199,12 +203,25 @@ and, after the docstring, the first thing its body does:
     except SecurityError as exc:
         # Refused. No pool was touched, no connection was acquired.
         log.info("query refused: %s", exc)
-        return QueryResult(
-            ok=False,
-            executed_sql="",
-            row_count=0,
-            error=f"Refused by the SQL validator: {exc}",
+        return tool_error(
+            QueryResult(
+                ok=False,
+                executed_sql="",
+                row_count=0,
+                error=f"Refused by the SQL validator: {exc}",
+            )
         )
+```
+
+`tool_error()`, in `src/pg_analyst/app.py`, is the one place every refusal in the project goes through. It keeps the dataclass as the structured body and sets the flag:
+
+```python
+    body = asdict(result)
+    return CallToolResult(
+        is_error=True,
+        structured_content=body,
+        content=[TextContent(type="text", text=json.dumps(body, indent=2))],
+    )
 ```
 
 ![A left-to-right pipeline for one query_database call. A strip of six chips names the checks in order: one statement, root is a query, no nested mutation, no SELECT INTO, no blocked function, and LIMIT then clamp. Failing any of them drops to a refusal carrying ok false and an empty executed_sql that never touches a pool. Past the checks, the statement is regenerated from the parse tree, a connection is acquired from the read-only pool, the rows are fetched, values are coerced so NUMERIC becomes a string, and a structured result is returned. A second failure branch shows PostgreSQL itself refusing with permission denied or a statement timeout.](diagrams/02-query-pipeline.svg)
@@ -219,7 +236,7 @@ Three decisions in that pipeline are worth defending.
 
 ```
 resultType: "complete"
-isError: false
+isError: true
 _meta: {"io.modelcontextprotocol/serverInfo": {"name": "postgres-analyst", "version": ""}}
 structuredContent:
 {
@@ -234,7 +251,7 @@ structuredContent:
 content[0] is one text block carrying the same object: True
 ```
 
-The `_meta` line is where every result carries `serverInfo`; its `version` is empty because the project never passes one to `MCPServer`. A note on the flag above it. The specification's schema comment on `isError` says an error that originates from the tool **SHOULD** be reported inside the result with `isError` set to true. This project reports a refusal inside the result, as asked, but leaves `isError` false and puts `ok: false` in `structuredContent`, so a refusal has the same shape as a page of rows. A model reads the `error` sentence either way; a host that uses `isError` as its failure signal sees a success.
+The `_meta` line is where every result carries `serverInfo`; its `version` is empty because the project never passes one to `MCPServer`. The flag above it follows the specification's schema comment on `isError`: an error that originates from the tool **SHOULD** be reported inside the result with `isError` set to true. A host that uses `isError` as its failure signal sees a failure, and the model still reads the `error` sentence, because `structuredContent` has the same shape as a page of rows with `ok: false` in it.
 
 **The caller is told what actually ran.** `executed_sql` is not the string that arrived; it is the statement regenerated from the parse tree. Section 6 explains why, and the field exists so the difference is never a surprise.
 
@@ -286,10 +303,11 @@ The checks, in the order `validate_read_query` runs them:
 | root type | anything that is not `Select`, `Union`, `Intersect`, or `Except` |
 | `reject_nested_mutations` | any of thirteen mutation node types below the root |
 | `into` | `SELECT ... INTO`, which is a write wearing a `SELECT`'s clothes |
+| locking clause | `FOR UPDATE`, `FOR SHARE`, and the other row locks, anywhere in the tree |
 | `check_dangerous_functions` | 16 names, matched against called functions rather than text |
 | `enforce_limit` | a missing `LIMIT`, a non-literal `LIMIT`, and anything over 1,000 rows |
 
-Four refusals, as the script prints them:
+Five refusals, as the script prints them:
 
 ```
 'SELECT 1 LIMIT 1; DROP TABLE users;'
@@ -303,9 +321,12 @@ Four refusals, as the script prints them:
      system, or interfere with other sessions.
 'SELECT * INTO evil FROM users LIMIT 1'
   -> SELECT ... INTO creates a new table. Refused on the read path.
+'SELECT * FROM users LIMIT 1 FOR UPDATE'
+  -> A locking clause (FOR UPDATE, FOR SHARE) takes row locks, which is not a read.
+     Refused on the read path.
 ```
 
-Two rules in that table deserve a sentence each.
+A row lock blocks writers for as long as the transaction stays open. PostgreSQL refuses one under the read role anyway, since every locking clause needs `UPDATE` privilege on the table and the role holds none; the validator's refusal gives the model a sentence instead of a database error. Two rules in that table deserve a sentence each.
 
 **A missing `LIMIT` is refused rather than silently added.** The model is perfectly capable of writing `LIMIT 50`, and a query that quietly returns a different result set than the one that was written is worse for everyone than an error naming the fix. An over-large `LIMIT` *is* clamped rather than refused, because the intent is unambiguous, and the caller is told (`query_database` adds a `notice` saying the limit was reduced). An ungrouped aggregate is exempt, because `SELECT count(*) FROM users` returns one row by construction; a grouped aggregate returns one row per group and gets no exemption:
 
@@ -408,18 +429,20 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public
 REVOKE CREATE ON SCHEMA public FROM PUBLIC;
 REVOKE CREATE ON SCHEMA public FROM mcp_readonly;
 
+REVOKE TEMPORARY ON DATABASE analytics FROM PUBLIC;
+
 ALTER ROLE mcp_readonly SET default_transaction_read_only = ON;
 ALTER ROLE mcp_readonly SET statement_timeout = '30s';
 ALTER ROLE mcp_readonly SET idle_in_transaction_session_timeout = '60s';
 ```
 
-Five of those nine statements are ordinary. Four are the post.
+Five of those ten statements are ordinary. Five are the post.
 
 **`GRANT SELECT` and nothing else** is the one that cannot be argued with. The role holds no `INSERT`, `UPDATE`, or `DELETE` privilege, so a write that slipped past every filter fails with a permission error, and no statement the session sends can grant the privilege back.
 
 **`default_transaction_read_only = ON`** makes every transaction the role opens read-only by default, so a stray `INSERT` fails with `cannot execute INSERT in a read-only transaction`, as the comment in the role file puts it. **`statement_timeout = '30s'`** is the answer to `pg_sleep` reached through a wrapper the blocklist has never heard of, to the Cartesian join, and to every other query whose cost the parser cannot see. It is enforced by the database server, so it survives a client that has stopped listening; the `command_timeout` on the pool does not. Both are role defaults, though, not grants: a session may change either with `SET` or `set_config()`. On this server it cannot, because the validator refuses `SET` as a non-`SELECT` root and `set_config` is on the blocklist. Here a filter guards an enforcement layer, which is why the grant, not the settings, is the line that holds when everything else is wrong.
 
-**`REVOKE CREATE ON SCHEMA public FROM PUBLIC`** is the one people skip. On PostgreSQL 14 and earlier, `PUBLIC` holds `CREATE` on the `public` schema by default, which means "read-only" quietly includes "can make new tables". The compose file runs PostgreSQL 17, where that default is already gone, which is exactly why the line is easy to leave out of a script that later meets an older server.
+**`REVOKE CREATE ON SCHEMA public FROM PUBLIC`** is the one people skip. On PostgreSQL 14 and earlier, `PUBLIC` holds `CREATE` on the `public` schema by default, which means "read-only" quietly includes "can make new tables". The compose file runs PostgreSQL 17, where that default is already gone, which is exactly why the line is easy to leave out of a script that later meets an older server. **`REVOKE TEMPORARY ON DATABASE analytics FROM PUBLIC`** closes the same gap for temporary tables: `PUBLIC` holds `TEMPORARY` on every new database, so a session that had switched `default_transaction_read_only` off could otherwise create them.
 
 The suite has one test whose only job is to prove this layer exists independently of the Python. It reaches past the validator and uses the pool directly, the way a bug in the query path would. From `tests/test_server.py`:
 
@@ -524,22 +547,22 @@ uv run --extra dev pytest -q
 With no database configured it ends:
 
 ```
-........................................................................ [ 74%]
-.............ssssssssssss                                                [100%]
-85 passed, 12 skipped in 2.16s
+........................................................................ [ 71%]
+.................ssssssssssss                                            [100%]
+89 passed, 12 skipped in 2.42s
 ```
 
 Split by file, because the split is the design (the wall-clock times vary by machine):
 
 ```
 $ uv run --extra dev pytest tests/test_security.py -q
-61 passed in 1.65s
+64 passed in 1.88s
 
 $ uv run --extra dev pytest tests/test_server.py -q
-24 passed, 12 skipped in 1.82s
+25 passed, 12 skipped in 2.23s
 ```
 
-The sixty-one in `test_security.py` need no database, no event loop, and no server, because the validator is a pure function of a string. The twelve skips are the tests in `test_server.py` that need a live PostgreSQL; the other twenty-four drive the server in memory, refusals included, because a refusal never reaches a pool.
+The sixty-four in `test_security.py` need no database, no event loop, and no server, because the validator is a pure function of a string. The twelve skips are the tests in `test_server.py` that need a live PostgreSQL; the other twenty-five drive the server in memory, refusals included, because a refusal never reaches a pool.
 
 The part worth copying is the last section of [test_security.py](../../code/13-postgres-analyst/tests/test_security.py), which is four tests asserting things the validator **allows**. The first, from `tests/test_security.py`:
 
@@ -561,7 +584,7 @@ The project is the post's code. From inside `code/13-postgres-analyst/`:
 
 ```bash
 uv sync --extra dev                  # once: the environment, with the test tools
-uv run --extra dev pytest            # 85 passed, 12 skipped without a database
+uv run --extra dev pytest            # 89 passed, 12 skipped without a database
 uv run python -m pg_analyst          # stdio, what a desktop host spawns; Ctrl+C stops it
 ```
 
@@ -582,12 +605,12 @@ uv run python posts/13-database-analyst/snippets/validator_cases.py      # secti
 uv run python posts/13-database-analyst/snippets/published_surface.py    # section 9: tools, schemas, annotations, resources, jsonable()
 ```
 
-The series root's environment pins the parser and the database driver too, `sqlglot` at 30.13.0 as the project's lock does; should a root environment lack them, each script runs itself again under `uv run --project code/13-postgres-analyst`. `refusal_on_the_wire.py` reads the outgoing request by wrapping a private method of the SDK's in-memory dispatcher, a seam of `mcp==2.3.0` that may move in a later release; it only observes.
+The series root's environment pins the parser and the database driver beside the SDK, `sqlglot` at 30.13.0 as the project's lock does, so the scripts need nothing from the project's own environment. `refusal_on_the_wire.py` reads the outgoing request by wrapping a private method of the SDK's in-memory dispatcher, a seam of `mcp==2.3.0` that may move in a later release; it only observes.
 
-One more script needs the container. `snippets/jobs/against_postgres.py` reads the `users` schema resource, sends a valid and a clamped query, runs `sample_table` on a real table and on the three hostile names, and sends a `DELETE` straight to the read pool twice, the second time after switching `default_transaction_read_only` off in the session, so that the grant alone has to refuse it. With the container up and the `.env` in place, from the series root (a few seconds; it changes nothing):
+One more script needs the container. `snippets/jobs/against_postgres.py` reads the `users` schema resource and the relationships resource, sends a valid and a clamped query, runs `sample_table` on a real table and on the three hostile names, and sends a `DELETE` straight to the read pool twice, the second time after switching `default_transaction_read_only` off in the session, so that the grant alone has to refuse it. With the container up and the `.env` in place, from the series root (a few seconds; it changes nothing):
 
 ```bash
-uv run --project code/13-postgres-analyst python posts/13-database-analyst/snippets/jobs/against_postgres.py
+uv run python posts/13-database-analyst/snippets/jobs/against_postgres.py
 ```
 
 No PostgreSQL was available when this page was checked, so that script's output is not quoted; what the page says about PostgreSQL's own refusals is what the project's database tests assert.
@@ -612,7 +635,7 @@ No PostgreSQL was available when this page was checked, so that script's output 
 2. **Trusting a parser that degrades instead of raising.** `sqlglot` answers much of the syntax it cannot model with an opaque `exp.Command` node and a logged warning, so every tree-walking check runs, finds nothing, and passes; refuse opaque nodes explicitly.
 3. **Blocking on substrings instead of on the parse tree.** `if "pg_sleep" in sql.lower()` refuses a customer whose name is `pg_sleep` and misses the same function called through a wrapper, getting both directions wrong at once.
 4. **Only checking the first keyword.** A data-modifying CTE is a `Select` at the root and PostgreSQL really does execute it; walk the whole tree and refuse mutation nodes anywhere below the root.
-5. **Joining `information_schema` on `constraint_name` alone.** A primary key's name is unique only within its schema, so a same-named constraint elsewhere marks the wrong column as a primary key in the very document that tells the model which column identifies a row.
+5. **Reading constraints through `information_schema` as the read role.** Its constraint views hide every table the role holds only `SELECT` on, and they join on a name PostgreSQL keeps unique only per table for a foreign key; read `pg_constraint`, which every role can see and which names the table itself.
 6. **Interpolating a table name from a tool argument.** PostgreSQL will not bind an identifier, so look the caller's string up in `information_schema.tables` as a parameter and build the query from the catalog's spelling, never from the caller's.
 
 ## Further reading

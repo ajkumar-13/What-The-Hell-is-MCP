@@ -7,11 +7,11 @@ requires-python = ">=3.10"
 
 # Pinned exactly. This project was written and tested against mcp 2.3.0, a
 # release of the 2.x line that implements protocol revision 2026-07-28. Do not float this pin: the 1.x line
-# uses a completely different module layout (mcp.server.fastmcp, mcp.types).
+# uses a different module layout (mcp.server.fastmcp, which 2.x no longer has).
 dependencies = [
     "mcp[cli]==2.3.0",
     "asyncpg>=0.30.0",
-    # sqlglot, not sqlparse. sqlparse is a tokeniser and a formatter; it has no
+    # sqlglot, not sqlparse. sqlparse is a tokenizer and a formatter; it has no
     # grammar, so it cannot tell you that a DELETE is nested inside a CTE.
     "sqlglot>=25.0.0",
     "python-dotenv>=1.0.0",

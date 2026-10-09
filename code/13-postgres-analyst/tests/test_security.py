@@ -112,6 +112,22 @@ def test_select_into_is_refused():
     assert "INTO" in str(excinfo.value)
 
 
+@pytest.mark.parametrize(
+    "sql",
+    [
+        "SELECT * FROM users LIMIT 1 FOR UPDATE",
+        "SELECT * FROM users LIMIT 1 FOR SHARE",
+        "SELECT * FROM (SELECT * FROM users FOR UPDATE) x LIMIT 1",
+    ],
+)
+def test_a_locking_clause_is_refused(sql):
+    """A row lock is not a read, and a nested one is still a lock. The read
+    role refuses these too; the validator says why first."""
+    with pytest.raises(SecurityError) as excinfo:
+        validate_read_query(sql)
+    assert "locking clause" in str(excinfo.value)
+
+
 def test_unparseable_sql_is_refused():
     with pytest.raises(SecurityError) as excinfo:
         validate_read_query("this is not sql @@@")

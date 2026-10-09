@@ -7,7 +7,7 @@ updated: 2026-10-09
 status: complete
 part: "Part IV - Projects"
 level: intermediate
-reading_time: 30
+reading_time: 31
 tags: [mcp, project, postgresql, transactions, audit, elicitation]
 hero: diagrams/01-the-write-path.svg
 prerequisites: [mcp-013, mcp-008]

@@ -43,11 +43,11 @@ from mcp.server.mcpserver import (
     ElicitationResult,
     Resolve,
 )
-from mcp_types import ToolAnnotations
+from mcp_types import CallToolResult, ToolAnnotations
 from pydantic import BaseModel, Field
 
 from .app import log as server_log
-from .app import mcp
+from .app import mcp, tool_error
 from .audit import record_operation
 from .database import DatabaseNotConfigured, db, writes_enabled
 from .security import SecurityError, WritePlan, validate_write_statement
@@ -78,7 +78,11 @@ class WriteResult:
     - `dry_run`:   the statement is valid; nothing ran, nobody was asked.
     - `declined`:  a human was asked and said no, or dismissed the prompt.
     - `committed`: it ran, and it is in the audit log.
-    - `failed`:    it ran and rolled back. The failure is in the audit log.
+    - `failed`:    there is no write pool, so nothing ran and nobody was asked;
+                   or it ran and rolled back, and the failure is in the audit
+                   log.
+
+    `disabled`, `rejected`, and `failed` come back with `isError: true`.
     """
 
     status: str
@@ -127,19 +131,20 @@ def _confirm_write(
     A resolver may take any of the tool's arguments by name, and the SDK fills
     in defaults the caller omitted, so `dry_run` is always a real bool here.
 
-    Three conditions send back a stand-in `DeclinedElicitation` instead of an
+    Four conditions send back a stand-in `DeclinedElicitation` instead of an
     `Elicit`, and no question is put to the user at all:
 
     - writes are switched off, so there is nothing to approve;
     - this is a dry run, so nothing will be executed;
+    - there is no write pool, so an approved write could not run;
     - the statement is going to be refused anyway, and asking a human to
       approve something the server has already decided to reject teaches them
       to click through prompts without reading them.
 
     The tool body handles each of those cases before it ever looks at the
-    approval, so the stand-in is never mistaken for a real refusal.
+    approval, so the stand-in is never mistaken for a real accept.
     """
-    if not writes_enabled() or dry_run:
+    if not writes_enabled() or dry_run or not db.writes_configured:
         return DeclinedElicitation()
 
     try:
@@ -205,7 +210,7 @@ async def write_database(
     sql: str,
     approval: Annotated[ElicitationResult[WriteApproval], Resolve(_confirm_write)],
     dry_run: bool = False,
-) -> WriteResult:
+) -> Annotated[CallToolResult, WriteResult]:
     """Run one INSERT, UPDATE, or DELETE, after a human confirms it.
 
     UPDATE and DELETE must carry a WHERE clause. Schema changes, TRUNCATE,
@@ -223,13 +228,19 @@ async def write_database(
     # every Resolve-backed parameter. That is what stops the model supplying
     # its own approval and making this whole function decorative.
 
+    # Refusals (disabled, rejected, failed) go back through `tool_error`, so
+    # they carry `isError: true`. A dry run, a commit, and a human saying no
+    # are not failures of the tool and come back as ordinary results.
+
     # -- gate 1: is this deployment allowed to write at all? ---------------
     if not writes_enabled():
-        return _outcome(
-            None,
-            "disabled",
-            "Writes are switched off on this server. Set ENABLE_WRITES=true and "
-            "provide DATABASE_WRITE_URL to enable them.",
+        return tool_error(
+            _outcome(
+                None,
+                "disabled",
+                "Writes are switched off on this server. Set ENABLE_WRITES=true "
+                "and provide DATABASE_WRITE_URL to enable them.",
+            )
         )
 
     # -- gate 2: does the statement survive validation? --------------------
@@ -237,7 +248,9 @@ async def write_database(
         plan = validate_write_statement(sql)
     except SecurityError as exc:
         log.info("write refused: %s", exc)
-        return _outcome(None, "rejected", f"Refused by the SQL validator: {exc}")
+        return tool_error(
+            _outcome(None, "rejected", f"Refused by the SQL validator: {exc}")
+        )
 
     # -- dry run: report and stop, before anybody is asked anything --------
     if dry_run:
@@ -246,6 +259,18 @@ async def write_database(
             "dry_run",
             "Valid. Nothing was executed and nobody was asked to confirm. "
             "Call again with dry_run=False to run it for real.",
+        )
+
+    # -- is there anywhere to send it? Checked before the approval, like the
+    # resolver, so nobody was asked and the stand-in is never read. --------
+    if not db.writes_configured:
+        return tool_error(
+            _outcome(
+                plan,
+                "failed",
+                "DATABASE_WRITE_URL is not set, so this server has no write pool. "
+                "Nothing was executed and nobody was asked to confirm.",
+            )
         )
 
     # -- gate 3: did a human say yes? --------------------------------------
@@ -259,14 +284,6 @@ async def write_database(
         return _outcome(plan, "declined", "The user answered no to the confirmation.")
 
     note = approval.data.reason.strip()
-
-    if not db.writes_configured:
-        return _outcome(
-            plan,
-            "failed",
-            "DATABASE_WRITE_URL is not set, so this server has no write pool. "
-            "Nothing was executed.",
-        )
 
     # -- gate 4: one transaction, with the audit row inside it -------------
     try:
@@ -288,11 +305,13 @@ async def write_database(
     except (asyncpg.PostgresError, DatabaseNotConfigured, OSError) as exc:
         audit_id = await _record_failure(plan, note, exc)
         server_log.warning("write failed and rolled back: %s", exc)
-        return _outcome(
-            plan,
-            "failed",
-            f"Rolled back. PostgreSQL said: {exc}",
-            audit_id=audit_id,
+        return tool_error(
+            _outcome(
+                plan,
+                "failed",
+                f"Rolled back. PostgreSQL said: {exc}",
+                audit_id=audit_id,
+            )
         )
 
     server_log.info(

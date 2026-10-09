@@ -7,13 +7,16 @@ registrations live in separate files without a circular import.
 
 from __future__ import annotations
 
+import json
 import logging
 import sys
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from dataclasses import asdict
 
 from dotenv import load_dotenv
 from mcp.server.mcpserver import MCPServer
+from mcp_types import CallToolResult, TextContent
 
 from .database import db, writes_enabled
 
@@ -25,10 +28,13 @@ from .database import db, writes_enabled
 # at call time, so this line is guaranteed to have run first.
 load_dotenv()
 
-# Under the stdio transport, stdout IS the protocol channel. Anything printed
-# there is parsed as a JSON-RPC frame, and a stray print() will break the
-# connection in a way that is genuinely hard to diagnose. Logging must go to
-# stderr, which the host collects and shows you.
+# Under the stdio transport, stdout IS the protocol channel. While it serves,
+# mcp 2.3.0 points file descriptor 1 at stderr, so a flushed print() in a tool
+# body lands on stderr; but a print() still held in Python's buffer reaches the
+# pipe when the process exits, and one that runs at import time, before the
+# transport starts, goes straight into the JSON-RPC stream and corrupts it.
+# Logging goes to stderr, which the host collects and shows, and that habit
+# does not depend on any of those details.
 logging.basicConfig(
     stream=sys.stderr,
     level=logging.INFO,
@@ -72,6 +78,25 @@ async def lifespan(server: MCPServer) -> AsyncIterator[None]:
         yield
     finally:
         await db.close()
+
+
+def tool_error(result: object) -> CallToolResult:
+    """Return a tool's own failure as an `isError: true` result.
+
+    The Tools page asks for errors that originate in a tool to be reported
+    inside the result with `isError` set, so a host that reads the flag sees a
+    failure. The structured body, `ok: false` or a `status` with a `detail`
+    sentence, travels as `structuredContent` and as one text block carrying the
+    same object, so the model still reads why and can correct itself. Every
+    refusal in this package goes through here; successes are returned as plain
+    dataclasses and the SDK builds their result.
+    """
+    body = asdict(result)
+    return CallToolResult(
+        is_error=True,
+        structured_content=body,
+        content=[TextContent(type="text", text=json.dumps(body, indent=2))],
+    )
 
 
 mcp = MCPServer("postgres-analyst", lifespan=lifespan)

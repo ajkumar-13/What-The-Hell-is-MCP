@@ -186,6 +186,9 @@ Each host documents its own configuration file, and they disagree with each othe
 - PostgreSQL documentation, *EXPLAIN*: `EXPLAIN ANALYZE` executes the statement it explains. https://www.postgresql.org/docs/current/sql-explain.html
 - PostgreSQL documentation, *Row Security Policies* (ddl-rowsecurity). https://www.postgresql.org/docs/current/ddl-rowsecurity.html
 - PostgreSQL documentation, *Transactions* (tutorial-transactions): the atomic commit post 14 builds the audit row on. https://www.postgresql.org/docs/current/tutorial-transactions.html
+- PostgreSQL documentation, *table_constraints* (infoschema-table-constraints): the view lists only constraints on tables the current role owns or holds a privilege other than SELECT on. https://www.postgresql.org/docs/current/infoschema-table-constraints.html
+- PostgreSQL documentation, *pg_constraint* (catalog-pg-constraint): the catalog post 13's schema resource reads instead. https://www.postgresql.org/docs/current/catalog-pg-constraint.html
+- PostgreSQL documentation, *SELECT* (sql-select): a locking clause needs the UPDATE privilege. https://www.postgresql.org/docs/current/sql-select.html
 - Kubernetes Python client. https://github.com/kubernetes-client/python
 - Kubernetes, *"Debug Running Pods"*. https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/
 - Kubernetes, *"Rolling Back a Deployment"*. https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-back-a-deployment

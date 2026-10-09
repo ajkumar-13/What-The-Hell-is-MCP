@@ -7,15 +7,16 @@ code/13-postgres-analyst/:
     docker compose up -d          # seeds three tables, then creates both roles
     cp .env.example .env          # DATABASE_URL names the mcp_readonly role
 
-Then, from the series root, in the project's environment:
+Then, from the series root:
 
-    uv run --project code/13-postgres-analyst python posts/13-database-analyst/snippets/jobs/against_postgres.py
+    uv run python posts/13-database-analyst/snippets/jobs/against_postgres.py
 
 It takes a few seconds once the container reports healthy. It imports the
 project, which reads DATABASE_URL from that .env, connects an in-memory client,
 and prints:
 
-1. the postgres://schema/users resource, with its primary key marked;
+1. the postgres://schema/users resource, with its primary key marked, and
+   the postgres://relationships resource, with the seed's foreign keys;
 2. one valid query_database call, and one whose LIMIT is clamped;
 3. sample_table on a real table, then on the three hostile names of the
    project's injection test;
@@ -54,6 +55,8 @@ async def main() -> None:
     async with Client(mcp) as client:
         print("== 1. postgres://schema/users ==")
         print((await client.read_resource("postgres://schema/users")).contents[0].text)
+        print("\n== 1. postgres://relationships ==")
+        print((await client.read_resource("postgres://relationships")).contents[0].text)
 
         print("\n== 2. query_database ==")
         for sql in ("SELECT email, country FROM users LIMIT 3", "SELECT id FROM users LIMIT 999999"):

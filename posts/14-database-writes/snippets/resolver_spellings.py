@@ -8,7 +8,7 @@ approval parameter, and calls each through an in-memory client whose user
 accepts, declines, or cancels. Prints what the tool body received, or what the
 model got back. The third spelling is refused when the decorator runs. Last, a
 resolver that returns a DeclinedElicitation() instead of an Elicit, as the
-project's _confirm_write does for its three no-ask cases, shows what the tool
+project's _confirm_write does for its four no-ask cases, shows what the tool
 body receives in that case.
 
 Needs only the SDK, so it runs in the root environment as it is.

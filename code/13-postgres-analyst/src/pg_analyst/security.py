@@ -366,6 +366,17 @@ def validate_read_query(sql: str, max_rows: int = MAX_ROWS) -> QueryPlan:
             "SELECT ... INTO creates a new table. Refused on the read path."
         )
 
+    # FOR UPDATE, FOR NO KEY UPDATE, FOR SHARE, and FOR KEY SHARE take row
+    # locks, anywhere in the tree. A lock is not a read: it blocks writers for
+    # as long as the transaction stays open. The read role cannot take one
+    # anyway, but refusing here gives the model a sentence instead of a
+    # PostgreSQL error.
+    if statement.find(exp.Lock) is not None:
+        raise SecurityError(
+            "A locking clause (FOR UPDATE, FOR SHARE) takes row locks, which is "
+            "not a read. Refused on the read path."
+        )
+
     check_dangerous_functions(statement)
     statement, limit, clamped = enforce_limit(statement, max_rows)
 

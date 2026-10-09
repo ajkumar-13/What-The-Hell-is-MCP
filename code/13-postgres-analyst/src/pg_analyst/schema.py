@@ -32,14 +32,28 @@ INTROSPECTED_SCHEMA = "public"
 MAX_SAMPLE_ROWS = 100
 
 
-# The primary-key subquery is schema-qualified in four places: the projection,
-# both halves of the join to `table_constraints`, and the join back to
-# `columns`. An earlier version dropped them and joined on `constraint_name`
-# alone, which is a real bug and not a tidiness one. Constraint names are
-# unique per schema, not per database, so a `users_pkey` belonging to a
-# `staging.users` would join to the `public.users` rows and mark the wrong
-# column as a primary key, in a Markdown document whose entire job is telling a
-# model which column identifies a row.
+# Constraints are read from `pg_catalog`, not from `information_schema`, for
+# two reasons, and an earlier version of this file had both bugs.
+#
+# 1. The views filter by privilege. `information_schema.table_constraints`
+#    lists only constraints on tables the current user owns or holds a
+#    privilege other than SELECT on, and `constraint_column_usage` only columns
+#    of tables a currently enabled role owns. The read role holds SELECT and
+#    nothing else, so through those views it saw no primary key and no foreign
+#    key at all.
+# 2. The views identify a constraint by schema and name, and PostgreSQL does
+#    not make every constraint name unique per schema. A primary key's name is
+#    also its index's name, so it is unique per schema; a foreign key's name is
+#    unique only per table. Two tables in one schema may each carry a foreign
+#    key named `fk_owner`, and a join on the name pairs each one's columns with
+#    the other's, in a Markdown document whose entire job is telling a model
+#    how the tables join.
+#
+# `pg_constraint` names the table a constraint belongs to by `conrelid` and the
+# table a foreign key points at by `confrelid`, so every join below is on the
+# table itself, and the catalog is readable by every role. The columns still
+# come from `information_schema.columns`, which shows every column the role can
+# read.
 _COLUMNS_SQL = """
 SELECT
     c.table_name,
@@ -47,43 +61,50 @@ SELECT
     c.data_type,
     c.is_nullable,
     c.column_default,
-    CASE WHEN pk.column_name IS NOT NULL THEN true ELSE false END AS is_primary_key
+    EXISTS (
+        SELECT 1
+        FROM pg_catalog.pg_constraint con
+        JOIN pg_catalog.pg_class cls ON cls.oid = con.conrelid
+        JOIN pg_catalog.pg_namespace ns ON ns.oid = cls.relnamespace
+        JOIN pg_catalog.pg_attribute att
+            ON att.attrelid = con.conrelid
+           AND att.attnum = ANY (con.conkey)
+        WHERE con.contype = 'p'
+          AND ns.nspname::text = c.table_schema::text
+          AND cls.relname::text = c.table_name::text
+          AND att.attname::text = c.column_name::text
+    ) AS is_primary_key
 FROM information_schema.columns c
-LEFT JOIN (
-    SELECT ku.table_schema, ku.table_name, ku.column_name
-    FROM information_schema.table_constraints tc
-    JOIN information_schema.key_column_usage ku
-        ON tc.constraint_name = ku.constraint_name
-       AND tc.constraint_schema = ku.constraint_schema
-       AND tc.table_schema = ku.table_schema
-    WHERE tc.constraint_type = 'PRIMARY KEY'
-      AND tc.table_schema = $1::text
-) pk
-    ON c.table_schema = pk.table_schema
-   AND c.table_name = pk.table_name
-   AND c.column_name = pk.column_name
 WHERE c.table_schema = $1::text
   AND ($2::text IS NULL OR c.table_name::text = $2::text)
 ORDER BY c.table_name, c.ordinal_position
 """
 
+# One row per column pair of each foreign key. `unnest` with two arrays walks
+# `conkey` and `confkey` side by side, so a composite key's columns stay paired
+# in their declared order.
 _FOREIGN_KEYS_SQL = """
 SELECT
-    tc.table_name       AS from_table,
-    kcu.column_name     AS from_column,
-    ccu.table_name      AS to_table,
-    ccu.column_name     AS to_column,
-    tc.constraint_name  AS constraint_name
-FROM information_schema.table_constraints tc
-JOIN information_schema.key_column_usage kcu
-    ON tc.constraint_name = kcu.constraint_name
-   AND tc.constraint_schema = kcu.constraint_schema
-JOIN information_schema.constraint_column_usage ccu
-    ON ccu.constraint_name = tc.constraint_name
-   AND ccu.constraint_schema = tc.constraint_schema
-WHERE tc.constraint_type = 'FOREIGN KEY'
-  AND tc.table_schema = $1::text
-ORDER BY tc.table_name, kcu.ordinal_position
+    src.relname::text      AS from_table,
+    src_col.attname::text  AS from_column,
+    dst.relname::text      AS to_table,
+    dst_col.attname::text  AS to_column,
+    con.conname::text      AS constraint_name
+FROM pg_catalog.pg_constraint con
+JOIN pg_catalog.pg_class src ON src.oid = con.conrelid
+JOIN pg_catalog.pg_namespace ns ON ns.oid = src.relnamespace
+JOIN pg_catalog.pg_class dst ON dst.oid = con.confrelid
+CROSS JOIN LATERAL unnest(con.conkey, con.confkey)
+    WITH ORDINALITY AS k(from_attnum, to_attnum, ord)
+JOIN pg_catalog.pg_attribute src_col
+    ON src_col.attrelid = con.conrelid
+   AND src_col.attnum = k.from_attnum
+JOIN pg_catalog.pg_attribute dst_col
+    ON dst_col.attrelid = con.confrelid
+   AND dst_col.attnum = k.to_attnum
+WHERE con.contype = 'f'
+  AND ns.nspname::text = $1::text
+ORDER BY src.relname, con.conname, k.ord
 """
 
 # The `::text` casts are not decoration. `information_schema` columns are the

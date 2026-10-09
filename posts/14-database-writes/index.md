@@ -1,6 +1,6 @@
 # 14 - Project 1: Writes, transactions, and an audit trail
 
-> **TL;DR.** A model-initiated database write is defensible when a human has read the exact statement that will run, when the change and the record of the change commit together, and when that record lands where the model cannot edit it. This post adds `INSERT`, `UPDATE`, and `DELETE` to the Model Context Protocol (MCP) server of [post 13](../13-database-analyst/index.md) with a deployment switch, a second PostgreSQL role, a dry run, an approval parameter the model cannot see, and an audit row written inside the mutation's own transaction. Every result, question, schema and call trace quoted below is printed by a script in `snippets/` against `mcp==2.3.0`; the transaction traces come from a recording stub that stands in for the database, and the one run that needs a real PostgreSQL is a job with its own setup.
+> **TL;DR.** A model-initiated database write is defensible when a human has read the exact statement that will run, when the change and the record of the change commit together, and when that record lands where the model cannot edit it. This post adds `INSERT`, `UPDATE`, and `DELETE` to the Model Context Protocol (MCP) server of [post 13](../13-database-analyst/index.md) with a deployment switch, a second PostgreSQL role, a dry run, an approval parameter the model cannot see, and an audit row written inside the mutation's own transaction. Every result, question, schema and call trace quoted below is printed by a script in `snippets/` against `mcp==2.3.0`; wherever a write pool is needed, including the transaction traces, a stub stands in for the database, and the one run that needs a real PostgreSQL is a job with its own setup.
 >
 > **Prerequisites:** [Post 13](../13-database-analyst/index.md), [Post 08](../08-elicitation-and-mrtr/index.md).
 > **Safe to skip?** Skip it if the reader can already gate a database mutation behind an elicitation the model cannot forge, keep an audit row inside the mutation's transaction while recording failures on a separate write-pool connection, and say which annotation of a resolved parameter keeps decline and cancel apart.
@@ -73,11 +73,11 @@ On any machine where only `DATABASE_URL` was set, that line made the "write pool
 
 The roles themselves are in [sql/002-readonly-role.sql](../../code/13-postgres-analyst/sql/002-readonly-role.sql). `mcp_writer` holds `SELECT`, `INSERT`, `UPDATE`, and `DELETE` on the seeded tables, plus `CREATE` on the schema so that it can build the audit table at startup. It does not own the seeded tables, so it cannot `DROP` or `ALTER` them; it does not hold `TRUNCATE`; and it is not a superuser, so the blocklisted file-system functions fail regardless of the blocklist.
 
-The file closes with a suggestion worth taking further than it goes. It proposes revoking `UPDATE` and `DELETE` on `mcp_audit_log` from `mcp_writer` once the table exists, so that a compromised write path can add to the record but not edit it. Because `mcp_writer` creates that table, it owns it, and PostgreSQL treats an owner as holding every grant option on its own table and the right to drop it: an owner can re-grant itself whatever was revoked. A trail that is append-only for the write role needs a table created by a different role, which grants `mcp_writer` only what an `INSERT ... RETURNING id` needs; the project's own startup creation of the table would then have to be skipped, since `CREATE INDEX IF NOT EXISTS` on a table another role owns fails before the existence check.
+The file closes with what a trail that a compromised write path can add to but not edit would take. Revoking `UPDATE` and `DELETE` on `mcp_audit_log` from `mcp_writer` does not get there. Because `mcp_writer` creates that table, it owns it, and PostgreSQL treats an owner as holding every grant option on its own table and the right to drop it: an owner can re-grant itself whatever was revoked. A trail that is append-only for the write role needs a table created by a different role, which grants `mcp_writer` only what an `INSERT ... RETURNING id` needs; the project's own startup creation of the table would then have to be skipped, since `CREATE INDEX IF NOT EXISTS` on a table another role owns fails before the existence check.
 
 ## 3. Validate first, then dry run, then ask
 
-The write validator is the read validator's sibling in [security.py](../../code/13-postgres-analyst/src/pg_analyst/security.py), and it is deliberately narrower: `INSERT`, `UPDATE`, `DELETE`, and nothing else. `snippets/write_gates.py` turns `ENABLE_WRITES` on and sends statements the validator refuses; each call also counts the questions its user was shown:
+The write validator is the read validator's sibling in [security.py](../../code/13-postgres-analyst/src/pg_analyst/security.py), and it is deliberately narrower: `INSERT`, `UPDATE`, `DELETE`, and nothing else. `snippets/write_gates.py` turns `ENABLE_WRITES` on, opens a stand-in write pool so that a question could be asked, and sends statements the validator refuses; each call also counts the questions its user was shown:
 
 ```
 --- {"sql": "TRUNCATE TABLE users"}
@@ -90,7 +90,7 @@ The write validator is the read validator's sibling in [security.py](../../code/
   "audit_id": 0,
   "detail": "Refused by the SQL validator: Only INSERT, UPDATE, and DELETE are allowed here, and this is TRUNCATE. Schema changes are not this server's job."
 }
-isError=false  questions asked: 0
+isError=true  questions asked: 0
 
 --- {"sql": "DELETE FROM users"}
 {
@@ -102,10 +102,10 @@ isError=false  questions asked: 0
   "audit_id": 0,
   "detail": "Refused by the SQL validator: DELETE without a WHERE clause would touch every row in the table. Add a WHERE clause naming the rows you mean."
 }
-isError=false  questions asked: 0
+isError=true  questions asked: 0
 ```
 
-No data definition language (DDL), no `TRUNCATE`, no `COPY`, no `GRANT`, no `MERGE`. A model with a shell into the schema is a different product from a model that can correct a row, and this server is the second one. A refusal is a result with `isError` false, not a protocol error, for the reason post 13 gives where it discusses the shape of a refusal: a model that reads a structured refusal can correct itself on the next turn. Post 13 also records the cost: the schema comment on `isError` asks for `true` here, so a host that treats `isError` as its failure signal sees a success.
+No data definition language (DDL), no `TRUNCATE`, no `COPY`, no `GRANT`, no `MERGE`. A model with a shell into the schema is a different product from a model that can correct a row, and this server is the second one. A refusal is a result, not a protocol error, for the reason post 13 gives where it discusses the shape of a refusal: a model that reads a structured refusal can correct itself on the next turn. It carries `isError: true`, as the schema comment on `isError` asks of an error that originates in the tool, through the same `tool_error()` helper the read path uses; a disabled server and a missing write pool answer the same way. A dry run, a commit, and a human saying no are not failures of the tool and come back with `isError` false.
 
 The `WHERE` rule is a floor, not a guarantee, and the validator's own comment says so. The same script sends `UPDATE users SET active = false WHERE true` as a dry run and gets `"status": "dry_run"` with `"executed_sql": "UPDATE users SET active = FALSE WHERE TRUE"`. The rule is aimed at the statement with no predicate at all. What bounds the rest is the human in section 4.
 
@@ -193,7 +193,7 @@ async def write_database(
     sql: str,
     approval: Annotated[ElicitationResult[WriteApproval], Resolve(_confirm_write)],
     dry_run: bool = False,
-) -> WriteResult:
+) -> Annotated[CallToolResult, WriteResult]:
 ```
 
 The SDK strips every `Resolve`-backed parameter from the published input schema. Read back through an in-memory client, `snippets/confirm_wire.py` prints:
@@ -218,19 +218,20 @@ def _confirm_write(
     A resolver may take any of the tool's arguments by name, and the SDK fills
     in defaults the caller omitted, so `dry_run` is always a real bool here.
 
-    Three conditions send back a stand-in `DeclinedElicitation` instead of an
+    Four conditions send back a stand-in `DeclinedElicitation` instead of an
     `Elicit`, and no question is put to the user at all:
 
     - writes are switched off, so there is nothing to approve;
     - this is a dry run, so nothing will be executed;
+    - there is no write pool, so an approved write could not run;
     - the statement is going to be refused anyway, and asking a human to
       approve something the server has already decided to reject teaches them
       to click through prompts without reading them.
 
     The tool body handles each of those cases before it ever looks at the
-    approval, so the stand-in is never mistaken for a real refusal.
+    approval, so the stand-in is never mistaken for a real accept.
     """
-    if not writes_enabled() or dry_run:
+    if not writes_enabled() or dry_run or not db.writes_configured:
         return DeclinedElicitation()
 
     try:
@@ -241,7 +242,7 @@ def _confirm_write(
     return Elicit(_confirmation_question(plan), WriteApproval)
 ```
 
-The resolver takes `sql` and `dry_run` by name, matched against the tool's own arguments. In the three no-ask cases it returns a stand-in and nothing goes on the wire, which is why section 3's counts were all zero.
+The resolver takes `sql` and `dry_run` by name, matched against the tool's own arguments. In the four no-ask cases it returns a stand-in and nothing goes on the wire, which is why section 3's counts were all zero.
 
 The parameter's annotation is the load-bearing choice, and three plausible spellings behave differently. `snippets/resolver_spellings.py` registers one small tool per spelling on a throwaway server and has a user accept, decline, and cancel each:
 
@@ -263,15 +264,15 @@ Only the first row preserves the three-way branch. The second registers without 
   asked=0 body got AcceptedElicitation[Any], data=DeclinedElicitation(action='decline'), isinstance(ap, DeclinedElicitation)=False
 ```
 
-So a tool that relied on `isinstance(approval, DeclinedElicitation)` for the stand-in would read a synthetic skip as an accept. `write_database` never gets there: the deployment switch, the validator, and the dry-run return handle all three no-ask conditions before the body inspects `approval`. That ordering is part of the pattern, not an accident of it.
+So a tool that relied on `isinstance(approval, DeclinedElicitation)` for the stand-in would read a synthetic skip as an accept. `write_database` never gets there: the deployment switch, the validator, the dry-run return, and the write-pool check handle all four no-ask conditions before the body inspects `approval`. That ordering is part of the pattern, not an accident of it.
 
-The real outcomes all land as a plain `"complete"` result with a distinct `detail`, and none of them is an error. `snippets/confirm_wire.py` answers the same call four ways; there is no write pool in this run, so the approved write stops at the pool check:
+The real outcomes all land as a plain `"complete"` result with a distinct `detail`, and none of them is an error. `snippets/confirm_wire.py` answers the same call four ways. A stand-in write pool answers every `DELETE` with `DELETE 0`, the tag PostgreSQL returns for a `DELETE` that matches no row, so the approved write commits and changes nothing:
 
 ```
 decline                    asked=1 isError=false status='declined' detail='The user declined to confirm this write.'
 cancel                     asked=1 isError=false status='declined' detail='The confirmation prompt was dismissed.'
 accept {"confirm": false}  asked=1 isError=false status='declined' detail='The user answered no to the confirmation.'
-accept {"confirm": true}   asked=1 isError=false status='failed' detail='DATABASE_WRITE_URL is not set, so this server has no write pool. Nothing was executed.'
+accept {"confirm": true}   asked=1 isError=false status='committed' detail='Committed. 0 row(s) changed, recorded in the audit log as entry 1.'
 ```
 
 The third row is the one worth pausing on, and it is the trap post 08 names. `action: "accept"` means the form came back, not that the user said yes. A confirmation checkbox left unchecked arrives as an accept carrying `confirm: false`.
@@ -417,7 +418,7 @@ The model contributes the semantics of one field and the literal text of none of
 
 Two smaller decisions in [audit.py](../../code/13-postgres-analyst/src/pg_analyst/audit.py) are worth borrowing.
 
-**The identity variables are named for what they configure.** They are `AUDIT_SESSION_ID` and `AUDIT_ACTOR`, and both default to `unknown`; the stub's committed row in `snippets/transaction_trace.py` carries `session_id='unknown' actor='unknown'`. The project's comments justify avoiding an `MCP_` prefix by saying the SDK reads that prefix from the environment. `mcp==2.3.0` does not: `snippets/transaction_trace.py` builds an `MCPServer` with a malformed `MCP_DEBUG` set and prints `MCPServer('probe') with MCP_DEBUG=not-a-bool: constructed, settings.debug=False`. The `AUDIT_` names are still the better choice, because they say which component reads them.
+**The identity variables are named for what they configure.** They are `AUDIT_SESSION_ID` and `AUDIT_ACTOR`, and both default to `unknown`; the stub's committed row in `snippets/transaction_trace.py` carries `session_id='unknown' actor='unknown'`. They avoid an `MCP_` prefix because a variable's name should say which component reads it, not to dodge the SDK, which under `mcp==2.3.0` ignores even a malformed `MCP_DEBUG`: `snippets/transaction_trace.py` builds an `MCPServer` with a malformed `MCP_DEBUG` set and prints `MCPServer('probe') with MCP_DEBUG=not-a-bool: constructed, settings.debug=False`.
 
 **Neither is an authenticated identity, and the code says so.** Under stdio there is nobody to authenticate: the host launched this process. Recording `unknown` honestly is better than recording a value that looks like an identity and is not. [Post 20](../20-authorization/index.md) covers what to record when there is a real one.
 
@@ -480,24 +481,24 @@ The project is the post's code. From inside `code/13-postgres-analyst/`:
 
 ```bash
 uv sync --extra dev               # once: the environment, with the test tools
-uv run --extra dev pytest         # 85 passed, 12 skipped without a database
+uv run --extra dev pytest         # 89 passed, 12 skipped without a database
 ```
 
 With `-q` added for the short form, the run on the machine that wrote this post (the time varies):
 
 ```
-........................................................................ [ 74%]
-.............ssssssssssss                                                [100%]
-85 passed, 12 skipped in 2.08s
+........................................................................ [ 71%]
+.................ssssssssssss                                            [100%]
+89 passed, 12 skipped in 2.42s
 ```
 
-Every write-path test runs with no database, because every gate before the transaction is pure: writes disabled, nobody asked when they are, an invalid statement rejected without asking, the dry run, decline, cancel, accept with `confirm` false, the approval hidden from the schema, one question per call, identical questions across three calls, and an approved write with no write pool. The twelve skips are the tests marked `needs_database`, and all twelve are on the read path. No test in the suite commits a write to PostgreSQL; the committed and failed paths of section 5 are exercised by the stub script and by the live job below.
+Every write-path test runs with no database, because every gate before the transaction is pure: writes disabled, nobody asked when they are, an invalid statement rejected without asking, the dry run, decline, cancel, accept with `confirm` false, the approval hidden from the schema, one question per call, identical questions across three calls, an approved write with no write pool, and nobody asked when there is none. The tests that need a question asked open a stand-in write pool that accepts only the startup `CREATE` statements. The twelve skips are the tests marked `needs_database`, and all twelve are on the read path. No test in the suite commits a write to PostgreSQL; the committed and failed paths of section 5 are exercised by the stub script and by the live job below.
 
-Four scripts under `snippets/` print everything quoted above. Each runs from the series root with no arguments in a few seconds and needs no database, host, or network. `resolver_spellings.py` needs only the SDK; the other three import the project in memory, and the root environment pins the project's `asyncpg`, `sqlglot` and `python-dotenv` beside the SDK. Where those libraries are missing, each of the three runs itself again under `uv run --project code/13-postgres-analyst`, which needs `uv sync` to have been run there once.
+Four scripts under `snippets/` print everything quoted above. Each runs from the series root with no arguments in a few seconds and needs no database, host, or network. `resolver_spellings.py` needs only the SDK; the other three import the project in memory, and the root environment pins the project's `asyncpg`, `sqlglot` and `python-dotenv` beside the SDK, so nothing from the project's own environment is needed.
 
 ```bash
 uv run python posts/14-database-writes/snippets/write_gates.py          # sections 2 and 3: accessors, the fallback, gates before any question
-uv run python posts/14-database-writes/snippets/confirm_wire.py         # section 4: the schema, the first leg, four answers, one question
+uv run python posts/14-database-writes/snippets/confirm_wire.py         # sections 4 and 9: the schema, the first leg, the answers, one question
 uv run python posts/14-database-writes/snippets/resolver_spellings.py   # section 4: three annotations and the stand-in
 uv run python posts/14-database-writes/snippets/transaction_trace.py    # sections 2, 5, 6, 7 and 9: recorded transactions and the trail
 ```
@@ -532,7 +533,13 @@ log: ERROR postgres-analyst.writes: could not record the failed write in the aud
 
 The tool's answer looks almost normal; only `"audit_id": 0` and one log line give it away. The stub raises the error with the wording PostgreSQL uses for a read-only transaction. A server wired this way records every success and no failures at all, and the failures are the entries an audit log exists for.
 
-**`ENABLE_WRITES` is on and `DATABASE_WRITE_URL` is missing.** The server starts, logs a warning, and refuses every approved write with the last row of section 4's four answers. Note `asked=1` on that row: the resolver checks the switch and the statement but not the pool, so the human is asked to approve a write that cannot run. That is the one place this project spends consent on a doomed request, and a resolver that also returned the stand-in when `db.writes_configured` is false would close it.
+**`ENABLE_WRITES` is on and `DATABASE_WRITE_URL` is missing.** The server starts, logs a warning, and refuses every valid write before anyone is asked. `snippets/confirm_wire.py` sends section 4's approved `DELETE` once more with no write pool:
+
+```
+accept {"confirm": true}   asked=0 isError=true status='failed' detail='DATABASE_WRITE_URL is not set, so this server has no write pool. Nothing was executed and nobody was asked to confirm.'
+```
+
+The user would have approved, and was never shown the question: the resolver checks the pool as well as the switch and the statement, so consent is never spent on a write that cannot run.
 
 **A test client with no elicitation callback.** `Client(mcp)` without `elicitation_callback` declares no elicitation capability, so the resolver may not ask, and the call fails before any question is sent. `snippets/confirm_wire.py` prints:
 

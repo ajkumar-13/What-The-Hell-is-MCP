@@ -13,7 +13,9 @@ Post 14. Two rules make this useful rather than decorative:
 
 The trail is exposed as a resource so a human can read it in the same
 conversation the writes happened in. It is not exposed as a tool the model can
-edit, and the write role should not hold `UPDATE` or `DELETE` on it.
+edit. The write role creates the table and therefore owns it, so the trail is
+not append-only for that role; the end of `sql/002-readonly-role.sql` says
+what making it so would take.
 """
 
 from __future__ import annotations
@@ -76,10 +78,8 @@ LIMIT $1
 def _identity() -> tuple[str, str]:
     """Who this process is acting as, for the audit row.
 
-    These are deliberately not named `MCP_*`. The SDK's `Settings` object reads
-    the whole `MCP_` prefix out of the environment, and putting unrelated keys
-    there invites a collision that shows up as a confusing validation error at
-    server construction.
+    Deliberately not named `MCP_*`: a variable's name says which component
+    reads it, and these two are read by the audit trail.
 
     Neither value is an authenticated identity. Under stdio there is nobody to
     authenticate: the host launched this process. Post 20 covers what an

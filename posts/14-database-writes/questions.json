@@ -348,7 +348,7 @@
       "outcomes": [
         "o1"
       ],
-      "section": "3",
+      "section": "4",
       "est_minutes": 4,
       "tags": [
         "gates",
@@ -356,7 +356,7 @@
       ],
       "status": "reviewed",
       "updated": "2026-10-09",
-      "prompt": "A client whose user always accepts with `confirm` true calls `write_database` five times on a server with `ENABLE_WRITES=true` and no write pool, with these arguments in order. How many confirmation dialogs does the user see in total?",
+      "prompt": "A client whose user always accepts with `confirm` true calls `write_database` five times on a server with `ENABLE_WRITES=true` and a write pool open, with these arguments in order. How many confirmation dialogs does the user see in total?",
       "stimulus": {
         "kind": "code",
         "language": "text",
@@ -367,8 +367,8 @@
         "tolerance": 0,
         "unit": "dialogs"
       },
-      "precision_note": "snippets/write_gates.py prints 'questions asked: 0' for DELETE FROM users, TRUNCATE TABLE users and the dry run; snippets/confirm_wire.py prints asked=1 for each answered call of DELETE FROM orders WHERE id = 4242, so 0 + 0 + 0 + 1 + 1.",
-      "explanation": "Sections 3 and 4: a statement the validator refuses and a dry run return before the resolver asks anybody, so the first three calls show nothing. Each of the last two is a separate call with a valid statement, and each asks once; the missing write pool is noticed only after the approval.",
+      "precision_note": "snippets/write_gates.py, with its stand-in write pool open, prints 'questions asked: 0' for DELETE FROM users, TRUNCATE TABLE users and the dry run; snippets/confirm_wire.py, with its stand-in pool, prints asked=1 for each answered call of DELETE FROM orders WHERE id = 4242, so 0 + 0 + 0 + 1 + 1.",
+      "explanation": "Sections 3 and 4: a statement the validator refuses and a dry run return before the resolver asks anybody, so the first three calls show nothing. Each of the last two is a separate call with a valid statement and a write pool to run it, and each asks once. With no write pool the resolver would return its stand-in for those two as well, and the total would be 0.",
       "hints": [
         "Mark which calls the resolver answers with its stand-in instead of a question.",
         "Two calls with the same arguments are still two calls."
@@ -753,14 +753,14 @@
       "connects": [
         "mcp-008"
       ],
-      "solution": "A resolver that returns a value instead of an `Elicit` is treated as already resolved: no question goes on the wire, and the tool body receives an `AcceptedElicitation` whose `.data` is the returned `DeclinedElicitation`. `snippets/resolver_spellings.py` prints `body got AcceptedElicitation[Any], data=DeclinedElicitation(action='decline'), isinstance(ap, DeclinedElicitation)=False`. So the stand-in does not arrive as a decline; a body that branched on `isinstance(approval, DeclinedElicitation)` would fall through to the accept branch and read `approval.data.confirm` from an object that has no such field.\n\n`write_database` is correct because every condition under which `_confirm_write` returns the stand-in (writes switched off, a dry run, a statement the validator refuses) is checked again in the body, in that order, and returns before the body inspects `approval`. The resolver and the body agree on the no-ask cases, so the stand-in is never read.\n\nPost 08's tool always asks, so its body can branch on the three outcomes directly. An author adding a no-ask branch there (for example, skipping the question for a process id that does not exist) must make the body detect the same condition and return before it looks at `approval`, or else unwrap the stand-in explicitly; otherwise the synthetic skip is read as a real accept.",
+      "solution": "A resolver that returns a value instead of an `Elicit` is treated as already resolved: no question goes on the wire, and the tool body receives an `AcceptedElicitation` whose `.data` is the returned `DeclinedElicitation`. `snippets/resolver_spellings.py` prints `body got AcceptedElicitation[Any], data=DeclinedElicitation(action='decline'), isinstance(ap, DeclinedElicitation)=False`. So the stand-in does not arrive as a decline; a body that branched on `isinstance(approval, DeclinedElicitation)` would fall through to the accept branch and read `approval.data.confirm` from an object that has no such field.\n\n`write_database` is correct because every condition under which `_confirm_write` returns the stand-in (writes switched off, a statement the validator refuses, a dry run, no write pool) is checked again in the body, in that order, and returns before the body inspects `approval`. The resolver and the body agree on the no-ask cases, so the stand-in is never read.\n\nPost 08's tool always asks, so its body can branch on the three outcomes directly. An author adding a no-ask branch there (for example, skipping the question for a process id that does not exist) must make the body detect the same condition and return before it looks at `approval`, or else unwrap the stand-in explicitly; otherwise the synthetic skip is read as a real accept.",
       "rubric": [
         {
           "criterion": "States that the body receives an `AcceptedElicitation` wrapping the `DeclinedElicitation`, so `isinstance` against `DeclinedElicitation` is false",
           "points": 3
         },
         {
-          "criterion": "Explains that `write_database` re-checks the switch, the validator and the dry run before inspecting `approval`",
+          "criterion": "Explains that `write_database` re-checks the switch, the validator, the dry run and the write pool before inspecting `approval`",
           "points": 3
         },
         {
@@ -775,7 +775,7 @@
       "explanation": "Section 4 prints the stand-in caveat and shows the ordering in `write_database` that makes it harmless. Post 08's resolver always elicits, so the hazard appears only when a no-ask branch is added without the matching check in the body.",
       "hints": [
         "Run or read `snippets/resolver_spellings.py`'s last line.",
-        "Compare the three no-ask conditions in `_confirm_write` with the first three checks in `write_database`'s body."
+        "Compare the four no-ask conditions in `_confirm_write` with the first four checks in `write_database`'s body."
       ]
     }
   ]
