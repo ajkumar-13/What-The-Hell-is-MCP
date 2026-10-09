@@ -1,8 +1,24 @@
 id: mcp-018
 slug: 18-server-side-models
-title: "18 · Project 3 · Server-side model calls and multi-page research"
+title: "18 - Project 3: Server-side model calls and multi-page research"
+summary: "Sampling is deprecated and its back channel is gone, so a server that needs a model calls a provider itself. The post builds an offline-first summarizer that names what ran, and a bounded research pass that cites every claim."
 date: 2026-07-25
-tags: [model-context-protocol, mcp, project, sampling, deprecation, citations]
-hero: diagrams/01-sampling-vs-direct-call.svg
-reading_time: 22
+updated: 2026-10-09
+status: complete
 part: "Part IV - Projects"
+level: intermediate
+reading_time: 33
+tags: [mcp, project, sampling, deprecation, summarization, citations]
+hero: diagrams/01-sampling-vs-direct-call.svg
+prerequisites: [mcp-017]
+code: required
+outcomes:
+  - id: o1
+    text: "Explain what happened to sampling in revision 2026-07-28 and what survives of it."
+  - id: o2
+    text: "Build a server-side summarizer as a protocol with an offline default and an opt-in provider."
+  - id: o3
+    text: "Report which summarizer actually ran, so that a fallback is never labeled as the model."
+  - id: o4
+    text: "Run a bounded multi-page research pass whose every claim carries the page it came from."
+recommended: [mcp-008, mcp-009]

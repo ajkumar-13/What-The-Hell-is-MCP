@@ -80,6 +80,12 @@ extra you get `75 passed, 1 skipped`; the skip is the one test that needs it.
 
 Post 18 adds a summarizer that can call a model server-side:
 
+The provider is Anthropic. With the `provider` extra installed and `ANTHROPIC_API_KEY`
+set, `summarize_page` and `research_urls` send the extracted text of every page they
+summarize to Anthropic's Messages API, billed to the key's owner (model `claude-opus-5`,
+or the one named in `RESEARCH_BROWSER_MODEL`). `RESEARCH_BROWSER_SUMMARIZER=extractive`
+turns it off with the key still set.
+
 ```bash
 uv sync --extra provider
 ```

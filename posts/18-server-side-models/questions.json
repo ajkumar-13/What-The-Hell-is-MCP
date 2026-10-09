@@ -1,0 +1,767 @@
+{
+  "standard": "2.1.0",
+  "post": "mcp-018",
+  "next_ordinal": 19,
+  "questions": [
+    {
+      "id": "mcp-018-q01",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 2,
+      "tags": [
+        "sampling",
+        "deprecation"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A maintainer asks what revision 2026-07-28 did to sampling. Which statement is accurate?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The feature was removed outright, and `sampling/createMessage` no longer exists in the schema.",
+          "correct": false,
+          "feedback": "The feature is deprecated, not removed: its types still carry `@deprecated` in the schema, and the earliest removal is a revision released on or after 2027-07-28."
+        },
+        {
+          "key": "b",
+          "text": "It is deprecated, and survives only as `sampling/createMessage` inside an `input_required` result.",
+          "correct": true,
+          "feedback": "Right. The deprecation has a window, but the server-initiated request channel was deleted, so the only surviving form is a request inside MRTR `inputRequests`."
+        },
+        {
+          "key": "c",
+          "text": "The feature is deprecated, and until 2027-07-28 a server may still send `sampling/createMessage` to the client as before.",
+          "correct": false,
+          "feedback": "The window protects the types, not the old call. Servers must not initiate JSON-RPC requests in 2026-07-28, and the SDK refuses the call with `-32600`."
+        },
+        {
+          "key": "d",
+          "text": "Nothing changed for sampling itself; only the `includeContext` values `thisServer` and `allServers` were deprecated.",
+          "correct": false,
+          "feedback": "Those two values were deprecated a revision earlier, in 2025-11-25. In 2026-07-28 SEP-2577 deprecates the whole feature."
+        }
+      ],
+      "explanation": "Section 2 separates two changes: SEP-2577 deprecates sampling with removal no earlier than the first revision released on or after 2027-07-28, and the revision deletes server-initiated requests with no window. What survives is `sampling/createMessage` as a `CreateMessageRequest` inside MRTR `inputRequests`.",
+      "hints": [
+        "Two separate things happened in this revision; one has a window and one does not."
+      ]
+    },
+    {
+      "id": "mcp-018-q02",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 3,
+      "tags": [
+        "sampling",
+        "errors"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "An older server's tool calls `ctx.session.create_message(...)` in its body. A client that declares the `sampling` capability calls the tool over Streamable HTTP at revision 2026-07-28, with `mcp==2.3.0` on the server. What does the client get?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The request hangs until the client's model answers, because the client declared `sampling`.",
+          "correct": false,
+          "feedback": "Nothing is ever sent to the client. The per-request context on the 2026-07-28 path has `can_send_request` false, so there is nothing to wait for."
+        },
+        {
+          "key": "b",
+          "text": "A normal result, plus a deprecation warning, because sampling stays usable until its removal date.",
+          "correct": false,
+          "feedback": "The warning is raised in the server process, and then the call fails: the deprecation window does not bring back the deleted channel."
+        },
+        {
+          "key": "c",
+          "text": "A JSON-RPC error, code `-32600`, saying the transport has no back channel.",
+          "correct": true,
+          "feedback": "Right. The SDK raises `MCPDeprecationWarning` at the call site and then `NoBackChannelError`, which reaches the client as `-32600` (`Invalid Request`) on an HTTP 400."
+        },
+        {
+          "key": "d",
+          "text": "An `input_required` result carrying the sampling request, because the SDK converts the old call to MRTR.",
+          "correct": false,
+          "feedback": "The SDK does not rewrite the old call. Only a parameter resolved with `Resolve` and a `Sample` marker produces an `input_required` result."
+        }
+      ],
+      "explanation": "Section 2 runs exactly this in `snippets/sampling_today.py`: the tool raises `MCPDeprecationWarning`, then the request fails with `-32600` and the message `Cannot send 'sampling/createMessage': this transport context has no back-channel for server-initiated requests.`",
+      "hints": [
+        "Ask whether the 2026-07-28 Streamable HTTP path has any channel on which a server can send a request.",
+        "The deprecation warning and the failure are two different events."
+      ]
+    },
+    {
+      "id": "mcp-018-q03",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 1,
+      "tags": [
+        "sdk",
+        "errors"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "In `mcp==2.3.0`, which exception class does the SDK raise when a server tries to send a request to the client and the transport has no channel for it? Give the class name.",
+      "answer": {
+        "model": "`NoBackChannelError`, from `mcp.shared.exceptions`.",
+        "accept": [
+          "(?i)^(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|never|isn't|is not|rather than|instead of)\\s+(?:a\\s+|an\\s+|the\\s+)?`?(?:mcp\\.shared\\.exceptions\\.)?NoBackChannelError)(?![\\s\\S]*NoBackChannelError`?\\s*(?:,|\\bor\\b|/|\\band\\b)\\s*`?(?:MCPDeprecationWarning|DeprecationWarning|MCPError|TimeoutError|RuntimeError)\\b)(?![\\s\\S]*\\b(?:MCPDeprecationWarning|DeprecationWarning|MCPError|TimeoutError|RuntimeError)`?\\s*(?:,|\\bor\\b|/)\\s*`?(?:mcp\\.shared\\.exceptions\\.)?NoBackChannelError)[\\s\\S]*\\bNoBackChannelError\\b[\\s\\S]*$"
+        ]
+      },
+      "explanation": "Section 2 prints its message, `Cannot send 'sampling/createMessage': this transport context has no back-channel for server-initiated requests.` It lives in `mcp.shared.exceptions` and serializes to `-32600` (`Invalid Request`).",
+      "hints": [
+        "Its name says what the transport lacks."
+      ]
+    },
+    {
+      "id": "mcp-018-q04",
+      "type": "order",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 3,
+      "tags": [
+        "mrtr",
+        "sampling"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A server that keeps sampling during its migration asks the host's model through MRTR. Put the steps of one successful exchange in order.",
+      "items": [
+        {
+          "key": "a",
+          "text": "The client sends `tools/call` with the tool's arguments."
+        },
+        {
+          "key": "b",
+          "text": "The server answers with `resultType: \"input_required\"`, a `sampling/createMessage` entry in `inputRequests`, and a sealed `requestState`."
+        },
+        {
+          "key": "c",
+          "text": "The host has its own model produce the completion, after any approval it asks the user for."
+        },
+        {
+          "key": "d",
+          "text": "The client sends `tools/call` again with the same arguments, the completion in `inputResponses`, and the echoed `requestState`."
+        },
+        {
+          "key": "e",
+          "text": "The server finishes the tool and returns a `complete` result."
+        }
+      ],
+      "answer": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e"
+      ],
+      "partial_credit": true,
+      "explanation": "Section 2 shows step 2 on the wire: the server does not call the client, it returns the request inside an `input_required` result and is called again. The completion therefore arrives in a second, independent `tools/call` that carries `inputResponses` and the `requestState` the server minted.",
+      "hints": [
+        "The server never sends a request; it only answers one.",
+        "The completion has to travel inside a request the client makes."
+      ]
+    },
+    {
+      "id": "mcp-018-q05",
+      "type": "numeric",
+      "track": "edge",
+      "difficulty": 2,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "11",
+      "est_minutes": 2,
+      "tags": [
+        "mrtr",
+        "errors"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A server's tool asks for a completion with `Resolve` and a `Sample` marker. A client that declares no client capabilities at all calls the tool at revision 2026-07-28. Which JSON-RPC error code does the response carry under `mcp==2.3.0`?",
+      "answer": {
+        "value": -32021,
+        "tolerance": 0,
+        "unit": ""
+      },
+      "precision_note": "Printed by snippets/sampling_today.py: code -32021, message \"Client did not declare the sampling capability required by resolver ...\", data.requiredCapabilities {\"sampling\": {}}. The nearest wrong answers are -32600 (the old call with no back channel) and -32602.",
+      "explanation": "Section 11 shows the response: HTTP 400 with code `-32021`, the message naming the resolver, and `data.requiredCapabilities` set to `{\"sampling\": {}}`. The MRTR path needs the deprecated `sampling` capability, so a client that dropped it cannot use the tool at all.",
+      "hints": [
+        "This is the missing-capability error, not the no-back-channel error.",
+        "It is the same code MRTR uses when a client lacks a capability a resolver needs, with the required capability in `data`."
+      ]
+    },
+    {
+      "id": "mcp-018-q06",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 2,
+      "tags": [
+        "testing",
+        "cost"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The research browser's `tests/conftest.py` installs the extractive summarizer for every test through an autouse fixture. What does that prevent?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "A developer's exported key silently running a billable path that continuous integration never runs.",
+          "correct": true,
+          "feedback": "Right. Without the pin, `default_summarizer()` reads the developer's environment, so the same suite would call a paid provider on one machine and the extractive path in continuous integration."
+        },
+        {
+          "key": "b",
+          "text": "The extractive summarizer returning different sentences from one test to the next.",
+          "correct": false,
+          "feedback": "The extractive summarizer is already deterministic: ties resolve by document position. The fixture is about which summarizer runs, not about its output."
+        },
+        {
+          "key": "c",
+          "text": "Tests failing because the `anthropic` package is not installed in the test environment.",
+          "correct": false,
+          "feedback": "A key without the package already degrades to the extractive summarizer with a warning; the server does not fail on the missing package."
+        },
+        {
+          "key": "d",
+          "text": "Tests running slowly because the extractive summarizer has to download and load a language model before the first test.",
+          "correct": false,
+          "feedback": "The extractive summarizer needs no model, no network and no key; it ranks the page's own sentences by term frequency."
+        }
+      ],
+      "explanation": "Section 5 explains the fixture `isolated_server`: it calls `use_summarizer(ExtractiveSummarizer())` so that the suite never depends on what the developer happens to have exported.",
+      "hints": [
+        "Ask what `default_summarizer()` reads when nothing overrides it."
+      ]
+    },
+    {
+      "id": "mcp-018-q07",
+      "type": "match",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 3,
+      "tags": [
+        "configuration"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Match each configuration to the summarizer name that `default_summarizer()` in `summarize.py` selects. The `anthropic` package is installed except where a row says it is missing.",
+      "left": [
+        {
+          "key": "a",
+          "text": "No variables set at all, package missing"
+        },
+        {
+          "key": "b",
+          "text": "`ANTHROPIC_API_KEY` set, package missing"
+        },
+        {
+          "key": "c",
+          "text": "`ANTHROPIC_API_KEY` set"
+        },
+        {
+          "key": "d",
+          "text": "`ANTHROPIC_API_KEY` set and `RESEARCH_BROWSER_MODEL=claude-sonnet-5`"
+        },
+        {
+          "key": "e",
+          "text": "`ANTHROPIC_API_KEY` set and `RESEARCH_BROWSER_SUMMARIZER=extractive`"
+        }
+      ],
+      "right": [
+        {
+          "key": "p",
+          "text": "`extractive`, with nothing logged, because no key is configured"
+        },
+        {
+          "key": "q",
+          "text": "`extractive`, with a warning that the key is set but the package is not installed"
+        },
+        {
+          "key": "r",
+          "text": "`anthropic:claude-opus-5`"
+        },
+        {
+          "key": "s",
+          "text": "`anthropic:claude-sonnet-5`"
+        },
+        {
+          "key": "t",
+          "text": "`extractive`, because the explicit override beats the configured key"
+        },
+        {
+          "key": "u",
+          "text": "An `ImportError` when the server starts"
+        }
+      ],
+      "answer": {
+        "a": "p",
+        "b": "q",
+        "c": "r",
+        "d": "s",
+        "e": "t"
+      },
+      "explanation": "Section 5: the override `RESEARCH_BROWSER_SUMMARIZER=extractive` is checked first and wins over a key; with no key the extractive summarizer is chosen silently; a key with the package missing logs a warning and degrades; otherwise the provider is used with `RESEARCH_BROWSER_MODEL` or the default `claude-opus-5`. Nothing raises at start, because the optional dependency is never allowed to take the server down.",
+      "hints": [
+        "Read the selection in the order the code checks it: the override, then the key, then the package.",
+        "One option on the right never happens."
+      ]
+    },
+    {
+      "id": "mcp-018-q08",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "4",
+      "est_minutes": 3,
+      "tags": [
+        "extractive",
+        "citations"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The extractive summarizer joins the sentences it chose with a newline rather than a space. In one or two sentences, explain what a space would break.",
+      "answer": {
+        "model": "Headings and list items have no terminating punctuation, so a space-joined summary cannot be split back into the units it was built from, and the citation step could no longer attribute each claim to its page on its own.",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)(?=(?:\\S+\\s+){6})(?![\\s\\S]*\\b(?:breaks nothing|nothing (?:would |will )?breaks?|makes no difference|no difference|doesn't matter|does not matter|would not break|wouldn't break|is only cosmetic|just cosmetic|purely cosmetic|changes nothing|nothing (?:needs|has) to be split|has no effect|(?:that is|that's|which is) fine)\\b)(?![\\s\\S]*\\b(?:headings?|list items?|titles?)\\s+(?:have|has|carry|carries|end with|ends with|always end)\\b(?!\\s+(?:no|none|neither|not)\\b))(?=[\\s\\S]*\\b(?:headings?|headers?|list items?|bullets?|titles?|no (?:terminal |terminating |ending |final |closing |trailing )?(?:punctuation|full stops?|periods?|terminators?)|without (?:a |any )?(?:terminal |terminating |ending |final |closing |trailing )?(?:punctuation|full stops?|periods?|terminators?)|lack(?:s|ing)? (?:a |any )?(?:terminal |terminating |ending |final |closing |trailing )?(?:punctuation|full stops?|periods?|terminators?)|(?:don't|do not|doesn't|does not|never) end))(?=[\\s\\S]*(?:\\b(?:merge[sd]?|merging|run(?:s)? together|running together|glued?|fuse[sd]?|fusing|unsplittable|indistinguishable|(?:become|becomes|form|forms|into|as) (?:a single|one) (?:long )?(?:string|sentence|claim|unit|line|piece)|one (?:long )?(?:string|sentence|claim|unit) (?:with|together))|\\b(?:cannot|can't|can not|could not|couldn't|can no longer|could no longer|unable to|impossible to|no way to|fails? to|failed to|would fail to|not be able to|not be|no longer be)\\b[^.;:\\n]{0,60}?\\b(?:split|separat|tell (?:them |where )?apart|attribut|cite|cited|citation|recover|undo|broken back)|\\b(?:split|splitting|splitter|attribution|citation)s?\\b[^.;:\\n]{0,30}?\\b(?:would|will|could)?\\s*(?:fail|fails|break|breaks|be lost)\\b|\\bbreak(?:s|ing)?\\s+(?:the\\s+)?(?:split|splitting|per-claim|attribution|citations?)\\b))[\\s\\S]+$"
+        ]
+      },
+      "explanation": "Section 4 shows it on the article fixture: the heading `Where the bytes actually go` space-joined to the next sentence splits back as one string, while the newline join splits into two units. The research loop needs each unit separately, because it records one citation per claim.",
+      "hints": [
+        "Think about a line of the page that does not end in a full stop.",
+        "The summary is split again later; ask which step needs the pieces one at a time."
+      ]
+    },
+    {
+      "id": "mcp-018-q09",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 1,
+      "tags": [
+        "provenance"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A `summarize_page` result has `summarizer`, `requested_summarizer`, `fell_back` and `note`. Which one boolean field tells a caller that the requested summarizer did not produce the text?",
+      "answer": {
+        "model": "`fell_back`",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)(?![\\s\\S]*\\b(?:not|never|isn't|is not|doesn't|does not)\\s+(?:the\\s+)?`?fell[_ ]?back)(?![\\s\\S]*\\bfell[_ ]?back`?\\s*(?:,|\\bor\\b|/|\\band\\b)\\s*`?(?:note|requested|summarizer|requested_summarizer)\\b)(?![\\s\\S]*\\b(?:note|requested|summarizer|requested_summarizer)`?\\s*(?:,|\\bor\\b|/|\\band\\b)\\s*`?fell[_ ]?back)[\\s\\S]*\\bfell[_ ]?back\\b[\\s\\S]*$"
+        ]
+      },
+      "explanation": "Section 6: `fell_back` is true exactly when the requested summarizer raised and the extractive fallback ran; then `summarizer` names what ran, `requested_summarizer` what was asked for, and `note` why they differ.",
+      "hints": [
+        "The other three fields are strings."
+      ]
+    },
+    {
+      "id": "mcp-018-q10",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 2,
+      "tags": [
+        "provenance",
+        "arithmetic"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`summarize()` is handed a 120-word page, and the summarizer that runs returns 18 words. What `reduction_percent` does the resulting `Summary` report?",
+      "answer": {
+        "value": 85.0,
+        "tolerance": 0.05,
+        "unit": "percent"
+      },
+      "precision_note": "Closed form from summarize(): round((1 - summary_words / input_words) * 100, 1) = round((1 - 18/120) * 100, 1) = 85.0; a stub summarizer returning 18 words for a 120-word input prints 85.0. The nearest wrong method, the kept fraction 18/120, gives 15.0.",
+      "explanation": "Section 6's `Summary` reports `reduction_percent` as the share of words removed, $(1 - 18/120) \\times 100 = 85.0$, rounded to one decimal. It is the same rule that turns 63 words into 29 as 54.0 in the fallback transcript.",
+      "hints": [
+        "The field reports what was removed, not what was kept.",
+        "Compute $1 - 18/120$ and express it as a percentage."
+      ]
+    },
+    {
+      "id": "mcp-018-q11",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 15,
+      "tags": [
+        "provenance",
+        "fallback"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`labeled_summary(text, primary, fallback)` has the defect section 6 describes: when the provider fails, the text comes from the fallback but the label still claims the provider ran, and only one kind of failure is caught. Fix it so that any exception from `primary.summarize` triggers the fallback, and the result says what actually ran: `summarizer` is the name of what produced the text, `requested` is always `primary.name`, `fell_back` says whether they differ, and `note` is empty on success and on failure reads `<requested> failed (<ExceptionType>: <message>); used <fallback name>`. Standard library only.",
+      "kind": "fix",
+      "language": "python",
+      "starter": "def labeled_summary(text, primary, fallback):\n    \"\"\"Summarize `text` with `primary`; on any failure, use `fallback`.\n\n    `primary` and `fallback` each have a `name` (str) and a\n    `summarize(text) -> str` method. Return a dict with the keys\n    text, summarizer, requested, fell_back and note.\n    \"\"\"\n    try:\n        summary = primary.summarize(text)\n    except RuntimeError:\n        summary = fallback.summarize(text)\n    return {\n        \"text\": summary,\n        \"summarizer\": primary.name,\n        \"requested\": primary.name,\n        \"fell_back\": False,\n        \"note\": \"\",\n    }\n",
+      "solution": "def labeled_summary(text, primary, fallback):\n    \"\"\"Summarize `text` with `primary`; on any failure, use `fallback`.\n\n    `primary` and `fallback` each have a `name` (str) and a\n    `summarize(text) -> str` method. Return a dict with the keys\n    text, summarizer, requested, fell_back and note.\n    \"\"\"\n    requested = primary.name\n    try:\n        summary = primary.summarize(text)\n    except Exception as exc:\n        note = f\"{requested} failed ({type(exc).__name__}: {exc}); used {fallback.name}\"\n        return {\n            \"text\": fallback.summarize(text),\n            \"summarizer\": fallback.name,\n            \"requested\": requested,\n            \"fell_back\": True,\n            \"note\": note,\n        }\n    return {\n        \"text\": summary,\n        \"summarizer\": requested,\n        \"requested\": requested,\n        \"fell_back\": False,\n        \"note\": \"\",\n    }\n",
+      "tests": "\nclass Fixed:\n    def __init__(self, name, reply=None, error=None):\n        self.name = name\n        self.reply = reply\n        self.error = error\n        self.calls = 0\n\n    def summarize(self, text):\n        self.calls += 1\n        if self.error is not None:\n            raise self.error\n        return self.reply\n\n\n# The provider answers: it is named as what ran, and the fallback is never called.\nmodel = Fixed(\"anthropic:claude-opus-5\", reply=\"A model wrote this.\")\nbackup = Fixed(\"extractive\", reply=\"First sentence.\")\nr = labeled_summary(\"Some page text.\", model, backup)\nassert r[\"text\"] == \"A model wrote this.\", r\nassert r[\"summarizer\"] == \"anthropic:claude-opus-5\" and r[\"requested\"] == \"anthropic:claude-opus-5\", r\nassert r[\"fell_back\"] is False and r[\"note\"] == \"\", r\nassert backup.calls == 0, \"the fallback ran although the provider answered\"\n\n# The provider fails with an expired key: the label says what really ran.\nmodel = Fixed(\"anthropic:claude-opus-5\", error=RuntimeError(\"401 invalid x-api-key\"))\nbackup = Fixed(\"extractive\", reply=\"First sentence.\")\nr = labeled_summary(\"Some page text.\", model, backup)\nassert r[\"text\"] == \"First sentence.\", r\nassert r[\"summarizer\"] == \"extractive\", \"a fallback was labeled as the model\"\nassert r[\"requested\"] == \"anthropic:claude-opus-5\", r\nassert r[\"fell_back\"] is True, r\nassert \"RuntimeError: 401 invalid x-api-key\" in r[\"note\"], r[\"note\"]\nassert \"extractive\" in r[\"note\"], r[\"note\"]\n\n# A timeout is a failure too, not only RuntimeError.\nmodel = Fixed(\"anthropic:claude-opus-5\", error=TimeoutError(\"read timed out\"))\nr = labeled_summary(\"Some page text.\", model, Fixed(\"extractive\", reply=\"x\"))\nassert r[\"fell_back\"] is True and r[\"summarizer\"] == \"extractive\", r\nassert \"TimeoutError: read timed out\" in r[\"note\"], r[\"note\"]\n\n# The fallback's own name is reported, whatever it is called, and the note has the stated form.\nmodel = Fixed(\"anthropic:claude-opus-5\", error=RuntimeError(\"401 invalid x-api-key\"))\nr = labeled_summary(\"Some page text.\", model, Fixed(\"lead-sentences\", reply=\"y\"))\nassert r[\"summarizer\"] == \"lead-sentences\", \"the fallback's name was not reported\"\nassert r[\"note\"] == \"anthropic:claude-opus-5 failed (RuntimeError: 401 invalid x-api-key); used lead-sentences\", r[\"note\"]\n\nassert set(r) == {\"text\", \"summarizer\", \"requested\", \"fell_back\", \"note\"}, sorted(r)\nprint(\"ok\")\n",
+      "expected_output": "ok\n",
+      "explanation": "Section 6's wrapper records `requested` before the call, catches every `Exception`, and on failure runs the fallback and sets `summarizer` to the fallback's name with `fell_back` true and a one-line note. A label that names the provider for fallback text makes the caller read a truncation as a model's compression.",
+      "hints": [
+        "There are three separate defects: what is caught, what `summarizer` says, and what `fell_back` and `note` say.",
+        "Remember the requested name before calling, and build a different result in the `except` branch.",
+        "Use `type(exc).__name__` and `str(exc)` in the note."
+      ]
+    },
+    {
+      "id": "mcp-018-q12",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "7",
+      "est_minutes": 4,
+      "tags": [
+        "budget"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "`research_urls` is called with three URLs whose pages extract to 707, 134 and 265 words, in that order, with `max_words=800` and the default page budget. Give `pages_visited`, `words_read`, and the number of sources the stop message reports as not visited.",
+      "answer": {
+        "parts": [
+          {
+            "label": "pages_visited",
+            "value": 2,
+            "tolerance": 0,
+            "unit": "pages"
+          },
+          {
+            "label": "words_read",
+            "value": 841,
+            "tolerance": 0,
+            "unit": "words"
+          },
+          {
+            "label": "not visited",
+            "value": 1,
+            "tolerance": 0,
+            "unit": "sources"
+          }
+        ]
+      },
+      "precision_note": "Gate before each page: 0 < 800 reads 707, 707 < 800 reads 134 (841), 841 >= 800 stops. The project on its three fixtures with max_words=800 prints 2 pages, 841 words, '1 source(s) not visited'. Treating max_words as a cap, the nearest wrong method, gives 1 page and 707 words.",
+      "explanation": "Section 7's gate checks `words_read >= budget.max_words` at the top of each iteration, before a page is loaded, so the limit stops the pass after it has been crossed rather than preventing the crossing. Section 11 makes the same point with the 500-word budget that read 707 words.",
+      "hints": [
+        "The budget is checked before each page, not after.",
+        "Add the word counts one page at a time and test the running total against 800 before each next page."
+      ]
+    },
+    {
+      "id": "mcp-018-q13",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "8",
+      "est_minutes": 3,
+      "tags": [
+        "citations",
+        "verbatim"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A research pass runs with the provider summarizer instead of the extractive one, and the model paraphrases each page. What happens to its claims in the report?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "They are dropped, because `CitationLog.add` refuses a claim that does not appear in the source text.",
+          "correct": false,
+          "feedback": "`add` refuses only an empty claim or an empty URL. Whether the claim appears in the source decides the `verbatim` flag, not whether it is recorded."
+        },
+        {
+          "key": "b",
+          "text": "They are recorded with their page's URL and `verbatim: false`.",
+          "correct": true,
+          "feedback": "Right. A paraphrase is still attributable to the page it came from, but it cannot be quoted, and the flag is computed by checking the claim against the extracted text."
+        },
+        {
+          "key": "c",
+          "text": "They are recorded with `verbatim: true`, because the model was given the page's text.",
+          "correct": false,
+          "feedback": "The flag is not asserted from where the text came from; it is computed as `claim in source_text`, which a paraphrase fails."
+        },
+        {
+          "key": "d",
+          "text": "They are recorded without a URL, because a model's sentence has no single source page.",
+          "correct": false,
+          "feedback": "No claim can enter the report without a URL: `add` raises `MissingSourceError` on a blank one, and each claim is added with the URL of the page whose summary produced it."
+        }
+      ],
+      "explanation": "Section 8: the citation log is the only way into the report, it refuses empty claims and empty URLs, and `verbatim` is `bool(source_text) and claim in source_text`. The stub-provider run prints a claim with `verbatim: false` and the article's URL.",
+      "hints": [
+        "Separate the two questions: is the claim recorded, and is it marked quotable."
+      ]
+    },
+    {
+      "id": "mcp-018-q14",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "11",
+      "est_minutes": 3,
+      "tags": [
+        "failures",
+        "stop-reason"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A research report says `\"stopped_because\": \"completed: visited every source\"` and `\"pages_failed\": 1`. What does that tell the caller?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The report is inconsistent, so the server has a bug.",
+          "correct": false,
+          "feedback": "Both fields are correct. `stopped_because` describes why the loop ended; `pages_failed` describes how the pages fared."
+        },
+        {
+          "key": "b",
+          "text": "Every source was attempted; one failed to load and is listed in `failures`.",
+          "correct": true,
+          "feedback": "Right. The loop ran out of URLs rather than budget, and a dead link is recorded and stepped over rather than ending the pass."
+        },
+        {
+          "key": "c",
+          "text": "Every source was read successfully, and the failure was a retry that later succeeded.",
+          "correct": false,
+          "feedback": "The loop does not retry. A page that fails to load is appended to `failures` and the loop moves on."
+        },
+        {
+          "key": "d",
+          "text": "The pass stopped at the failed page, and the pages after it were not visited.",
+          "correct": false,
+          "feedback": "A dead link does not end the pass. A pass that stops early says `budget: ...` with the number of sources not visited."
+        }
+      ],
+      "explanation": "Section 11 prints this exact case: a dead link, then a page that loads, then the same page again gives `pages_visited=1`, `pages_failed=1`, the failure in `failures`, and `completed: visited every source`. A caller that reads only `stopped_because` misses the failure.",
+      "hints": [
+        "Ask what `stopped_because` describes: the loop or the pages.",
+        "Section 7's dead-link handler appends and continues."
+      ]
+    },
+    {
+      "id": "mcp-018-q15",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "8",
+      "est_minutes": 12,
+      "tags": [
+        "citations",
+        "provenance"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Write `add_citation(entries, claim, url, title, source_text=\"\")`, the dict version of the project's `CitationLog.add`. Strip the claim; raise `MissingSourceError` if it is then empty, or if `url` is empty or only whitespace, and in either case append nothing. Otherwise append and return `{\"claim\", \"url\", \"title\", \"verbatim\"}`, with the URL stripped and `verbatim` true only when `source_text` is non-empty and contains the stripped claim. Standard library only.",
+      "kind": "implement",
+      "language": "python",
+      "starter": "class MissingSourceError(ValueError):\n    \"\"\"A claim with no source, or no claim at all.\"\"\"\n\n\ndef add_citation(entries, claim, url, title, source_text=\"\"):\n    \"\"\"Validate, then append one citation dict to `entries` and return it.\n\n    The dict has the keys claim, url, title and verbatim.\n    \"\"\"\n    raise NotImplementedError\n",
+      "solution": "class MissingSourceError(ValueError):\n    \"\"\"A claim with no source, or no claim at all.\"\"\"\n\n\ndef add_citation(entries, claim, url, title, source_text=\"\"):\n    \"\"\"Validate, then append one citation dict to `entries` and return it.\n\n    The dict has the keys claim, url, title and verbatim.\n    \"\"\"\n    claim = claim.strip()\n    if not claim:\n        raise MissingSourceError(\"a claim cannot be empty\")\n    if not url.strip():\n        raise MissingSourceError(f\"refusing to record a claim with no source URL: {claim[:60]!r}\")\n    citation = {\n        \"claim\": claim,\n        \"url\": url.strip(),\n        \"title\": title,\n        \"verbatim\": bool(source_text) and claim in source_text,\n    }\n    entries.append(citation)\n    return citation\n",
+      "tests": "\nPAGE = \"Where the bytes actually go\\nThe article is not the page.\\nMost of it is markup.\"\n\nlog = []\nc = add_citation(log, \"  The article is not the page.  \", url=\" https://example.com/a \", title=\"A\", source_text=PAGE)\nassert c == {\"claim\": \"The article is not the page.\", \"url\": \"https://example.com/a\", \"title\": \"A\", \"verbatim\": True}, c\nassert log == [c]\n\n# A heading has no full stop and is still a claim.\nassert add_citation(log, \"Where the bytes actually go\", url=\"https://example.com/a\", title=\"A\", source_text=PAGE)[\"verbatim\"] is True\n\n# A paraphrase is cited, but not marked verbatim.\np = add_citation(log, \"Pages are mostly markup.\", url=\"https://example.com/a\", title=\"A\", source_text=PAGE)\nassert p[\"verbatim\"] is False and p[\"url\"] == \"https://example.com/a\", p\n\n# No source text to check against: never verbatim.\nassert add_citation(log, \"The article is not the page.\", url=\"https://example.com/a\", title=\"A\")[\"verbatim\"] is False\n\nbefore = list(log)\nfor bad_url in (\"\", \"   \", \"\\t\"):\n    try:\n        add_citation(log, \"The article is not the page.\", url=bad_url, title=\"A\", source_text=PAGE)\n    except MissingSourceError:\n        pass\n    else:\n        raise AssertionError(f\"a claim with url {bad_url!r} was recorded\")\nfor bad_claim in (\"\", \"   \"):\n    try:\n        add_citation(log, bad_claim, url=\"https://example.com/a\", title=\"A\", source_text=PAGE)\n    except MissingSourceError:\n        pass\n    else:\n        raise AssertionError(\"an empty claim was recorded\")\nassert log == before, \"a refused claim was appended before it was refused\"\nassert issubclass(MissingSourceError, ValueError)\nprint(\"ok\")\n",
+      "expected_output": "ok\n",
+      "explanation": "Section 8's `add` validates before it appends, so an unsourced claim is never recorded and filtered later; there is nothing to filter. `verbatim` is checked against the extracted text rather than asserted, which is why a heading or a sentence of the page comes back true and a paraphrase false.",
+      "hints": [
+        "Validate first, append last.",
+        "Strip before every check, and test the URL with `url.strip()`.",
+        "`verbatim` is a containment test on the stripped claim, guarded by a non-empty `source_text`."
+      ]
+    },
+    {
+      "id": "mcp-018-q16",
+      "type": "numeric",
+      "track": "edge",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "11",
+      "est_minutes": 2,
+      "tags": [
+        "budget",
+        "clamping"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A model calls `research_urls` with `max_pages=50` and `max_words=100`. Which page and word limits does the `Budget` of that pass actually hold?",
+      "answer": {
+        "parts": [
+          {
+            "label": "max_pages",
+            "value": 20,
+            "tolerance": 0,
+            "unit": "pages"
+          },
+          {
+            "label": "max_words",
+            "value": 500,
+            "tolerance": 0,
+            "unit": "words"
+          }
+        ]
+      },
+      "precision_note": "From research_urls: max_pages = max(1, min(50, MAX_MAX_PAGES=20)) = 20 and max_words = max(500, 100) = 500. snippets/research_runs.py prints 'word limit reached (500)' for a requested max_words of 100.",
+      "explanation": "Section 11: the tool clamps `max_pages` to between 1 and 20 and `max_words` to at least 500, so the stop message reports 500 even though 100 was asked for. A caller reading the message sees the limit that was applied, not the one it sent.",
+      "hints": [
+        "Both arguments are clamped before the `Budget` is built.",
+        "One has a ceiling of 20; the other has a floor."
+      ]
+    },
+    {
+      "id": "mcp-018-q17",
+      "type": "long",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o3",
+        "o2"
+      ],
+      "section": "6",
+      "est_minutes": 12,
+      "tags": [
+        "provenance",
+        "design"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A pull request changes the research browser's summarizer wrapper: on a provider exception it now returns the first 2,000 words of the page, keeps `summarizer` set to the provider's name so that \"results stay consistent\", and logs the exception at DEBUG. Critique the change and say what the code should do instead, naming the fields involved.",
+      "kind": "critique",
+      "answer_length": "half a page",
+      "solution": "The change reintroduces the first edition's defect. The text is now a truncation, but the label says a model produced it, so a caller reads it as a compression of the whole page and treats an absent fact as one the model judged unimportant, when in fact the tail was simply cut. The label decides which reading is correct, and a wrong label makes the correct reading unavailable.\n\nThe failure is also silent and repeatable: an expired key produces plausible, wrongly labeled output on every call, and a DEBUG log line is invisible at the server's INFO level, so nothing shows that the provider has stopped working. \"Consistency\" here means consistently false.\n\nThe code should do what `summarize()` does: record `requested` (the provider's name) before the call, catch the exception, run the extractive summarizer rather than truncating (it returns real page sentences, which section 8 can cite as verbatim), and set `summarizer` to `extractive`, `fell_back` to true, and `note` to a one-line reason such as `anthropic:claude-opus-5 failed (RuntimeError: 401 invalid x-api-key); used extractive`, logging the failure at WARNING. These fields must be in the published output schema of `summarize_page` (`summarizer`, `requested_summarizer`, `fell_back`, `note`) so a caller can branch on them.",
+      "rubric": [
+        {
+          "criterion": "Explains that labeling fallback text as the provider's misleads the caller about what the text is (truncation read as a model's compression).",
+          "points": 3
+        },
+        {
+          "criterion": "Points out the failure becomes silent and repeatable, including that a DEBUG log hides it.",
+          "points": 2
+        },
+        {
+          "criterion": "Proposes recording requested versus what ran, with fell_back true and a note giving the reason.",
+          "points": 3
+        },
+        {
+          "criterion": "Says the fields belong in the published output schema, not in prose, and prefers the extractive fallback over truncation.",
+          "points": 2
+        }
+      ],
+      "explanation": "Section 6 tells this defect's history and shows the honest wrapper and its transcript: `summarizer` is what ran, `requested` what was asked for, `fell_back` and `note` say why they differ, and the result schema carries them.",
+      "hints": [
+        "Ask how a reader weighs a model summary differently from a truncation.",
+        "List the four fields the wrapper fills, and ask which ones the pull request makes false."
+      ]
+    },
+    {
+      "id": "mcp-018-q18",
+      "type": "long",
+      "track": "connect",
+      "difficulty": 4,
+      "outcomes": [
+        "o1",
+        "o2"
+      ],
+      "section": "3",
+      "est_minutes": 15,
+      "tags": [
+        "sampling",
+        "consent",
+        "security"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A team keeps one model-backed summary path for the research browser's `research_urls`, a tool that fetches arbitrary pages. Option A is the MRTR sampling path of post 08 (`Resolve` with a `Sample` marker). Option B is a direct provider call from the server with an extractive default. Compare the two on who pays, who consents, which clients can use the tool, and the exposure post 19 analyzes, then recommend one.",
+      "kind": "connect",
+      "answer_length": "half a page",
+      "connects": [
+        "mcp-008",
+        "mcp-019"
+      ],
+      "solution": "Option A keeps the host paying: the completion runs on the host's model, under the host's subscription or budget, and the host can put its user in front of each request, which is the consent the old sampling page asked for. But it depends on a deprecated feature with removal no earlier than the first revision released on or after 2027-07-28, it needs every client to declare the deprecated `sampling` capability (a client that does not gets `-32021` and the tool fails outright), and each call costs an extra round trip through the host.\n\nOption B moves the bill to whoever supplied the key, and consent from the user at call time to the operator at deploy time, so the server must name the provider in its documentation and make the path opt-in. In exchange it works with every client, because nothing travels through the host, and it has a default (extractive) that needs no model at all.\n\nOn security, post 19 treats this server as pure untrusted content: every fetched page can carry instructions. In both options that text reaches a model's prompt. In B it is a second model the user never chose, and its output then flows into the host model's context, so a summary is as untrusted as the page; the extractive default avoids the second model entirely and returns sentences that are verifiably on the page. In A the host's own model reads injected text inside its own turn.\n\nRecommendation: B, with the extractive summarizer as the default and the provider opt-in, disclosed, budgeted, and labeled in every result; A only as a migration runway for a server that already ships sampling.",
+      "rubric": [
+        {
+          "criterion": "States who pays and who consents in each option (host and user versus operator at deploy time).",
+          "points": 2
+        },
+        {
+          "criterion": "Notes A's dependence on the deprecated capability: removal timeline, clients without sampling fail with -32021, extra round trip.",
+          "points": 2
+        },
+        {
+          "criterion": "Connects to post 19: fetched pages are untrusted content that reaches a model's prompt in both options, and a summary is no more trusted than the page.",
+          "points": 3
+        },
+        {
+          "criterion": "Recommends B with an extractive default, opt-in provider, disclosure and honest labels, and keeps A only as a migration path.",
+          "points": 2
+        }
+      ],
+      "explanation": "Section 3 moves the bill and the consent, section 2 and post 08 describe the surviving MRTR path and its capability requirement, and post 19 places this server at the untrusted-content corner of the threat model; the recommendation follows section 9's cases and the post's design.",
+      "hints": [
+        "Start from section 3's three questions for each option.",
+        "Ask which clients still declare a deprecated capability, and what one that does not receives.",
+        "For the security part, follow the page text: which model reads it in each option?"
+      ]
+    }
+  ]
+}
