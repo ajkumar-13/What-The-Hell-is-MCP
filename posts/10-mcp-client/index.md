@@ -837,4 +837,4 @@ Full citations are in [REFERENCES.md](../../REFERENCES.md).
 ## What to read next
 
 - **[Post 11 - Building a host: the tool loop, many servers, and permissions](../11-building-a-host/index.md):** the same project four modules further on, with several clients behind one catalog, a model driving them, and the permission gate that decides which calls may happen.
-- **[Post 12 - Testing and debugging MCP](../12-testing-and-debugging/index.md):** the in-memory pattern this project's 68 tests are built on, and how to read a wire trace like the ones above.
+- **[Post 12 - Testing and debugging MCP](../12-testing-and-debugging/index.md):** the in-memory pattern behind this project's client tests, and how to read a wire trace like the ones above.
