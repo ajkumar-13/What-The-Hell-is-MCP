@@ -8,36 +8,36 @@ Everything below was checked on **2026-07-26**. Documentation URLs in this ecosy
 
 ## 1. The specification
 
-The series targets revision **2026-07-28**. While that revision was a release candidate it lived at `/specification/draft/`; after it goes final the same pages are served from `/specification/2026-07-28/`.
+The series targets revision **2026-07-28**. Its pages are served from `/specification/2026-07-28/`; `/specification/draft/`, where they lived while the revision was a release candidate, now serves the next draft and is not cited.
 
 | Topic | URL |
 |---|---|
 | Versioning and revision index | https://modelcontextprotocol.io/specification/versioning |
-| Versioning and compatibility (eras, version negotiation, extension negotiation) | https://modelcontextprotocol.io/specification/draft/basic/versioning |
-| 2026-07-28 changelog | https://modelcontextprotocol.io/specification/draft/changelog |
-| Architecture | https://modelcontextprotocol.io/specification/draft/architecture |
-| Base protocol (message shapes, error codes, `_meta`, `resultType`) | https://modelcontextprotocol.io/specification/draft/basic |
-| `server/discover` | https://modelcontextprotocol.io/specification/draft/server/discover |
-| Transports (overview) | https://modelcontextprotocol.io/specification/draft/basic/transports |
-| Transports: Streamable HTTP | https://modelcontextprotocol.io/specification/draft/basic/transports/streamable-http |
-| Transports: stdio | https://modelcontextprotocol.io/specification/draft/basic/transports/stdio |
-| Patterns overview (message direction, MRTR, subscriptions, progress) | https://modelcontextprotocol.io/specification/draft/basic/patterns |
-| Multi Round-Trip Requests (MRTR) | https://modelcontextprotocol.io/specification/draft/basic/patterns/mrtr |
-| Subscriptions (`subscriptions/listen`) | https://modelcontextprotocol.io/specification/draft/basic/patterns/subscriptions |
-| Progress | https://modelcontextprotocol.io/specification/draft/basic/patterns/progress |
-| Cancellation | https://modelcontextprotocol.io/specification/draft/basic/patterns/cancellation |
-| Tools | https://modelcontextprotocol.io/specification/draft/server/tools |
-| Resources | https://modelcontextprotocol.io/specification/draft/server/resources |
-| Prompts | https://modelcontextprotocol.io/specification/draft/server/prompts |
-| Completion | https://modelcontextprotocol.io/specification/draft/server/utilities/completion |
-| Pagination | https://modelcontextprotocol.io/specification/draft/server/utilities/pagination |
-| Caching (`ttlMs`, `cacheScope`) | https://modelcontextprotocol.io/specification/draft/server/utilities/caching |
-| Logging (deprecated in 2026-07-28) | https://modelcontextprotocol.io/specification/draft/server/utilities/logging |
-| Elicitation | https://modelcontextprotocol.io/specification/draft/client/elicitation |
-| Sampling (deprecated in 2026-07-28) | https://modelcontextprotocol.io/specification/draft/client/sampling |
-| Authorization (including the Client Registration, Authorization Server Discovery, and Security Considerations sections) † | https://modelcontextprotocol.io/specification/draft/basic/authorization |
-| Client registration (Client ID Metadata Documents, and Dynamic Client Registration as deprecated) | https://modelcontextprotocol.io/specification/draft/basic/authorization/client-registration |
-| Deprecated features registry | https://modelcontextprotocol.io/specification/draft/deprecated |
+| Versioning and compatibility (eras, version negotiation, extension negotiation) | https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning |
+| 2026-07-28 changelog | https://modelcontextprotocol.io/specification/2026-07-28/changelog |
+| Architecture | https://modelcontextprotocol.io/specification/2026-07-28/architecture |
+| Base protocol (message shapes, error codes, `_meta`, `resultType`) | https://modelcontextprotocol.io/specification/2026-07-28/basic |
+| `server/discover` | https://modelcontextprotocol.io/specification/2026-07-28/server/discover |
+| Transports (overview) | https://modelcontextprotocol.io/specification/2026-07-28/basic/transports |
+| Transports: Streamable HTTP | https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http |
+| Transports: stdio | https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/stdio |
+| Patterns overview (message direction, MRTR, subscriptions, progress) | https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns |
+| Multi Round-Trip Requests (MRTR) | https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr |
+| Subscriptions (`subscriptions/listen`) | https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/subscriptions |
+| Progress | https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/progress |
+| Cancellation | https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/cancellation |
+| Tools | https://modelcontextprotocol.io/specification/2026-07-28/server/tools |
+| Resources | https://modelcontextprotocol.io/specification/2026-07-28/server/resources |
+| Prompts | https://modelcontextprotocol.io/specification/2026-07-28/server/prompts |
+| Completion | https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/completion |
+| Pagination | https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/pagination |
+| Caching (`ttlMs`, `cacheScope`) | https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/caching |
+| Logging (deprecated in 2026-07-28) | https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/logging |
+| Elicitation | https://modelcontextprotocol.io/specification/2026-07-28/client/elicitation |
+| Sampling (deprecated in 2026-07-28) | https://modelcontextprotocol.io/specification/2026-07-28/client/sampling |
+| Authorization (including the Client Registration, Authorization Server Discovery, and Security Considerations sections) † | https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization |
+| Client registration (Client ID Metadata Documents, and Dynamic Client Registration as deprecated) | https://modelcontextprotocol.io/specification/2026-07-28/basic/authorization/client-registration |
+| Deprecated features registry | https://modelcontextprotocol.io/specification/2026-07-28/deprecated |
 | Feature lifecycle policy | https://modelcontextprotocol.io/community/feature-lifecycle |
 | Canonical schema (TypeScript) | https://github.com/modelcontextprotocol/modelcontextprotocol/blob/main/schema/draft/schema.ts |
 
@@ -96,7 +96,8 @@ Index: https://modelcontextprotocol.io/seps. The rendered SEP pages do not use p
 
 ### Official guidance
 
-- Model Context Protocol, *"Security Best Practices"*. https://modelcontextprotocol.io/specification/draft/basic/security_best_practices
+- Model Context Protocol, *"Security Best Practices"*, revision 2026-07-28 (eleven attack sections). https://modelcontextprotocol.io/docs/2026-07-28/tutorials/security/security_best_practices
+- Model Context Protocol, *"Security Best Practices"*, revision 2025-11-25 (the session-hijacking text post 19 quotes as history). https://modelcontextprotocol.io/specification/2025-11-25/basic/security_best_practices
 - Model Context Protocol, *"Registry moderation policy"*. https://modelcontextprotocol.io/registry/moderation-policy
 - Model Context Protocol, *"Security Interest Group"*. https://modelcontextprotocol.io/community/interest-groups/security
 
@@ -105,13 +106,13 @@ Index: https://modelcontextprotocol.io/seps. The rendered SEP pages do not use p
 These attack classes are **not** covered by the normative specification. All are third-party research, and all are live concerns for a server author.
 
 - Invariant Labs, *"MCP Security Notification: Tool Poisoning Attacks"* (2025). https://invariantlabs.ai/blog/mcp-security-notification-tool-poisoning-attacks
-- Invariant Labs, *"Toxic agent flows in the GitHub MCP server"* (2025). https://invariantlabs.ai/blog/mcp-github-vulnerability
+- Invariant Labs, *"GitHub MCP Exploited: Accessing private repositories via MCP"* (2025-05-26). https://invariantlabs.ai/blog/mcp-github-vulnerability
 - Trail of Bits, *"Jumping the line: how MCP servers can attack you before you ever use them"* (2025). https://blog.trailofbits.com/2025/04/21/jumping-the-line-how-mcp-servers-can-attack-you-before-you-ever-use-them/
 - Trail of Bits, *"How MCP servers can steal your conversation history"* (2025). https://blog.trailofbits.com/2025/04/23/how-mcp-servers-can-steal-your-conversation-history/
 - Trail of Bits, *"Deceiving users with ANSI terminal codes in MCP"* (2025). https://blog.trailofbits.com/2025/04/29/deceiving-users-with-ansi-terminal-codes-in-mcp/
 - Willison, S. *"The lethal trifecta for AI agents"* (2025-06-16), the post that coined the phrase. https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/
 - Willison, S. *"Supabase MCP can leak your entire SQL database"* (2025-07-06), the trifecta applied to an MCP database server. Posts 13 and 19 cite it. https://simonwillison.net/2025/Jul/6/supabase-mcp-lethal-trifecta/
-- Anthropic, *"How we contain Claude"* (2026). https://www.anthropic.com/engineering/how-we-contain-claude
+- Anthropic, *"How we contain Claude across products"* (2026-05-25). https://www.anthropic.com/engineering/how-we-contain-claude
 - Anthropic, *"Code execution with MCP"*. https://www.anthropic.com/engineering/code-execution-with-mcp
 
 ### Vulnerabilities

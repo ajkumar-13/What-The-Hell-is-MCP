@@ -762,7 +762,7 @@ Setting only the model moves the refusal to the key, `ANTHROPIC_API_KEY is not s
 
 ## Further reading
 
-- Specification, *"Tools"*, revision 2026-07-28. The naming rules and allowed character set, the disambiguation guidance for aggregating clients, annotations as untrusted unless from a trusted server, and the security section: a human in the loop with the ability to deny, and the client-side list that includes showing tool inputs before calling the server. <https://modelcontextprotocol.io/specification/draft/server/tools>
+- Specification, *"Tools"*, revision 2026-07-28. The naming rules and allowed character set, the disambiguation guidance for aggregating clients, annotations as untrusted unless from a trusted server, and the security section: a human in the loop with the ability to deny, and the client-side list that includes showing tool inputs before calling the server. <https://modelcontextprotocol.io/specification/2026-07-28/server/tools>
 - Hungerford, O., Morrow, S., and Chang, L., *"Tool Annotations as Risk Vocabulary: What Hints Can and Can't Do"* (2026-03-16), Model Context Protocol blog. What annotations are for, and why a hint cannot be a control.
 - Trail of Bits, *"Jumping the line: how MCP servers can attack you before you ever use them"* (2025). The first of the three entry points in section 8, the one that needs no user action.
 - Anthropic, *"How we contain Claude"* (2026). Containment as a property of the whole system, the frame in which section 8 places the gate.

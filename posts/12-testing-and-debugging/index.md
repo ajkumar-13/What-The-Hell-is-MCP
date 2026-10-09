@@ -713,9 +713,9 @@ Five failures are worth knowing by their symptoms, because each reaches its auth
 
 ## Further reading
 
-- Specification, *"Tools"*, revision 2026-07-28. The `isError` rule, why an execution failure is a successful response, the untrusted-annotations rule, and the protocol errors it lists, including an unknown tool. <https://modelcontextprotocol.io/specification/draft/server/tools>
-- Specification, *"Base protocol"*, revision 2026-07-28, the error codes. `-32020`, `-32021`, and `-32022`, the `data` payloads of the last two, and `-32602` replacing `-32002` for a missing resource. <https://modelcontextprotocol.io/specification/draft/basic>
-- Specification, *"Transports: Streamable HTTP"*, revision 2026-07-28. The `MCP-Protocol-Version`, `Mcp-Method`, `Mcp-Name`, and `Mcp-Param-{Name}` headers, and the rule that a mismatch is `400 Bad Request` with `HeaderMismatch`. <https://modelcontextprotocol.io/specification/draft/basic/transports/streamable-http>
+- Specification, *"Tools"*, revision 2026-07-28. The `isError` rule, why an execution failure is a successful response, the untrusted-annotations rule, and the protocol errors it lists, including an unknown tool. <https://modelcontextprotocol.io/specification/2026-07-28/server/tools>
+- Specification, *"Base protocol"*, revision 2026-07-28, the error codes. `-32020`, `-32021`, and `-32022`, the `data` payloads of the last two, and `-32602` replacing `-32002` for a missing resource. <https://modelcontextprotocol.io/specification/2026-07-28/basic>
+- Specification, *"Transports: Streamable HTTP"*, revision 2026-07-28. The `MCP-Protocol-Version`, `Mcp-Method`, `Mcp-Name`, and `Mcp-Param-{Name}` headers, and the rule that a mismatch is `400 Bad Request` with `HeaderMismatch`. <https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http>
 - MCP Inspector. <https://github.com/modelcontextprotocol/inspector>. Check the repository for the current release before following any command line, including this post's.
 - CVE-2025-49596, *"MCP Inspector unauthenticated remote code execution before 0.14.1"*, 9.4 critical. <https://nvd.nist.gov/vuln/detail/CVE-2025-49596>
 - Conformance suite. <https://github.com/modelcontextprotocol/conformance>. The independent check that an implementation matches the specification rather than its author's reading of it.

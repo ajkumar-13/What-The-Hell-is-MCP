@@ -704,11 +704,11 @@ prompts/get confirm_prompt: MCPError -32603: Internal server error
 
 ## Further reading
 
-- Specification, *"Multi Round-Trip Requests"*, revision 2026-07-28. The four steps, the three types, and the eight server and four client requirements quoted in section 3. <https://modelcontextprotocol.io/specification/draft/basic/patterns/mrtr>
-- Specification, *"Patterns overview"*, revision 2026-07-28. The rule that servers must not initiate JSON-RPC requests, quoted in section 2. <https://modelcontextprotocol.io/specification/draft/basic/patterns>
-- Specification, *"Elicitation"*, revision 2026-07-28. Capability declaration, the schema restrictions in section 7, the three actions, URL mode, and the phishing and statefulness requirements in section 9. <https://modelcontextprotocol.io/specification/draft/client/elicitation>
-- Specification, *"Base protocol"*, revision 2026-07-28. `resultType`, the per-request `_meta` keys, and the error codes, including the retired `-32042`. <https://modelcontextprotocol.io/specification/draft/basic>
-- Specification, *"Caching"*, revision 2026-07-28. Why interim results carry no caching hints and MRTR retries are never cacheable. <https://modelcontextprotocol.io/specification/draft/server/utilities/caching>
+- Specification, *"Multi Round-Trip Requests"*, revision 2026-07-28. The four steps, the three types, and the eight server and four client requirements quoted in section 3. <https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr>
+- Specification, *"Patterns overview"*, revision 2026-07-28. The rule that servers must not initiate JSON-RPC requests, quoted in section 2. <https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns>
+- Specification, *"Elicitation"*, revision 2026-07-28. Capability declaration, the schema restrictions in section 7, the three actions, URL mode, and the phishing and statefulness requirements in section 9. <https://modelcontextprotocol.io/specification/2026-07-28/client/elicitation>
+- Specification, *"Base protocol"*, revision 2026-07-28. `resultType`, the per-request `_meta` keys, and the error codes, including the retired `-32042`. <https://modelcontextprotocol.io/specification/2026-07-28/basic>
+- Specification, *"Caching"*, revision 2026-07-28. Why interim results carry no caching hints and MRTR retries are never cacheable. <https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/caching>
 - SEP-2322, *"Multi Round-Trip Requests"* (2026), status Final. The design rationale and the worked example section 5 quotes on re-sent arguments. <https://modelcontextprotocol.io/seps/2322-MRTR>
 - SEP-1036 (URL-mode elicitation) and SEP-1034 (elicitation defaults). The proposals behind section 9's mode and section 7's `default` values.
 - MCP Python SDK, release 2.3.0. `MCPServer`, `Resolve`, `Elicit`, `ElicitationResult`, `RequestStateSecurity`, and `Client` with an `elicitation_callback`. <https://github.com/modelcontextprotocol/python-sdk>

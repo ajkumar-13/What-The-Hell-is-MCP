@@ -701,8 +701,8 @@ The tool then appears in `tools/list` as `['files/search']`, slash and all, so t
 
 ## Further reading
 
-- Specification, *"Tools"*, revision 2026-07-28. The complete `Tool` object, `ToolAnnotations` and its defaults, the naming rules, deterministic ordering, the content block types, `structuredContent`, and the error split quoted throughout. <https://modelcontextprotocol.io/specification/draft/server/tools>
-- Specification, *"Base protocol"*, revision 2026-07-28, the JSON Schema usage section: 2020-12 as the default dialect, and the error codes with their HTTP statuses. <https://modelcontextprotocol.io/specification/draft/basic>
+- Specification, *"Tools"*, revision 2026-07-28. The complete `Tool` object, `ToolAnnotations` and its defaults, the naming rules, deterministic ordering, the content block types, `structuredContent`, and the error split quoted throughout. <https://modelcontextprotocol.io/specification/2026-07-28/server/tools>
+- Specification, *"Base protocol"*, revision 2026-07-28, the JSON Schema usage section: 2020-12 as the default dialect, and the error codes with their HTTP statuses. <https://modelcontextprotocol.io/specification/2026-07-28/basic>
 - SEP-2106, *"Arbitrary JSON Schema 2020-12 keywords in `inputSchema`"*. The proposal that opened `inputSchema` to every 2020-12 keyword, added the `$ref` and composition-keyword safety rules, and loosened `structuredContent` from an object to any JSON value. Index at <https://modelcontextprotocol.io/seps>.
 - SEP-986, *"Tool naming guidance"*. The character set the SDK warns about, and why it is a should rather than a must.
 - SEP-1303, *"Input validation errors as tool execution errors"*. The proposal behind the ambiguity the note in section 7 flags.

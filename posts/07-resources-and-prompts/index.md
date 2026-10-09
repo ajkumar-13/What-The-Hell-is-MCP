@@ -795,12 +795,12 @@ Catch `MCPError` inside the block, next to the call that raised it, or use `exce
 
 ## Further reading
 
-- Specification, *"Resources"*, revision 2026-07-28. The `Resource` object, the capability flags, the `-32602` rule, the empty-contents prohibition, and the URI scheme and security requirements quoted in sections 2 and 3. <https://modelcontextprotocol.io/specification/draft/server/resources>
-- Specification, *"Prompts"*, revision 2026-07-28. The `Prompt` and `PromptArgument` objects, string-only arguments, and the prompt error codes in section 8. <https://modelcontextprotocol.io/specification/draft/server/prompts>
-- Specification, *"Completion"*, revision 2026-07-28. The two reference types, the 100-item cap, and the `context.arguments` field. <https://modelcontextprotocol.io/specification/draft/server/utilities/completion>
-- Specification, *"Pagination"*, revision 2026-07-28. Opaque cursors, the four paginated operations, and the empty-string-is-a-valid-cursor rule. <https://modelcontextprotocol.io/specification/draft/server/utilities/pagination>
-- Specification, *"Caching"*, revision 2026-07-28, and SEP-2549. The six cacheable methods, the TTL semantics, and the `cacheScope` security warning in section 6. <https://modelcontextprotocol.io/specification/draft/server/utilities/caching>
-- Specification, *"Subscriptions"*, revision 2026-07-28. The filter fields, the acknowledgment ordering, the subscription id, and the statement that this replaces `resources/subscribe`. <https://modelcontextprotocol.io/specification/draft/basic/patterns/subscriptions>
+- Specification, *"Resources"*, revision 2026-07-28. The `Resource` object, the capability flags, the `-32602` rule, the empty-contents prohibition, and the URI scheme and security requirements quoted in sections 2 and 3. <https://modelcontextprotocol.io/specification/2026-07-28/server/resources>
+- Specification, *"Prompts"*, revision 2026-07-28. The `Prompt` and `PromptArgument` objects, string-only arguments, and the prompt error codes in section 8. <https://modelcontextprotocol.io/specification/2026-07-28/server/prompts>
+- Specification, *"Completion"*, revision 2026-07-28. The two reference types, the 100-item cap, and the `context.arguments` field. <https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/completion>
+- Specification, *"Pagination"*, revision 2026-07-28. Opaque cursors, the four paginated operations, and the empty-string-is-a-valid-cursor rule. <https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/pagination>
+- Specification, *"Caching"*, revision 2026-07-28, and SEP-2549. The six cacheable methods, the TTL semantics, and the `cacheScope` security warning in section 6. <https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/caching>
+- Specification, *"Subscriptions"*, revision 2026-07-28. The filter fields, the acknowledgment ordering, the subscription id, and the statement that this replaces `resources/subscribe`. <https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/subscriptions>
 - RFC 6570, *URI Template*. <https://www.rfc-editor.org/rfc/rfc6570>
 - RFC 3986, *Uniform Resource Identifier (URI): Generic Syntax*, for custom schemes. <https://www.rfc-editor.org/rfc/rfc3986>
 - MCP Python SDK, release 2.3.0. `@mcp.resource`, `@mcp.prompt()`, `@mcp.completion()`, `ResourceSecurity`, `cache_hints`, and `Client.listen`. <https://github.com/modelcontextprotocol/python-sdk>

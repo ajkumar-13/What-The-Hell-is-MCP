@@ -583,7 +583,7 @@ One more mistake never reaches the model. Under stdio, standard output is the pr
 
 ## Further reading
 
-- Specification, *"Tools"*, revision 2026-07-28. The `ToolAnnotations` note quoted in section 4, the requirement that clients treat annotations as untrusted, and the text block a tool with structured content should also send. <https://modelcontextprotocol.io/specification/draft/server/tools>
+- Specification, *"Tools"*, revision 2026-07-28. The `ToolAnnotations` note quoted in section 4, the requirement that clients treat annotations as untrusted, and the text block a tool with structured content should also send. <https://modelcontextprotocol.io/specification/2026-07-28/server/tools>
 - Hungerford, O., Morrow, S., and Chang, L., *"Tool Annotations as Risk Vocabulary: What Hints Can and Can't Do"* (2026-03-16), Model Context Protocol blog. What the annotation hints can and cannot do, the theme of section 4. <https://blog.modelcontextprotocol.io/posts/2026-03-16-tool-annotations/>
 - Kubernetes Python client. The synchronous API surface this project wraps, and the source of the `limitBytes` description in section 6. <https://github.com/kubernetes-client/python>
 - Kubernetes, *"Debug Running Pods"*. The manual version of the correlation in section 5, including `--previous` and the container state fields. <https://kubernetes.io/docs/tasks/debug/debug-application/debug-running-pod/>

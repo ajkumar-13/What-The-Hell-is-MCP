@@ -288,8 +288,8 @@ These are the mistakes the ten minutes of section 3 actually produce. Each host 
 ## Further reading
 
 - Model Context Protocol, [*Versioning and revision index*](https://modelcontextprotocol.io/specification/versioning) (2026). While 2026-07-28 was a release candidate its pages were served from `/specification/draft/`, so check both paths if a deep link fails.
-- Model Context Protocol, [*2026-07-28 changelog*](https://modelcontextprotocol.io/specification/draft/changelog) (2026). The authoritative list of what this revision removed.
-- Model Context Protocol, [*Tools*](https://modelcontextprotocol.io/specification/draft/server/tools), revision 2026-07-28. Source of the `tools/call` request and result in section 4 and of the confirmation, human-in-the-loop, and annotation rules in sections 3 and 5.
+- Model Context Protocol, [*2026-07-28 changelog*](https://modelcontextprotocol.io/specification/2026-07-28/changelog) (2026). The authoritative list of what this revision removed.
+- Model Context Protocol, [*Tools*](https://modelcontextprotocol.io/specification/2026-07-28/server/tools), revision 2026-07-28. Source of the `tools/call` request and result in section 4 and of the confirmation, human-in-the-loop, and annotation rules in sections 3 and 5.
 - Model Context Protocol, [*Registry moderation policy*](https://modelcontextprotocol.io/registry/moderation-policy). Source of the "minimal-to-no moderation" line quoted in section 3.
 - [Registry documentation](https://registry.modelcontextprotocol.io/docs). What a listing records, and the search address section 3 uses.
 - Model Context Protocol, [*MCP joins the Agentic AI Foundation*](https://blog.modelcontextprotocol.io/posts/2025-12-09-mcp-joins-agentic-ai-foundation/) (2025). The announcement quoted in section 8.

@@ -640,8 +640,8 @@ No PostgreSQL was available when this page was checked, so that script's output 
 
 ## Further reading
 
-- Specification, *"Tools"*, revision 2026-07-28. The split between protocol errors and tool execution errors, the `isError` rule quoted in section 5, and the rule that annotations are untrusted. <https://modelcontextprotocol.io/specification/draft/server/tools>
-- Specification, *"Resources"*, revision 2026-07-28. Why the schema is application-driven context and not a tool. <https://modelcontextprotocol.io/specification/draft/server/resources>
+- Specification, *"Tools"*, revision 2026-07-28. The split between protocol errors and tool execution errors, the `isError` rule quoted in section 5, and the rule that annotations are untrusted. <https://modelcontextprotocol.io/specification/2026-07-28/server/tools>
+- Specification, *"Resources"*, revision 2026-07-28. Why the schema is application-driven context and not a tool. <https://modelcontextprotocol.io/specification/2026-07-28/server/resources>
 - PostgreSQL roles and privileges. Login roles, `GRANT`, and what a role may and may not do. <https://www.postgresql.org/docs/current/user-manag.html>
 - PostgreSQL documentation, *Client Connection Defaults*. `statement_timeout` and `default_transaction_read_only` as role settings a session can override. <https://www.postgresql.org/docs/current/runtime-config-client.html>
 - `sqlglot`. Release 30.13.0 produced every parse quoted here, including the `Command` fallback. <https://github.com/tobymao/sqlglot>

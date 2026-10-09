@@ -742,9 +742,9 @@ Invalid Host header
 
 ## Further reading
 
-- Specification, *Transports*, revision 2026-07-28: the Streamable HTTP page (the endpoint rule, the send and receive rules, the header set, the status-code table, cancellation by stream close, what earlier revisions had, and the HTTP probe) and the stdio page (the framing rules of section 2, the stdout requirement, shutdown, and the stdio probe). <https://modelcontextprotocol.io/specification/draft/basic/transports>
+- Specification, *Transports*, revision 2026-07-28: the Streamable HTTP page (the endpoint rule, the send and receive rules, the header set, the status-code table, cancellation by stream close, what earlier revisions had, and the HTTP probe) and the stdio page (the framing rules of section 2, the stdout requirement, shutdown, and the stdio probe). <https://modelcontextprotocol.io/specification/2026-07-28/basic/transports>
 - Specification, *Versioning and compatibility*, revision 2026-07-28. The modern, legacy, and dual-era model, and the compatibility matrix of section 7.
-- Specification, *Deprecated features registry*, revision 2026-07-28. Where HTTP+SSE now lives. <https://modelcontextprotocol.io/specification/draft/deprecated>
+- Specification, *Deprecated features registry*, revision 2026-07-28. Where HTTP+SSE now lives. <https://modelcontextprotocol.io/specification/2026-07-28/deprecated>
 - SEP-2243, the `Mcp-Method` and `Mcp-Name` routing headers. `Mcp-Method`, `Mcp-Name`, the `x-mcp-header` annotation, `Mcp-Param-{Name}`, the Base64 sentinel, and the reasoning behind mandatory server-side validation.
 - SEP-2575, *Stateless MCP*, and SEP-2567, *Sessionless MCP*. Why the session and the handshake were removed, and the load-balancing argument of section 6.
 - Model Context Protocol, *"The 2026-07-28 MCP Specification Release Candidate"* (2026). The round-robin sentence quoted in section 6.

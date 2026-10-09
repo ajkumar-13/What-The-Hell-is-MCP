@@ -42,7 +42,7 @@ Two terms are deliberately listed twice, because MCP and OAuth 2.1 use the same 
 
 **Content block**: One piece of a tool result or of a prompt message: `text`, `image`, `audio`, `resource_link`, or an embedded `resource`.
 
-**Cross-server shadowing**: An attack where one server's tool description changes how the model uses a *different*, trusted server's tools. The malicious server is never called, so nothing about it appears in the interaction log. Not the host-side *shadow* strategy for name collisions.
+**Cross-server shadowing**: An attack where one server's tool description changes how the model uses a *different*, trusted server's tools. The malicious server is never called, so nothing about it appears in the tool-call arguments, and, combined with a rug pull, nothing appears in the user-facing log either. Not the host-side *shadow* strategy for name collisions.
 
 **CSP (Content Security Policy)**: The browser policy the host applies to an MCP Apps view. The host builds it from the resource's own `ui.csp` declarations over a `default-src 'none'` base: `connectDomains` becomes `connect-src`, `resourceDomains` becomes the script, style, image, font, and media sources, and `frameDomains` becomes `frame-src`. A declaration is a request, and the host is free to narrow it but never to allow a domain that was not declared.
 
@@ -150,7 +150,7 @@ Two terms are deliberately listed twice, because MCP and OAuth 2.1 use the same 
 
 **Rug pull**: A server that changes its tool definitions after being approved, so the thing the user consented to is not the thing that runs.
 
-**Sampling**: **(deprecated)** A server asking the host's model to generate a completion. There is no back channel for it since 2026-07-28: `sampling/createMessage` survives only as a `CreateMessageRequest` inside MRTR `inputRequests`, and earliest removal is the first revision released on or after 2027-07-28. The migration path is a direct call to a model provider, disclosed to the user.
+**Sampling**: **(deprecated)** A server asking the host's model to generate a completion. There is no back channel for it since 2026-07-28: `sampling/createMessage` survives only as a `CreateMessageRequest` inside MRTR `inputRequests`, and earliest removal is the first revision released on or after 2027-07-28. The migration path is a direct call to a model provider, disclosed in the server's documentation.
 
 **Scope**: A named permission carried on an access token. A server publishes the minimum in `scopes_supported`, answers `403` with an `insufficient_scope` challenge rather than `401` when a token is valid but too thin, and names every scope an operation needs at once rather than one at a time.
 
@@ -167,6 +167,8 @@ Two terms are deliberately listed twice, because MCP and OAuth 2.1 use the same 
 **SSE (Server-Sent Events)**: The one-way `text/event-stream` format a Streamable HTTP POST uses when a server streams notifications before its response. Each request has its own stream, closing the stream **must** be treated as cancellation of that request, and resumability is gone: there is no `Last-Event-ID` and no redelivery, so a client that loses a stream re-issues the request with a new request id.
 
 **SSRF (Server-Side Request Forgery)**: Making a party fetch a URL an attacker chose. In MCP it is mostly a client problem: the URLs come from the server the client connected to, so a client requires `https://` outside loopback, blocks private and link-local ranges, and re-checks every redirect hop. A server meets it too if it fetches a client-supplied CIMD document.
+
+**State handle hijacking**: Revision 2026-07-28's replacement for the session-hijacking section of Security Best Practices. A handle for state that spans requests (a task id, an application-level handle) is an identifier, not a credential: a server **must** verify every inbound request, **must not** treat possession of a handle as authentication, and **should** key stored state by user and handle together. Post 19 section 3 reads the page.
 
 **Stateless**: The property, new in 2026-07-28, that every request carries everything the server needs to handle it, so any replica can serve any request.
 

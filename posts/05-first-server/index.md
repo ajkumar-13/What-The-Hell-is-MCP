@@ -771,9 +771,9 @@ That is not a bug in either the command or the layout; they simply want differen
 
 ## Further reading
 
-- Specification, *"Tools"*, revision 2026-07-28. The `Tool` object, `inputSchema`, annotations as untrusted hints, and the split between a protocol error and a tool execution error. <https://modelcontextprotocol.io/specification/draft/server/tools>
-- Specification, *"Transports"*, revision 2026-07-28. The stdio transport, including the rule that the server must not write anything to standard output that is not a valid MCP message. <https://modelcontextprotocol.io/specification/draft/basic/transports/stdio>
-- Specification, *"Base protocol"*, revision 2026-07-28. The required `_meta` keys, the rule that a request missing one is rejected with `-32602`, and the error codes with their HTTP statuses. <https://modelcontextprotocol.io/specification/draft/basic>
+- Specification, *"Tools"*, revision 2026-07-28. The `Tool` object, `inputSchema`, annotations as untrusted hints, and the split between a protocol error and a tool execution error. <https://modelcontextprotocol.io/specification/2026-07-28/server/tools>
+- Specification, *"Transports"*, revision 2026-07-28. The stdio transport, including the rule that the server must not write anything to standard output that is not a valid MCP message. <https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/stdio>
+- Specification, *"Base protocol"*, revision 2026-07-28. The required `_meta` keys, the rule that a request missing one is rejected with `-32602`, and the error codes with their HTTP statuses. <https://modelcontextprotocol.io/specification/2026-07-28/basic>
 - MCP Python SDK, release 2.3.0. `MCPServer`, `@mcp.tool()`, `run()`, and the `mcp install` command. <https://github.com/modelcontextprotocol/python-sdk>
 - Astral, *uv documentation*. `uv init --package`, `uv add`, `uv lock`, `uv sync` and `uv run --directory`. <https://docs.astral.sh/uv/>
 - Claude Desktop, *"Getting started with local MCP servers on Claude Desktop"*. Where the configuration file and the per-server logs live. <https://support.claude.com/en/articles/10949351-getting-started-with-local-mcp-servers-on-claude-desktop>

@@ -567,8 +567,8 @@ data: {"requiredCapabilities": {"elicitation": {"form": {}}}}
 
 ## Further reading
 
-- Specification, *"Multi Round-Trip Requests"*, revision 2026-07-28. The four steps, and why the server returns its question instead of sending one. <https://modelcontextprotocol.io/specification/draft/basic/patterns/mrtr>
-- Specification, *"Elicitation"*, revision 2026-07-28. Form mode, the three actions, and the requirement that a server handle a decline and a cancel. <https://modelcontextprotocol.io/specification/draft/client/elicitation>
+- Specification, *"Multi Round-Trip Requests"*, revision 2026-07-28. The four steps, and why the server returns its question instead of sending one. <https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr>
+- Specification, *"Elicitation"*, revision 2026-07-28. Form mode, the three actions, and the requirement that a server handle a decline and a cancel. <https://modelcontextprotocol.io/specification/2026-07-28/client/elicitation>
 - PostgreSQL roles and privileges. The grants behind `mcp_writer` and `mcp_readonly`, and default privileges for tables created later. <https://www.postgresql.org/docs/current/user-manag.html>
 - PostgreSQL documentation, *Privileges* (ddl-priv). The ownership rule behind section 2: the right to drop or alter a table is inherent in owning it. <https://www.postgresql.org/docs/current/ddl-priv.html>
 - `asyncpg`. Connection pools and the `transaction()` context manager that `write_transaction()` wraps. <https://magicstack.github.io/asyncpg/current/>

@@ -824,11 +824,11 @@ the SDK client on /mcp/: connected, 4 tools
 
 ## Further reading
 
-- Specification, *"Tools"*, revision 2026-07-28. The `isError` rule, the five content block types, structured content, annotations as untrusted, and the split between a protocol error and a tool execution error. <https://modelcontextprotocol.io/specification/draft/server/tools>
-- Specification, *"Multi Round-Trip Requests (MRTR)"*, revision 2026-07-28, and SEP-2322. The `inputRequests` map, the `requestState` rules, and the requirement that the retry carry a different JSON-RPC identifier. <https://modelcontextprotocol.io/specification/draft/basic/patterns/mrtr>
-- Specification, *"Base protocol"*, revision 2026-07-28. The `_meta` carried on every request and the error codes, including `-32021` and its `requiredCapabilities` payload. <https://modelcontextprotocol.io/specification/draft/basic>
-- Specification, *"Transports: Streamable HTTP"*, revision 2026-07-28, and SEP-2243. The `Mcp-Method` and `Mcp-Name` routing headers shown in section 3. <https://modelcontextprotocol.io/specification/draft/basic/transports/streamable-http>
-- Specification, *"Resources"* and *"Caching"*, revision 2026-07-28. Resource-not-found as `-32602`, and what `ttlMs` and `cacheScope` mean. <https://modelcontextprotocol.io/specification/draft/server/resources> and <https://modelcontextprotocol.io/specification/draft/server/utilities/caching>
+- Specification, *"Tools"*, revision 2026-07-28. The `isError` rule, the five content block types, structured content, annotations as untrusted, and the split between a protocol error and a tool execution error. <https://modelcontextprotocol.io/specification/2026-07-28/server/tools>
+- Specification, *"Multi Round-Trip Requests (MRTR)"*, revision 2026-07-28, and SEP-2322. The `inputRequests` map, the `requestState` rules, and the requirement that the retry carry a different JSON-RPC identifier. <https://modelcontextprotocol.io/specification/2026-07-28/basic/patterns/mrtr>
+- Specification, *"Base protocol"*, revision 2026-07-28. The `_meta` carried on every request and the error codes, including `-32021` and its `requiredCapabilities` payload. <https://modelcontextprotocol.io/specification/2026-07-28/basic>
+- Specification, *"Transports: Streamable HTTP"*, revision 2026-07-28, and SEP-2243. The `Mcp-Method` and `Mcp-Name` routing headers shown in section 3. <https://modelcontextprotocol.io/specification/2026-07-28/basic/transports/streamable-http>
+- Specification, *"Resources"* and *"Caching"*, revision 2026-07-28. Resource-not-found as `-32602`, and what `ttlMs` and `cacheScope` mean. <https://modelcontextprotocol.io/specification/2026-07-28/server/resources> and <https://modelcontextprotocol.io/specification/2026-07-28/server/utilities/caching>
 - MCP Python SDK, release 2.3.0. `Client`, `StdioServerParameters`, `streamable_http_client`, `CacheConfig`, and the input-required driver. <https://github.com/modelcontextprotocol/python-sdk>
 - [code/10-mcp-client/](../../code/10-mcp-client/). The complete project, with the suite run in section 10.
 
