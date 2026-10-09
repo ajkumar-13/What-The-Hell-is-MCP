@@ -698,7 +698,7 @@ tests\test_results.py ...............                                    [100%]
 
 Sixty-eight tests across posts 10 and 11, every one that needs a server connecting in memory, to post 05's server or to the small `mini` server the tests define. The count is the result; the seconds vary by machine.
 
-Seven scripts under `snippets/` print every transcript above that the suite does not. Each runs from the series root with no arguments, in under ten seconds here, through the root environment that pins `mcp[cli]==2.3.0`. Each imports the project from `code/10-mcp-client/src/` and the server from `code/05-first-server/src/`, starts any server it needs itself, in memory or as a stdio subprocess, and stops it before it exits. None needs a host, a provider key, or any network.
+Seven scripts under `snippets/` print every transcript above that the suite does not. Each runs from the series root with no arguments, in under ten seconds here, through the root environment that pins `mcp[cli]==2.3.0`. Each imports the project from `code/10-mcp-client/src/` and, where it needs one, the server from `code/05-first-server/src/`, starts any server it needs itself, in memory or as a stdio subprocess, and stops it before it exits. None needs a host, a provider key, or any network.
 
 ```bash
 uv run python posts/11-building-a-host/snippets/loop_rounds.py       # sections 2 and 4: a mixed reply, the round cap, a parallel round
