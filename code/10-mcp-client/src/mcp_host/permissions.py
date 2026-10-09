@@ -59,7 +59,22 @@ class PermissionRequest:
 
     @property
     def destructive(self) -> bool:
-        return bool(getattr(self.annotations, "destructive_hint", None))
+        """What the annotations claim, read with the schema's defaults.
+
+        An explicit `destructiveHint` wins either way, even beside a read-only
+        claim (a tool claiming both is resolved the safe way). When the hint is
+        absent the schema defaults it to true, unless the tool claims to be
+        read-only. A tool with no annotations at all is left as not destructive
+        here, so it prompts until the user answers "always", which is then
+        remembered for the session.
+        """
+        ann = self.annotations
+        if ann is None:
+            return False
+        hint = getattr(ann, "destructive_hint", None)
+        if hint is not None:
+            return bool(hint)
+        return not getattr(ann, "read_only_hint", None)
 
     @property
     def key(self) -> str:

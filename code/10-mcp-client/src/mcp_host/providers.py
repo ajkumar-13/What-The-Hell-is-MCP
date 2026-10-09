@@ -147,9 +147,9 @@ class ScriptedProvider:
     def append_tool_results(
         self, messages: list[Any], results: Sequence[ToolResult]
     ) -> None:
-        # All results in one turn. Splitting them across several messages is
-        # the mistake that quietly teaches a model to stop asking for parallel
-        # calls, on every provider that supports them.
+        # All results in one turn. Splitting them across several messages
+        # answers one parallel request as if it had been several, and leaves
+        # tool-use ids dangling in between.
         messages.append(
             {
                 "role": "user",

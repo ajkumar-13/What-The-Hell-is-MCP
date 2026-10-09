@@ -1,8 +1,24 @@
 id: mcp-011
 slug: 11-building-a-host
-title: "11 · Building a host: the tool loop, many servers, and permissions"
+title: "11 - Building a host: the tool loop, many servers, and permissions"
+summary: "Builds a host around the client: a tool loop in which every call passes a permission gate, one catalog that qualifies colliding names from several servers, and a gate that treats tool annotations as claims rather than facts."
 date: 2026-07-24
-tags: [model-context-protocol, mcp, hosts, tool-loop, permissions, multi-server]
-hero: diagrams/01-tool-loop.svg
-reading_time: 28
+updated: 2026-10-09
+status: complete
 part: "Part III - Clients, hosts, and testing"
+level: intermediate
+reading_time: 38
+tags: [mcp, hosts, tool-loop, permissions, multi-server, prompt-injection]
+hero: diagrams/01-tool-loop.svg
+prerequisites: [mcp-010]
+code: required
+outcomes:
+  - id: o1
+    text: "Drive a tool-execution loop in which no call reaches a server without passing the permission gate."
+  - id: o2
+    text: "Merge many servers into one catalog and resolve name collisions the way the specification allows."
+  - id: o3
+    text: "Write a permission policy that treats tool annotations as untrusted claims rather than facts."
+  - id: o4
+    text: "Point at the exact place in the loop where a prompt-injection payload enters."
+recommended: [mcp-002]

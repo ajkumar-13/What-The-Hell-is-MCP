@@ -29,8 +29,8 @@ uv sync --extra dev
 
 The `mcp` dependency is **pinned exactly** to `2.3.0`, a release of the 2.x line that
 implements protocol revision 2026-07-28. The 1.x line has a different module
-layout and none of the client code here would import against it: `mcp.types` is
-now `mcp_types`, `streamablehttp_client` is now `streamable_http_client`, and
+layout and none of the client code here would import against it: the protocol
+types live in `mcp_types` (with `mcp.types` kept as a mirror), `streamablehttp_client` is now `streamable_http_client`, and
 `ClientSession(read, write)` is now `Client(...)`.
 
 ## Configure

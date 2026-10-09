@@ -10,7 +10,7 @@ Note the shape of every test: the pool or client is opened with `async with`
 **inside the test body**, never handed over by a yield fixture. The client
 owns an anyio task group and a task group must be exited by the task that
 entered it; a yield fixture tears down in a different task and every test in
-the file fails with "Attempted to exit cancel scope in a different task".
+the file errors in teardown with "Attempted to exit cancel scope in a different task".
 """
 
 from __future__ import annotations

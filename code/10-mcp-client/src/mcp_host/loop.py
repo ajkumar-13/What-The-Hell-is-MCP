@@ -32,9 +32,9 @@ four servers in sequence feels four times slower than it is.
 
 **Every requested call gets a result.** Denied, unknown, failed: each one
 comes back with an entry, in the order the model asked, in a single turn.
-Dropping the result of a denied call leaves a dangling tool-use id that most
-providers reject outright, and returning them in separate turns teaches the
-model to stop asking for parallel calls.
+Dropping the result of a denied call leaves a dangling tool-use id that a
+provider may reject outright, and returning them in separate turns answers
+the model's parallel request as if it had been several.
 """
 
 from __future__ import annotations

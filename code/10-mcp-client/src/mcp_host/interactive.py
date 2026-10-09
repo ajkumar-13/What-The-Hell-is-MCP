@@ -179,7 +179,7 @@ async def call_with_input(
     """Drive the multi-round trip by hand.
 
     Three rules hold this together, and breaking any of them makes the call
-    loop until it hits the round cap:
+    fail or loop until it hits the round cap:
 
     1. Same tool name and the *same arguments* on every leg. The arguments are
        not "already sent"; each leg is a complete, independent call.

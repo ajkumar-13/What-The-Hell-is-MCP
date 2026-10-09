@@ -6,10 +6,11 @@ takes. Two servers exporting `search` is not hypothetical; it is what happens
 the moment you connect a filesystem server and a docs server.
 
 **The separator is a dot.** Tool names are constrained: the wire allows
-letters, digits, underscore, dot and hyphen, and nothing else. A slash is
-illegal, so `github/search` is not an option however natural it reads. Some
-provider APIs narrow the set further -- Anthropic's and OpenAI's tool names
-are `[A-Za-z0-9_-]` only -- which is why `separator` is a parameter and not a
+the specification says a tool name SHOULD use only letters, digits,
+underscore, dot and hyphen; a slash is outside that set, so `github/search`
+is not an option however natural it reads. Some
+provider APIs narrow the set further, to letters, digits, underscore and
+hyphen with no dot, which is why `separator` is a parameter and not a
 constant. Pass `separator="_"` when you are talking to one of those.
 
 **Namespacing is applied on collision, not always.** A tool whose name is
@@ -40,7 +41,7 @@ from .results import ToolOutcome
 # catalog boundary: a server that ships an illegal name should fail here,
 # loudly, rather than at the provider's API with a validation error that names
 # a field the reader has never seen.
-_LEGAL_NAME = re.compile(r"^[A-Za-z0-9_.\-]{1,128}$")
+_LEGAL_NAME = re.compile(r"[A-Za-z0-9_.\-]{1,128}")
 
 
 class UnknownTool(KeyError):
@@ -97,7 +98,7 @@ class ToolCatalog:
                 name = (
                     f"{server}{separator}{tool.name}" if contested else tool.name
                 )
-                if not _LEGAL_NAME.match(name):
+                if not _LEGAL_NAME.fullmatch(name):
                     raise ValueError(
                         f"tool name {name!r} from server {server!r} is not a legal "
                         "MCP tool name (letters, digits, '_', '.', '-' only)"

@@ -82,7 +82,7 @@ class ServerSpec:
 
     @classmethod
     def from_config(cls, name: str, entry: dict[str, Any]) -> ServerSpec:
-        """Parse one entry of the `mcpServers` object hosts have standardised on.
+        """Parse one entry of the `mcpServers` object hosts have standardized on.
 
         Two shapes: `{"command": ..., "args": [...]}` for stdio, and
         `{"url": ...}` for Streamable HTTP.

@@ -1,0 +1,835 @@
+{
+  "standard": "2.1.0",
+  "post": "mcp-011",
+  "next_ordinal": 20,
+  "questions": [
+    {
+      "id": "mcp-011-q01",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 2,
+      "tags": [
+        "tool-loop",
+        "exit-condition"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The project's `ToolLoop.run` sends the conversation to the model, gets a reply, and must decide whether the turn is finished. What does it branch on?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Whether the reply contains any tool calls.",
+          "correct": true,
+          "feedback": "Right. A reply without tool calls is the final answer, and every provider adapter can report tool calls in the same neutral form."
+        },
+        {
+          "key": "b",
+          "text": "Whether the provider's stop reason is the string for a finished turn.",
+          "correct": false,
+          "feedback": "Providers spell their stop reasons differently and add new ones, so the loop never branches on that string."
+        },
+        {
+          "key": "c",
+          "text": "Whether the reply carries any text for the user.",
+          "correct": false,
+          "feedback": "A reply can carry text and tool calls together; text alone does not mean the model is done asking."
+        },
+        {
+          "key": "d",
+          "text": "Whether the round counter has reached `max_rounds`.",
+          "correct": false,
+          "feedback": "The round cap ends a runaway loop with a stop message; it is not the normal exit condition."
+        }
+      ],
+      "explanation": "Section 2 states that the exit condition is \"no tool calls\", not a stop reason: `if not reply.tool_calls` returns the reply's text as the answer. The round cap is a separate guard that sets `stopped_early` and says so.",
+      "hints": [
+        "Look for the `if` that returns `turn` in the middle of the loop."
+      ]
+    },
+    {
+      "id": "mcp-011-q02",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 2,
+      "tags": [
+        "annotations",
+        "policy"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Under the default `PermissionPolicy`, a call to a tool annotated `readOnlyHint: true` is approved without a prompt. Which statement says why?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The specification obliges every host to approve, without asking, any tool whose server declares it read-only.",
+          "correct": false,
+          "feedback": "The Tools page says the opposite: clients must treat annotations as untrusted unless the server is trusted."
+        },
+        {
+          "key": "b",
+          "text": "The host's own policy auto-approves tools that claim to be read-only; with it off, the same tool prompts.",
+          "correct": true,
+          "feedback": "Right. The annotation only satisfied a rule the host had already decided to have, which `auto_approve_read_only=False` removes."
+        },
+        {
+          "key": "c",
+          "text": "The gate inspects the tool's input schema and its published output schema and confirms that neither can write.",
+          "correct": false,
+          "feedback": "Nothing verifies annotations; the gate reads the claim and never inspects what the tool does."
+        },
+        {
+          "key": "d",
+          "text": "The model never sees the annotations, so nothing it sends can be destructive.",
+          "correct": false,
+          "feedback": "It is true that `format_tools` drops the annotations, but that says nothing about what the tool itself does."
+        }
+      ],
+      "explanation": "Section 6: an annotation may satisfy a policy the host chose to have, and may never be the policy. `test_read_only_auto_approval_is_a_host_policy_not_a_server_right` turns `auto_approve_read_only` off and the same annotation buys nothing; `snippets/gate_rules.py` prints the prompt that then appears.",
+      "hints": [
+        "Ask what changes when `auto_approve_read_only` is set to `False`."
+      ]
+    },
+    {
+      "id": "mcp-011-q03",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 3,
+      "tags": [
+        "annotations",
+        "precedence"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A server publishes a tool named `rm_rf` with `readOnlyHint: true` and `destructiveHint: true`. Neither list in the host's policy mentions it, and the policy is otherwise the default. What does `PermissionGate.check` do with a call to it?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Approves it without a prompt, because the read-only shortcut covers any tool that claims to be read-only.",
+          "correct": false,
+          "feedback": "The read-only shortcut is rule 4; the destructive rule is rule 2 and runs first."
+        },
+        {
+          "key": "b",
+          "text": "Prompts the user, because the destructive rule is checked before the read-only shortcut.",
+          "correct": true,
+          "feedback": "Right. Destructive sits above the annotation shortcuts, so the contradiction resolves into a prompt."
+        },
+        {
+          "key": "c",
+          "text": "Denies it without asking, because contradictory annotations are rejected.",
+          "correct": false,
+          "feedback": "The gate has no contradiction check; it simply orders its rules so that the safe one wins."
+        },
+        {
+          "key": "d",
+          "text": "Refuses the whole server when the catalog is built.",
+          "correct": false,
+          "feedback": "The catalog validates names, not annotations; the tool is listed like any other."
+        }
+      ],
+      "explanation": "In the precedence chain of section 6, rule 2 (`request.destructive and policy.always_prompt_destructive`) runs before rule 4, the read-only shortcut. `test_a_lying_read_only_annotation_is_still_only_a_hint` pins this, and `snippets/gate_rules.py` prints one prompt for the case.",
+      "hints": [
+        "Number the rules in `check` and find which one this request meets first.",
+        "The destructive rule is the second block of `check`."
+      ]
+    },
+    {
+      "id": "mcp-011-q04",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 3,
+      "tags": [
+        "catalog",
+        "collisions"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A host has two servers under the configuration keys `docs` and `files`. Both report the name `search-server` for themselves in `serverInfo`. `docs` publishes `search`; `files` publishes `search` and `read`. With the project's default separator, which names does the model see?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "`search`, `files.search`, `read`",
+          "correct": false,
+          "feedback": "That qualifies only the second server's tool, so whichever server is listed first silently keeps the bare name."
+        },
+        {
+          "key": "b",
+          "text": "`search-server.search`, `search-server.search`, `read`",
+          "correct": false,
+          "feedback": "A server's self-reported name is not guaranteed unique and should not be relied upon; here it would produce the same name twice."
+        },
+        {
+          "key": "c",
+          "text": "`docs.search`, `files.search`, `read`",
+          "correct": true,
+          "feedback": "Right. The contested name is qualified on both sides with the configuration key and a dot, and the unique one stays bare."
+        },
+        {
+          "key": "d",
+          "text": "`docs/search`, `files/search`, `files/read`",
+          "correct": false,
+          "feedback": "A slash is outside the tool-name character set, and a name that collides with nothing keeps its bare form."
+        }
+      ],
+      "explanation": "Section 5: a contested name is qualified on both sides, the prefix is the key from the host's own configuration rather than `serverInfo`, and the separator is a dot. `snippets/catalog_merge.py` prints `['docs.search', 'files.search']` for the colliding pair.",
+      "hints": [
+        "Two questions: where does the prefix come from, and which names get one?"
+      ]
+    },
+    {
+      "id": "mcp-011-q05",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 2,
+      "outcomes": [
+        "o1",
+        "o2"
+      ],
+      "section": "2",
+      "est_minutes": 2,
+      "tags": [
+        "unknown-tool",
+        "tool-loop"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Inside `ToolLoop._run_calls`, the model asks for `teleport`, which no connected server publishes. What happens?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The loop raises `UnknownTool` and the turn ends with an exception.",
+          "correct": false,
+          "feedback": "`_run_calls` catches `UnknownTool` itself; a hallucinated name must not take the host down."
+        },
+        {
+          "key": "b",
+          "text": "The gate prompts the user about `teleport` before anything else happens.",
+          "correct": false,
+          "feedback": "An unknown name never reaches the gate: there is nothing to gate."
+        },
+        {
+          "key": "c",
+          "text": "The host sends `tools/call` for `teleport` to every connected server and returns the first error that comes back.",
+          "correct": false,
+          "feedback": "Nothing is sent anywhere; resolution fails in the catalog before any server is involved."
+        },
+        {
+          "key": "d",
+          "text": "The call gets a result saying there is no such tool, and the gate and the servers never see it.",
+          "correct": true,
+          "feedback": "Right. The model receives `TOOL FAILED (teleport): no such tool. Check the tool list and try again.` in its turn of results."
+        }
+      ],
+      "explanation": "Section 2 shows the branch: `catalog.resolve` raises `UnknownTool`, the loop records a failed `ToolOutcome` and continues, so the call still gets a result in order. `snippets/loop_rounds.py` prints it as `call_1_2`.",
+      "hints": [
+        "Find the `except UnknownTool` in `_run_calls`."
+      ]
+    },
+    {
+      "id": "mcp-011-q06",
+      "type": "short",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 1,
+      "tags": [
+        "wire-name"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "The catalog has published `mini.find_process` and the model calls it. What string does the host put in `params.name` of the `tools/call` it sends to the `mini` server?",
+      "answer": {
+        "model": "`find_process`, the server's own bare name.",
+        "accept": [
+          "^(?![\\s\\S]*?(?:^|[;,:\\n]|\\.\\s)(?:(?!\\b(?:not|never|than|instead|model|models|catalog|heard|sees|seen|shown|shows|only|publish\\w*|display\\w*)\\b|n't)[^;,:\\n])*?\\bmini[._/]find_process(?:(?!\\b(?:not|never|than|instead|model|models|catalog|heard|sees|seen|shown|shows|only|publish\\w*|display\\w*)\\b|n't)[^;,:\\n.])*(?:$|[;,:\\n.]))(?!(?:(?!find_process)[\\s\\S])*?(?<!not )(?<!not `)(?<!never )(?<!never `)(?<!n't )(?<!n't `)(?<!than )(?<!than `)(?<!of )(?<!of `)\\bmini[._/]find_process)(?![\\s\\S]*\\b(?:either|or|and/or)\\b[^.;]{0,30}\\bmini[._/]find_process)(?![\\s\\S]*(?:\\bnot|\\bnever|n't)\\s+(?:just\\s+|the\\s+)?`?find_process\\b)(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)[\\s\\S]*(?<![\\w./`-])`?find_process\\b[\\s\\S]*$"
+        ]
+      },
+      "explanation": "Section 5: the qualified name exists only in the catalog and in what the model is shown. `CatalogEntry` keeps the server's own `tool_name`, and dispatch sends that, because the server has never heard of the qualified form.",
+      "hints": [
+        "The prefix was added by the host. Does the server know about it?"
+      ]
+    },
+    {
+      "id": "mcp-011-q07",
+      "type": "short",
+      "track": "edge",
+      "difficulty": 3,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 3,
+      "tags": [
+        "remembered-decisions",
+        "deny"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "In the project's host, a user answers a plain `n` (not `N`) at the console prompt for an unannotated tool. In the next round the model asks for exactly the same call. In one or two sentences: what does the gate do with the repeated call, and why?",
+      "answer": {
+        "model": "It prompts the user again, because a plain no (DENY) refuses only that call and is not remembered; only N (never, DENY_ALWAYS) is stored as a session denial.",
+        "accept": [
+          "^(?![\\s\\S]*\\b(?:does not|doesn't|will not|won't|never|no longer|without|not)\\s+(?:\\w+\\s+){0,2}(?:prompt|ask|show)\\w*)(?![\\s\\S]*\\b(?:automatically|silently|auto-?)\\s*(?:\\w+\\s+){0,2}den\\w*)(?![\\s\\S]*denied earlier)(?![\\s\\S]*\\b(?:no|denial|refusal|answer|it|decision)\\W{0,2}\\s+(?:is|was|gets|stays)\\s+(?:remembered|stored|kept|saved|recorded)\\b)(?![\\s\\S]*\\b(?:maybe|perhaps|probably|possibly|might be|not sure|unsure|i think|i guess)\\b)(?=[\\s\\S]*(?:\\b(?:prompt\\w*|ask\\w*|dialog\\w*|question\\w*)\\b[^.;]{0,40}\\b(?:again|another|second|anew|once more)\\b|\\bre-?(?:prompt|ask)\\w*|\\b(?:again|another|second)\\b[^.;]{0,30}\\b(?:prompt|ask|dialog)\\w*))(?=[\\s\\S]*(?:(?:\\bnot|n't|\\bnever)\\s+(?:\\w+\\s+){0,3}(?:remember\\w*|stor\\w*|kept|saved|stick\\w*|persist\\w*|record\\w*)|\\bonly\\b[^.;]{0,40}(?:\\bN\\b|never|deny_always|deny always)|\\bnothing\\b[^.;]{0,20}\\b(?:stored|remembered|kept|saved|recorded)\\b|\\bforgot\\w*\\b|\\bone[- ]off\\b|\\bthis call only\\b|\\bonly (?:that|this|the) (?:one |single )?call\\b))[\\s\\S]{15,}$"
+        ]
+      },
+      "explanation": "Section 6: of the four answers only \"always\" (except for a destructive tool) and \"never\" are remembered. `_ask` adds the key to the denied set only for `DENY_ALWAYS`; a plain `DENY` returns a verdict and nothing more, so `snippets/gate_rules.py` shows two prompts for \"no\" followed by a repeat.",
+      "hints": [
+        "Look at what `_ask` stores for each of the four decisions.",
+        "Which decision adds the key to `self._denied`?"
+      ]
+    },
+    {
+      "id": "mcp-011-q08",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 3,
+      "tags": [
+        "catalog",
+        "collisions",
+        "counting"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A host connects three servers under the keys `a`, `b` and `c`. `a` publishes `search`, `read` and `list`; `b` publishes `search` and `write`; `c` publishes `read` and `ping`. The project's `ToolCatalog.build` merges them with its default separator. How many of the published names are qualified, and how many stay bare?",
+      "answer": {
+        "parts": [
+          {
+            "label": "qualified names",
+            "value": 4,
+            "tolerance": 0,
+            "unit": "names"
+          },
+          {
+            "label": "bare names",
+            "value": 3,
+            "tolerance": 0,
+            "unit": "names"
+          }
+        ]
+      },
+      "precision_note": "Closed form from section 5: each publication of a name on two or more servers is qualified, search (2) and read (2) give 4; list, write and ping stay bare (3). ToolCatalog.build on these lists returns ['a.search', 'a.read', 'list', 'b.search', 'write', 'c.read', 'ping'].",
+      "explanation": "A contested name is qualified on both sides, so `search` and `read` each produce two qualified entries, `a.search`, `b.search`, `a.read` and `c.read`. The three names that appear on only one server keep their bare form. Qualifying only the later server would give 2 and 5.",
+      "hints": [
+        "Count, for each name, how many servers publish it.",
+        "Every publication of a contested name is qualified, not only the second one."
+      ]
+    },
+    {
+      "id": "mcp-011-q09",
+      "type": "numeric",
+      "track": "workout",
+      "difficulty": 3,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 4,
+      "tags": [
+        "tool-loop",
+        "gate",
+        "counting"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "One model reply asks for five calls: `get_system_info` and `find_process` (both annotated read-only), `terminate_process` (annotated destructive; the user answers no), `teleport` (no server has it), and `note` (published with no annotations; the user answers yes once). The default policy applies. Give three counts for this round: prompts shown, calls that reach a server, and `tool_result` blocks sent back to the model.",
+      "answer": {
+        "parts": [
+          {
+            "label": "prompts shown",
+            "value": 2,
+            "tolerance": 0,
+            "unit": "prompts"
+          },
+          {
+            "label": "calls that reach a server",
+            "value": 3,
+            "tolerance": 0,
+            "unit": "calls"
+          },
+          {
+            "label": "tool_result blocks sent back",
+            "value": 5,
+            "tolerance": 0,
+            "unit": "blocks"
+          }
+        ]
+      },
+      "precision_note": "Closed form from section 2, checked by running ToolLoop with ScriptedProvider against the post 05 server and a server with one unannotated tool: prompts for terminate_process and note (2), calls executed get_system_info, find_process, note (3), and five tool_result blocks in one user message.",
+      "explanation": "The read-only tools are auto-approved without a prompt; the destructive tool and the unannotated tool each prompt, so two prompts. The unknown name never reaches the gate, and the denied call never reaches its server, so three calls run. Every requested call still gets a result, so five blocks go back in one turn.",
+      "hints": [
+        "Walk each call through `_run_calls`: resolve, then gate, then execute.",
+        "Unknown and denied calls skip execution but still produce a result."
+      ]
+    },
+    {
+      "id": "mcp-011-q10",
+      "type": "numeric",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "4",
+      "est_minutes": 3,
+      "tags": [
+        "parallel",
+        "gather"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "With every call auto-approved, one model reply asks for `watch_cpu` with `seconds` 3, `watch_cpu` with `seconds` 2, and `get_system_info`, against the post 05 server opened in memory. `watch_cpu` takes about one second per sample and `get_system_info` returns in about half a second. About how many seconds of wall-clock time does the round's execution take?",
+      "stimulus": {
+        "kind": "code",
+        "language": "python",
+        "content": "plan = [[(\"watch_cpu\", {\"seconds\": 3}), (\"watch_cpu\", {\"seconds\": 2}), (\"get_system_info\", {})], \"done\"]\nloop = ToolLoop(pool, PermissionGate(always_allow()), ScriptedProvider(plan))\nturn = await loop.run(\"watch\")"
+      },
+      "answer": {
+        "value": 3,
+        "tolerance": 0.7,
+        "unit": "seconds"
+      },
+      "precision_note": "The approved calls run together under asyncio.gather, so the round takes as long as the slowest call: max(3, 2, 0.5) = 3 s. A run of this plan measured 3.0 s; snippets/loop_rounds.py measures 2.0 s for two 2-second calls. Running them in sequence would take about 5.5 s.",
+      "explanation": "`_run_calls` gates the calls one at a time and then executes every approved call under one `asyncio.gather`, so the round lasts as long as its slowest call, about three seconds, not the five and a half that a sequential host would spend.",
+      "hints": [
+        "Are the approved calls awaited one after another, or together?",
+        "With concurrent execution, the slowest call sets the time."
+      ]
+    },
+    {
+      "id": "mcp-011-q11",
+      "type": "numeric",
+      "track": "edge",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 2,
+      "tags": [
+        "destructive",
+        "remembered-decisions"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "In one session the model calls the same tool, annotated `destructiveHint: true`, four times, and the user answers \"always\" whenever asked. How many prompts does the user see under the default `PermissionPolicy`, and how many with `PermissionPolicy(remember_destructive=True)`?",
+      "answer": {
+        "parts": [
+          {
+            "label": "prompts, default policy",
+            "value": 4,
+            "tolerance": 0,
+            "unit": "prompts"
+          },
+          {
+            "label": "prompts, remember_destructive=True",
+            "value": 1,
+            "tolerance": 0,
+            "unit": "prompts"
+          }
+        ]
+      },
+      "precision_note": "From section 6: by default an always for a destructive tool is not remembered, so each of the 4 calls prompts; with remember_destructive=True the first always is stored and the next 3 calls are allowed without a prompt. Checked by driving PermissionGate with scripted_prompter for both policies.",
+      "explanation": "The destructive rule prompts every time and, by default, `_ask` declines to remember an \"always\" for a destructive tool, so four calls mean four dialogs. `remember_destructive=True` is the written-down opt-out: the first answer is stored and the remaining three calls pass as \"allowed always for this session\".",
+      "hints": [
+        "Check what `_ask` does with `ALLOW_ALWAYS` when the request is destructive."
+      ]
+    },
+    {
+      "id": "mcp-011-q12",
+      "type": "code",
+      "track": "run",
+      "difficulty": 3,
+      "outcomes": [
+        "o2"
+      ],
+      "section": "5",
+      "est_minutes": 12,
+      "tags": [
+        "catalog",
+        "collisions",
+        "naming"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Write `qualify(tools_by_server, separator=\".\")`, the naming half of the project's `ToolCatalog.build`. It takes a dict from configuration key to the list of tool names that server publishes and returns the names the model is shown, in server order and then tool order. A name published by more than one server is qualified on every server that publishes it; any other name stays bare; and a published name outside the specification's character set (letters, digits, `_`, `.`, `-`, 1 to 128 characters, given as `LEGAL`) raises `ValueError`. Use only the standard library.",
+      "kind": "implement",
+      "language": "python",
+      "starter": "import re\n\nLEGAL = re.compile(r\"^[A-Za-z0-9_.\\-]{1,128}$\")\n\n\ndef qualify(tools_by_server, separator=\".\"):\n    \"\"\"Return the tool names a model is shown, in server order, then tool order.\n\n    `tools_by_server` maps a configuration key to the list of tool names that\n    server publishes. A name published by more than one server is qualified as\n    key + separator + name on every server that publishes it; any other name\n    stays bare. A published name that LEGAL does not match raises ValueError.\n    \"\"\"\n    raise NotImplementedError\n",
+      "solution": "import re\n\nLEGAL = re.compile(r\"^[A-Za-z0-9_.\\-]{1,128}$\")\n\n\ndef qualify(tools_by_server, separator=\".\"):\n    \"\"\"Return the tool names a model is shown, in server order, then tool order.\n\n    `tools_by_server` maps a configuration key to the list of tool names that\n    server publishes. A name published by more than one server is qualified as\n    key + separator + name on every server that publishes it; any other name\n    stays bare. A published name that LEGAL does not match raises ValueError.\n    \"\"\"\n    counts = {}\n    for names in tools_by_server.values():\n        for name in names:\n            counts[name] = counts.get(name, 0) + 1\n    published = []\n    for server, names in tools_by_server.items():\n        for name in names:\n            shown = f\"{server}{separator}{name}\" if counts[name] > 1 else name\n            if not LEGAL.match(shown):\n                raise ValueError(f\"illegal tool name {shown!r} from server {server!r}\")\n            published.append(shown)\n    return published\n",
+      "tests": "\nassert qualify({\"docs\": [\"search\"], \"files\": [\"search\", \"read\"]}) == [\"docs.search\", \"files.search\", \"read\"], \"qualify both sides, and only the contested name\"\nassert qualify({\"system-info\": [\"get_system_info\"], \"docs\": [\"search\"]}) == [\"get_system_info\", \"search\"], \"a unique name stays bare\"\nassert qualify({\"a\": [\"search\", \"read\", \"list\"], \"b\": [\"search\", \"write\"], \"c\": [\"read\", \"ping\"]}) == [\"a.search\", \"a.read\", \"list\", \"b.search\", \"write\", \"c.read\", \"ping\"]\nassert qualify({\"docs\": [\"search\"], \"files\": [\"search\"]}, separator=\"_\") == [\"docs_search\", \"files_search\"]\nfor bad in ({\"bad\": [\"group/search\"]}, {\"my docs\": [\"search\"], \"files\": [\"search\"]}):\n    try:\n        qualify(bad)\n    except ValueError:\n        pass\n    else:\n        raise AssertionError(f\"{bad} must raise ValueError\")\nassert qualify({\"x\": [\"a\" * 128]}) == [\"a\" * 128], \"128 characters is still legal\"\ntry:\n    qualify({\"long\": [\"a\" * 125], \"other\": [\"a\" * 125]})\nexcept ValueError:\n    pass\nelse:\n    raise AssertionError(\"a qualified name longer than 128 characters must raise\")\nassert qualify({}) == []\nprint(\"all qualify tests passed\")\n",
+      "explanation": "Count every name across every server before naming anything, then qualify each publication of a contested name with the key and the separator. Validate the name actually published, the qualified one, because a key such as `my docs` or a long prefix can make a legal tool name illegal.",
+      "hints": [
+        "Two passes: one to count each name across all servers, one to build the published list.",
+        "Check `LEGAL` against the published name, not the server's bare tool name."
+      ]
+    },
+    {
+      "id": "mcp-011-q13",
+      "type": "code",
+      "track": "run",
+      "difficulty": 4,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 12,
+      "tags": [
+        "gate",
+        "precedence",
+        "annotations"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "This function is meant to apply the first rules of the project's permission gate to one call, returning `\"allow\"`, `\"deny\"` or `\"ask\"`: the user's denylist, then the allowlist (either may name a `server.tool` key or a bare tool name, and deny wins a tie), then a prompt for anything annotated destructive, then auto-approval of read-only tools when the policy allows it, and a prompt for everything else. Its rules are in the wrong order. Fix it.",
+      "kind": "fix",
+      "language": "python",
+      "starter": "def decide(server, tool, annotations, policy):\n    \"\"\"Return \"allow\", \"deny\" or \"ask\" for one call, before any remembered decision.\n\n    `annotations` is a dict of hints such as {\"readOnlyHint\": True}, or None.\n    `policy` has \"auto_approve_read_only\" (a bool), \"allowlist\" and \"denylist\"\n    (sets of \"server.tool\" keys or bare tool names).\n    \"\"\"\n    ann = annotations or {}\n    key = f\"{server}.{tool}\"\n    if ann.get(\"readOnlyHint\") and policy.get(\"auto_approve_read_only\", True):\n        return \"allow\"\n    if key in policy.get(\"allowlist\", ()) or tool in policy.get(\"allowlist\", ()):\n        return \"allow\"\n    if key in policy.get(\"denylist\", ()) or tool in policy.get(\"denylist\", ()):\n        return \"deny\"\n    if ann.get(\"destructiveHint\"):\n        return \"ask\"\n    return \"ask\"\n",
+      "solution": "def decide(server, tool, annotations, policy):\n    \"\"\"Return \"allow\", \"deny\" or \"ask\" for one call, before any remembered decision.\n\n    `annotations` is a dict of hints such as {\"readOnlyHint\": True}, or None.\n    `policy` has \"auto_approve_read_only\" (a bool), \"allowlist\" and \"denylist\"\n    (sets of \"server.tool\" keys or bare tool names).\n    \"\"\"\n    ann = annotations or {}\n    key = f\"{server}.{tool}\"\n    if key in policy.get(\"denylist\", ()) or tool in policy.get(\"denylist\", ()):\n        return \"deny\"\n    if key in policy.get(\"allowlist\", ()) or tool in policy.get(\"allowlist\", ()):\n        return \"allow\"\n    if ann.get(\"destructiveHint\"):\n        return \"ask\"\n    if ann.get(\"readOnlyHint\") and policy.get(\"auto_approve_read_only\", True):\n        return \"allow\"\n    return \"ask\"\n",
+      "tests": "\nP = {\"auto_approve_read_only\": True, \"allowlist\": set(), \"denylist\": set()}\nRO = {\"readOnlyHint\": True, \"destructiveHint\": False}\nDES = {\"readOnlyHint\": False, \"destructiveHint\": True}\nLIAR = {\"readOnlyHint\": True, \"destructiveHint\": True}\nassert decide(\"demo\", \"t\", RO, P) == \"allow\"\nassert decide(\"demo\", \"t\", RO, dict(P, auto_approve_read_only=False)) == \"ask\", \"read-only approval is a host policy\"\nassert decide(\"demo\", \"rm_rf\", LIAR, P) == \"ask\", \"destructive is checked before the read-only shortcut\"\nassert decide(\"demo\", \"t\", None, P) == \"ask\", \"no annotations means ask\"\nassert decide(\"demo\", \"t\", RO, dict(P, denylist={\"demo.t\"})) == \"deny\", \"the denylist beats a read-only claim\"\nassert decide(\"demo\", \"t\", {}, dict(P, allowlist={\"demo.t\"}, denylist={\"demo.t\"})) == \"deny\", \"deny wins ties\"\nassert decide(\"demo\", \"rm\", DES, dict(P, allowlist={\"demo.rm\"})) == \"allow\", \"the allowlist beats the destructive rule\"\nassert decide(\"other\", \"rm\", RO, dict(P, denylist={\"rm\"})) == \"deny\", \"a bare name on a list matches every server\"\nassert decide(\"demo\", \"rm\", DES, P) == \"ask\"\nassert decide(\"other\", \"rm\", DES, dict(P, allowlist={\"rm\"})) == \"allow\", \"a bare name on the allowlist matches every server too\"\nprint(\"all decide tests passed\")\n",
+      "explanation": "The user's lists are the host's data and outrank every annotation, the denylist first so that deny wins ties, and the destructive rule must run before the read-only shortcut so that a tool claiming both prompts. Read-only auto-approval stays conditional on the host's `auto_approve_read_only` flag.",
+      "hints": [
+        "Which call does the starter approve that the gate in section 6 would prompt for?",
+        "Put the two lists first, denylist before allowlist, and the destructive check before the read-only shortcut."
+      ]
+    },
+    {
+      "id": "mcp-011-q14",
+      "type": "order",
+      "track": "workout",
+      "difficulty": 2,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "6",
+      "est_minutes": 2,
+      "tags": [
+        "precedence"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Put these checks in the order `PermissionGate.check` applies them to a call, first to last.",
+      "items": [
+        {
+          "key": "a",
+          "text": "The user's denylist, by `server.tool` key or bare tool name."
+        },
+        {
+          "key": "b",
+          "text": "The user's allowlist."
+        },
+        {
+          "key": "c",
+          "text": "The destructive rule: prompt for a tool annotated destructive."
+        },
+        {
+          "key": "d",
+          "text": "An \"always\" the user gave earlier in the session."
+        },
+        {
+          "key": "e",
+          "text": "The read-only shortcut, when the policy enables it."
+        },
+        {
+          "key": "f",
+          "text": "Prompt, because no rule covers the tool."
+        }
+      ],
+      "answer": [
+        "a",
+        "b",
+        "c",
+        "d",
+        "e",
+        "f"
+      ],
+      "partial_credit": true,
+      "explanation": "Section 6 reads the chain as whose data wins: the user's lists first (deny before allow), then the destructive rule above every annotation shortcut, then a remembered allow, then the read-only shortcut, and finally a prompt for everything else, including tools with no annotations.",
+      "hints": [
+        "User data first, then the rule that makes the gate worth having, then the shortcuts."
+      ]
+    },
+    {
+      "id": "mcp-011-q15",
+      "type": "match",
+      "track": "intuition",
+      "difficulty": 2,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "8",
+      "est_minutes": 3,
+      "tags": [
+        "prompt-injection",
+        "trust"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Match each piece of untrusted text to the place in the project's host where it enters, or reaches, the loop.",
+      "left": [
+        {
+          "key": "a",
+          "text": "A tool's `description`, as the server published it"
+        },
+        {
+          "key": "b",
+          "text": "The text of a tool's result"
+        },
+        {
+          "key": "c",
+          "text": "The arguments the model writes after reading both"
+        }
+      ],
+      "right": [
+        {
+          "key": "p",
+          "text": "Copied by `format_tools` into the model's context with the first request, before any call"
+        },
+        {
+          "key": "q",
+          "text": "Appended to the history by `append_tool_results` on the way back round the loop"
+        },
+        {
+          "key": "r",
+          "text": "Carried in the `arguments` field of the `PermissionRequest` that `gate.check` is shown"
+        },
+        {
+          "key": "s",
+          "text": "Used as the catalog prefix when two servers collide"
+        }
+      ],
+      "answer": {
+        "a": "p",
+        "b": "q",
+        "c": "r"
+      },
+      "explanation": "Section 8 names the three entry points in the order the loop meets them: descriptions at the first request, results on every round, and the arguments, which reach the gate in the request's `arguments` field (the description the gate prints is the called tool's own, not the text that caused the call). Nothing server-supplied becomes the catalog prefix; that comes from the host's configuration key.",
+      "hints": [
+        "Follow one round: what goes out with the first request, what comes back, what the gate reads."
+      ]
+    },
+    {
+      "id": "mcp-011-q16",
+      "type": "long",
+      "track": "connect",
+      "difficulty": 3,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "7",
+      "est_minutes": 10,
+      "tags": [
+        "two-gates",
+        "mrtr",
+        "prompt-injection"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A tool result tells the model to terminate PID 4242, and the model asks for `terminate_process` with `{\"pid\": 4242}` against the post 05 server. Compare the host's permission gate with the server's own confirmation from post 08: what each one is shown, who decides that it runs, and which failure each one still covers when the other is missing. Then say whether either of them can tell that the request came from an injection.",
+      "kind": "compare",
+      "connects": [
+        "mcp-008"
+      ],
+      "solution": "**Host gate.** It runs inside the host before any message is sent, because the host's policy says destructive tools prompt. It is shown the tool name, the server, the arguments `{'pid': 4242}` and the first line of the tool's description. The server never learns a call was considered, and a denial means the server is never called.\n\n**Server confirmation.** It is the post 05 server's `Resolve` parameter: the server answers the first `tools/call` with `input_required` and an elicitation form, and the client retries with the answer through MRTR. It fires because the server author decided the tool needs an answer, in any conformant host that declares elicitation. It is shown its own question text, \"Terminate process 4242 (...)? This cannot be undone.\", and the answer arrives in a parameter the model cannot see or forge.\n\n**Which covers what.** If the server declined to ask, the host gate is the only check; if the host auto-approved everything (for example `--yes`), the server's question is the only one. Neither substitutes for the other.\n\n**Injection.** Neither can see the sentence that caused the call: the payload was read by the model upstream of both, and both are shown only the consequence, a concrete termination. Their value is that a human sees that concrete action before it happens, which is why the dialog must show the arguments.",
+      "rubric": [
+        {
+          "criterion": "States what the host gate is shown (tool, server, arguments, one line of description) and that it runs before the server is contacted",
+          "points": 2
+        },
+        {
+          "criterion": "Describes the server confirmation as an MRTR input_required round trip decided by the server author, with an answer the model cannot forge",
+          "points": 2
+        },
+        {
+          "criterion": "Explains that each one is the only check when the other is missing (server that does not ask; host that auto-approves)",
+          "points": 2
+        },
+        {
+          "criterion": "Concludes that neither sees the injected text, only its consequence",
+          "points": 2
+        }
+      ],
+      "answer_length": "two paragraphs",
+      "explanation": "Section 7 shows both prompts for one call and why they are independent, and section 8 explains that every untrusted input reaches the model before either gate, so both judge a consequence rather than a payload.",
+      "hints": [
+        "Run the call through section 7's transcript: which prompt comes from where?",
+        "Ask what text each prompt actually contains, and where the injected sentence went."
+      ]
+    },
+    {
+      "id": "mcp-011-q17",
+      "type": "long",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o1"
+      ],
+      "section": "2",
+      "est_minutes": 10,
+      "tags": [
+        "tool-loop",
+        "critique"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A contributor proposes two changes to `ToolLoop._run_calls` \"for speed and to save tokens\": (1) wrap each call in one coroutine that runs `gate.check` and then `pool.call`, and run all of those under a single `asyncio.gather`; (2) send back results only for calls that actually ran, dropping the denied and unknown ones. Critique both changes against the properties the post says are load-bearing.",
+      "kind": "critique",
+      "solution": "**Change 1** keeps the gate on the critical path, since every call still passes `gate.check` before `pool.call`, but it makes gating parallel. With a console prompter, several permission prompts would race for one terminal: questions interleave and an answer can be read by the wrong prompt, so the user may approve a call they meant to refuse. Gating is deliberately sequential and only execution is parallel; the speed gain is the prompts', which are bounded by a human anyway, while the approved calls already run together.\n\n**Change 2** breaks the rule that every requested call gets a result in the order asked, in one turn. A tool-use identifier would be left without an answer, so the history no longer pairs each call with its result, and the model is never told that a call was refused or that a tool does not exist, so it may assume success or ask again. The denied result is also what carries the refusal to the model, which the system prompt tells it to report rather than retry. The saving is a few short `TOOL FAILED` strings.\n\nVerdict: reject both. Keep sequential gating with parallel execution, and keep one result per requested call, rebuilt from `calls` rather than from `approved`.",
+      "rubric": [
+        {
+          "criterion": "Notes that change 1 still gates every call but makes prompts race for one terminal, and that gating is sequential by design",
+          "points": 3
+        },
+        {
+          "criterion": "Notes that change 2 leaves tool-use identifiers without results and breaks the in-order, one-turn rule",
+          "points": 2
+        },
+        {
+          "criterion": "Explains that dropping denied or unknown results hides refusals and missing tools from the model",
+          "points": 2
+        },
+        {
+          "criterion": "Gives a clear verdict that keeps parallel execution of approved calls",
+          "points": 1
+        }
+      ],
+      "answer_length": "two paragraphs",
+      "explanation": "Section 2 names the load-bearing properties of `_run_calls`: no path to a server that avoids the gate, gating sequential and execution parallel, and every requested call getting a result in order. Change 1 breaks the second, change 2 the third.",
+      "hints": [
+        "List the three bold properties under `_run_calls` in section 2.",
+        "For each change, ask what the user and the model would each experience."
+      ]
+    },
+    {
+      "id": "mcp-011-q18",
+      "type": "mcq",
+      "track": "edge",
+      "difficulty": 4,
+      "outcomes": [
+        "o3"
+      ],
+      "section": "11",
+      "est_minutes": 3,
+      "tags": [
+        "annotations",
+        "defaults"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "Tool A arrives with `annotations` holding only `readOnlyHint: false`; tool B arrives with no `annotations` at all. Neither is on a list, and the policy is the default. For each, the user answers \"always\" at the first prompt. What does the project's gate do on the second call to each?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "Both prompt again, because the schema's defaults make both tools destructive and the gate applies those defaults to every tool.",
+          "correct": false,
+          "feedback": "The gate applies the defaults to an annotations object; a tool with no annotations at all is left as not destructive."
+        },
+        {
+          "key": "b",
+          "text": "A prompts again, as its absent `destructiveHint` counts as true; B passes, as the remembered always applies.",
+          "correct": true,
+          "feedback": "Right. A meets the destructive rule, which never remembers an always by default; B falls to rule 5, whose always is stored."
+        },
+        {
+          "key": "c",
+          "text": "A passes without a prompt and B prompts again, because the gate fills in defaults only when no annotations were sent.",
+          "correct": false,
+          "feedback": "That is the reverse: defaults are read from an annotations object, and a missing object is treated as not destructive."
+        },
+        {
+          "key": "d",
+          "text": "Both pass without a prompt, because a remembered always is checked before the destructive rule in the gate's chain.",
+          "correct": false,
+          "feedback": "The destructive rule is rule 2 and the remembered allow is rule 3, so for a destructive tool the stored always is never reached."
+        }
+      ],
+      "explanation": "`PermissionRequest.destructive` reads an `annotations` object with the schema's defaults, so A, with `destructiveHint` absent and not read-only, is destructive and prompts every time. B has no annotations object, is read as not destructive, and its \"always\" is remembered. Section 11 prints both cases from `snippets/gate_rules.py`.",
+      "hints": [
+        "What does `PermissionRequest.destructive` return when `annotations` is None, and when it is an object without `destructive_hint`?",
+        "Rule 2 runs before the remembered allow of rule 3."
+      ]
+    },
+    {
+      "id": "mcp-011-q19",
+      "type": "mcq",
+      "track": "intuition",
+      "difficulty": 1,
+      "outcomes": [
+        "o4"
+      ],
+      "section": "8",
+      "est_minutes": 1,
+      "tags": [
+        "prompt-injection",
+        "gate"
+      ],
+      "status": "reviewed",
+      "updated": "2026-10-09",
+      "prompt": "A poisoned tool result has led the model to ask for `terminate_process` with `{\"pid\": 4242}`. When `gate.check` runs, what does the console prompt put in front of the user?",
+      "select": "single",
+      "options": [
+        {
+          "key": "a",
+          "text": "The text of the tool result that led to the call.",
+          "correct": false,
+          "feedback": "The result was read by the model upstream of the gate; the `PermissionRequest` does not carry it."
+        },
+        {
+          "key": "b",
+          "text": "The tool, its server, the arguments, and the first line of that tool's description.",
+          "correct": true,
+          "feedback": "Right. That is the whole `PermissionRequest` the prompter prints: the consequence, not the cause."
+        },
+        {
+          "key": "c",
+          "text": "The model's reasoning for the call.",
+          "correct": false,
+          "feedback": "The loop passes only the call's name and arguments to the gate; it has no reasoning to show."
+        },
+        {
+          "key": "d",
+          "text": "The full conversation so far, poisoned result included, so the user can judge the context.",
+          "correct": false,
+          "feedback": "The gate is shown one call; the history stays with the provider."
+        }
+      ],
+      "explanation": "Section 8: the gate sees `{'pid': 4242}`, not the sentence that caused it. `snippets/injection_points.py` prints the request the prompter was given: tool, server, arguments, and the first line of `terminate_process`'s own description.",
+      "hints": [
+        "Look at the fields of `PermissionRequest`."
+      ]
+    }
+  ]
+}

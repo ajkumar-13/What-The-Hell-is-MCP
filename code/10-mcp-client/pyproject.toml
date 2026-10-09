@@ -7,7 +7,7 @@ requires-python = ">=3.10"
 
 # Pinned exactly, for the same reason the server project is: this code was
 # written against mcp 2.3.0, which implements protocol revision 2026-07-28.
-# The 1.x line has a different module layout (mcp.types, streamablehttp_client)
+# The 1.x line has a different module layout (streamablehttp_client, ClientSession)
 # and none of the client code here would import.
 dependencies = [
     "mcp[cli]==2.3.0",
